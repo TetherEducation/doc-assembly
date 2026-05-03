@@ -31,6 +31,7 @@ DOCML2JSON="${REPO_ROOT}/scripts/docml2json/docml2json.py"
 PATCH_CONTENT="${SCRIPT_DIR}/patch_content.py"
 CSV_DIR="${REPO_ROOT}/docs/superpowers/evidence/2026-05-03-signature-layouts"
 CSV_OUT="${CSV_OUT:-${CSV_DIR}/numeric_results.csv}"
+URLS_TSV="${CSV_DIR}/signing_urls.tsv"
 
 # All 13 layouts
 ALL_LAYOUTS=(
@@ -65,6 +66,11 @@ mkdir -p "$CSV_DIR"
 # ---- CSV header ------------------------------------------------------------
 if [[ ! -f "$CSV_OUT" ]]; then
   echo "layout,role,positionY,height,bottom_pct,anchor_top_pct,delta_pct,verdict" > "$CSV_OUT"
+fi
+
+# ---- Signing URLs TSV header -----------------------------------------------
+if [[ ! -f "$URLS_TSV" ]]; then
+  printf 'layout\trecipient_email\tsigning_url\n' > "$URLS_TSV"
 fi
 
 # ---- Layout filter ---------------------------------------------------------
@@ -354,6 +360,22 @@ with open('${DOC_PAYLOAD_FILE}', 'w') as f:
       exit 1
     fi
     log "[${LAYOUT}] Attempt ${ATTEMPT_ID}, envelope ${PROVIDER_DOC_ID}"
+
+    # 13b. Capture signing URL for first recipient (signer_order=1)
+    FIRST_SIGNING_URL=$(app_query "
+      SELECT signing_url
+      FROM execution.signing_attempt_recipients
+      WHERE attempt_id = '${ATTEMPT_ID}'
+        AND signer_order = 1
+      LIMIT 1
+    " | tr -d '[:space:]')
+    if [[ -n "$FIRST_SIGNING_URL" ]]; then
+      printf '%s\t%s\t%s\n' "${LAYOUT}" "${FIRST_EMAIL}" "${FIRST_SIGNING_URL}" >> "${URLS_TSV}"
+      log "[${LAYOUT}] Signing URL captured for ${FIRST_EMAIL}"
+    else
+      log "[${LAYOUT}] WARN: no signing_url found for signer_order=1"
+      printf '%s\t%s\t%s\n' "${LAYOUT}" "${FIRST_EMAIL}" "NONE" >> "${URLS_TSV}"
+    fi
 
     # 14. Query Documenso fields
     DOCUMENSO_FIELDS=$(documenso_query "

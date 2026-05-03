@@ -1,3 +1,5 @@
 # Numeric results are captured in Task 6 (baseline capture).
 # Do not commit partial or smoke-run data.
 numeric_results.csv
+# Signing URLs contain per-recipient tokens (expired but still sensitive).
+signing_urls.tsv
