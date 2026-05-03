@@ -143,6 +143,12 @@ func checkAuth(ctx context.Context, e *Engine) {
 }
 
 func checkSigningSessionAuth(ctx context.Context, e *Engine) error {
+	// In dummy auth mode (dev-only bypass), signing session auth is not enforced.
+	if e.config.Auth.IsDummyAuth() {
+		slog.WarnContext(ctx, "signing session auth check skipped (dummy auth mode)")
+		return nil
+	}
+
 	mode := strings.TrimSpace(e.signingSessionMode)
 	if mode == "" {
 		mode = e.config.SigningSessionAuth.Mode
