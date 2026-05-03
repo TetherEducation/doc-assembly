@@ -182,7 +182,8 @@ for LAYOUT in "${LAYOUTS[@]}"; do
     TS=$(date -u +%s)
     # Use a short deterministic code from the layout name (max 20 chars for code)
     LAYOUT_DT_CODE=$(echo "${LAYOUT}" | tr '[:lower:]-' '[:upper:]_' | cut -c1-18)
-    DT_LIST_RESP=$(api_get "/api/v1/tenant/document-types")
+    # Search by code directly to avoid pagination issues with the list endpoint
+    DT_LIST_RESP=$(api_get "/api/v1/tenant/document-types?q=${LAYOUT_DT_CODE}")
     LAYOUT_DT_ID=$(echo "$DT_LIST_RESP" | jq -r ".data[]? | select(.code == \"${LAYOUT_DT_CODE}\") | .id" 2>/dev/null | head -1)
     if [[ -z "$LAYOUT_DT_ID" ]]; then
       CREATE_DT_RESP=$(api_post "/api/v1/tenant/document-types" \
