@@ -68,7 +68,7 @@ func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*e
 		if dbRoleID == "" {
 			continue
 		}
-		posX, posY := port.ConvertFieldToProviderPosition(f)
+		posX, posY := port.ConvertFieldToDocumensoPosition(f)
 		positions = append(positions, port.SignatureFieldPosition{RoleID: dbRoleID, Page: f.Page, PositionX: posX, PositionY: posY, Width: f.Width, Height: f.Height})
 	}
 	return positions

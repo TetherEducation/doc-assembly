@@ -1,10 +1,13 @@
 package port
 
-// ConvertFieldToProviderPosition translates an extracted PDF anchor into Documenso
+// ConvertFieldToDocumensoPosition translates an extracted PDF anchor into Documenso
 // percentage coordinates. The returned (posX, posY) describe the field's TOP-LEFT
 // corner in % of page width/height. The bottom of the field aligns with the rendered
 // signature line (anchor Y).
-func ConvertFieldToProviderPosition(f SignatureField) (posX, posY float64) {
+//
+// This conversion is specific to Documenso (top-left % coordinates, signature artwork
+// centered in the field). Other providers may need their own conversion.
+func ConvertFieldToDocumensoPosition(f SignatureField) (posX, posY float64) {
 	posX, posY = f.PositionX, f.PositionY
 	if f.PDFPageW > 0 && f.PDFPageH > 0 {
 		anchorCenterPct := ((f.PDFPointX + f.PDFAnchorW/2) / f.PDFPageW) * 100
