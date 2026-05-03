@@ -68,23 +68,10 @@ func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*e
 		if dbRoleID == "" {
 			continue
 		}
-		posX, posY := convertFieldToProviderPosition(f)
+		posX, posY := port.ConvertFieldToProviderPosition(f)
 		positions = append(positions, port.SignatureFieldPosition{RoleID: dbRoleID, Page: f.Page, PositionX: posX, PositionY: posY, Width: f.Width, Height: f.Height})
 	}
 	return positions
-}
-
-func convertFieldToProviderPosition(f port.SignatureField) (posX, posY float64) {
-	posX, posY = f.PositionX, f.PositionY
-	if f.PDFPageW > 0 && f.PDFPageH > 0 {
-		anchorCenterPct := ((f.PDFPointX + f.PDFAnchorW/2) / f.PDFPageW) * 100
-		posX = anchorCenterPct - f.Width/2
-		posY = 100 - ((f.PDFPointY / f.PDFPageH) * 100)
-		posY -= f.Height
-	}
-	posX = max(0, min(posX, 100-f.Width))
-	posY = max(0, min(posY, 100-f.Height))
-	return posX, posY
 }
 
 func buildDefaultSignatureFieldPositions(recipients []*entity.DocumentRecipient) []port.SignatureFieldPosition {
