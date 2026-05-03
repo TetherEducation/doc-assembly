@@ -34,3 +34,19 @@ Legend: PENDING / PASS / FAIL. Visual=PASS only when a human reviewer (or Playwr
 
 **Numeric result:** delta=0.000% for all 13 layouts (center_pct == line_top_pct within 0.001%).
 **Visual result:** Playwright screenshots confirm field rectangle sits on the signature line for all 13 layouts.
+
+## Second iteration fix — rect-overlaps-label (commit `e30f70b`)
+
+**Problem discovered:** With `Height=8%`, the centered rect extended ~32pt below the signature line,
+covering the role label and subtitle text in the rendered PDF background.
+
+**Fix applied (E3 combined):**
+- `typst_converter_impl.go`: `defaultHeight` 8.0 → 6.0 (rect extends ~24pt below line on Letter)
+- `typst_converter_impl.go`: added `#v(25.0pt)` between `#line` and label so label renders below rect
+- `typst_converter_test.go`: updated test expectation from `dy: 20.0pt` to `dy: 0.0pt`
+- `config/config.go`: added `applyDatabaseEnvOverrides` so `DOC_ENGINE_DATABASE_*` env vars work
+- `bootstrap/preflight.go`: skip signing session auth check in dummy auth mode
+
+**Rerun verification:** All 13 layouts rerun with fresh documents using new binary (mtime 14:18:45, after both fix commits). All numeric: delta=0.0000, height=6.0000. All visual: Playwright screenshots show rect on line, label and subtitle fully visible.
+
+**All 13 layouts pass visual bar:** rect-on-line=YES, label-visible=YES, subtitle-visible=YES.

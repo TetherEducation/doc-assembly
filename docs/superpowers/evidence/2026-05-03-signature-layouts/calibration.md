@@ -6,7 +6,7 @@
 - Documenso coordinates: top-left percentage (0–100% of page width/height)
 - Konva.js stage scale: 1.307 (Documenso signing editor)
 - Artwork alignment: `verticalAlign="middle"` (confirmed via Konva inspection)
-- Field dimensions used: Width=20%, Height=8%
+- Field dimensions used: Width=20%, Height=6% (reduced from 8% — see E3 fix below)
 
 ## pdftotext anchor extraction (post-fix, dy=0)
 
@@ -68,3 +68,25 @@ posY = lineTopPct - Height/2
 Where `PDFPointY` = anchor Y measured from PDF bottom = `792 - yMin(pdftotext)`.
 
 This ensures `posY + Height/2 == lineTopPct`, i.e., the field center is on the line.
+
+## E3 fix — rect-overlaps-label (iteration 2)
+
+With `Height=8%`, the unsigned Documenso green rect extended `8/100 * 792 / 2 ≈ 32pt` below the
+signature line, covering the role label and subtitle rendered in the Typst PDF background.
+
+**Option chosen: E3 (combined)**
+
+1. Reduce `defaultHeight` from `8.0` to `6.0` (% of page height):
+   - Rect now extends `6/100 * 792 / 2 ≈ 24pt` below the line.
+2. Add `#v(25.0pt)` gap in Typst between `#line` and the label:
+   - Label renders ≥25pt below the line (1pt margin above rect bottom).
+   - Label and subtitle are fully visible as the green rect does not reach them.
+
+**Why E3 over E1 (pure gap) or E2 (smaller rect only):**
+- E2 alone would need `height < 2.5%` to avoid covering a label 10pt below the line — too small for legible artwork.
+- E1 alone at 8% would need a 36pt gap, which creates a large visual void in the signed PDF.
+- E3 with 6%+25pt achieves the minimum necessary gap with a natural-looking layout.
+
+**Numerical verification (rerun with new binary, all 13 layouts):**
+All `delta_pct = 0.0000` (center of 6% field exactly on the anchor line).
+Height confirmed as `6.0000` in Documenso field table for all 32 fields.
