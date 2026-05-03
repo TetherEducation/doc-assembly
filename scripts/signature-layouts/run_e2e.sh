@@ -65,7 +65,7 @@ mkdir -p "$CSV_DIR"
 
 # ---- CSV header ------------------------------------------------------------
 if [[ ! -f "$CSV_OUT" ]]; then
-  echo "layout,role,positionY,height,bottom_pct,anchor_top_pct,delta_pct,verdict" > "$CSV_OUT"
+  echo "layout,role,positionY,height,center_pct,line_top_pct,delta_pct,verdict" > "$CSV_OUT"
 fi
 
 # ---- Signing URLs TSV header -----------------------------------------------
@@ -379,7 +379,7 @@ with open('${DOC_PAYLOAD_FILE}', 'w') as f:
 
     # 14. Query Documenso fields
     DOCUMENSO_FIELDS=$(documenso_query "
-      SELECT f.\"recipientId\", f.\"positionY\", f.height, (f.\"positionY\" + f.height) AS bottom_pct
+      SELECT f.\"recipientId\", f.\"positionY\", f.height, (f.\"positionY\" + f.height / 2) AS center_pct
       FROM \"Field\" f
       WHERE f.\"envelopeId\" = '${PROVIDER_DOC_ID}'
       ORDER BY f.\"recipientId\"
@@ -392,7 +392,10 @@ with open('${DOC_PAYLOAD_FILE}', 'w') as f:
 
     log "[${LAYOUT}] Documenso fields retrieved"
 
-    # 15. Compute deltas and emit CSV rows
+    # 15. Compute deltas and emit CSV rows.
+    # Metric: the field center (posY + height/2) must equal the anchor Y (= line Y).
+    # The snapshot's PositionY stores the line_top_pct used as the anchor reference.
+    # Both are in Documenso's top-down % coordinate system.
     python3 - \
       "${LAYOUT}" \
       "${ATTEMPT_ID}" \
@@ -416,7 +419,7 @@ documenso_raw = sys.argv[7]
 
 snapshot = json.loads(snapshot_raw)
 
-# Parse Documenso fields: recipientId (int), positionY, height, bottom_pct
+# Parse Documenso fields: recipientId (int), positionY, height, center_pct
 documenso_map = {}
 for line in documenso_raw.strip().split('\n'):
     if not line.strip():
@@ -426,15 +429,20 @@ for line in documenso_raw.strip().split('\n'):
         rec_id = int(parts[0].strip())
         pos_y = float(parts[1].strip())
         h = float(parts[2].strip())
-        bottom = float(parts[3].strip())
-        documenso_map[rec_id] = {'positionY': pos_y, 'height': h, 'bottom_pct': bottom}
+        center = float(parts[3].strip())
+        documenso_map[rec_id] = {'positionY': pos_y, 'height': h, 'center_pct': center}
 
 env = {**os.environ, 'PGPASSWORD': 'postgres'}
 
 rows = []
 for field in snapshot:
     role_id = (field.get('RoleID') or field.get('roleId') or field.get('role_id', '')).strip()
-    pos_y_anchor = float(field.get('PositionY') or field.get('positionY') or field.get('position_y') or 0)
+    # PositionY in the snapshot is the field top % we computed via ConvertFieldToDocumensoPosition.
+    # After the center-alignment fix: posY = lineTopPct - height/2.
+    snapshot_pos_y = float(field.get('PositionY') or field.get('positionY') or field.get('position_y') or 0)
+    snapshot_height = float(field.get('Height') or field.get('height') or 8.0)
+    # The line position (center_pct that Documenso field should center on) is:
+    snapshot_center = snapshot_pos_y + snapshot_height / 2
 
     # Look up Documenso recipient ID from app DB
     result = subprocess.run(
@@ -448,32 +456,36 @@ for field in snapshot:
 
     if not prov_rec_id_str:
         print(f"  WARN: no provider_recipient_id for role {role_id[:8]}", file=sys.stderr)
-        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{pos_y_anchor:.4f},N/A,ERROR")
+        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{snapshot_center:.4f},N/A,ERROR")
         continue
 
     try:
         prov_rec_id = int(prov_rec_id_str)
     except ValueError:
         print(f"  WARN: non-integer provider_recipient_id '{prov_rec_id_str}'", file=sys.stderr)
-        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{pos_y_anchor:.4f},N/A,ERROR")
+        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{snapshot_center:.4f},N/A,ERROR")
         continue
 
     if prov_rec_id not in documenso_map:
         print(f"  WARN: recipientId {prov_rec_id} not in Documenso (envelope {provider_doc_id})", file=sys.stderr)
-        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{pos_y_anchor:.4f},N/A,ERROR")
+        rows.append(f"{layout},{role_id},N/A,N/A,N/A,{snapshot_center:.4f},N/A,ERROR")
         continue
 
     df = documenso_map[prov_rec_id]
     pos_y_doc = df['positionY']
     h_doc = df['height']
-    bottom_doc = df['bottom_pct']
+    center_doc = df['center_pct']  # positionY + height/2 from Documenso DB
 
-    delta = abs(pos_y_doc - pos_y_anchor)
+    # Metric: the center of the Documenso field (what Documenso stored) should match
+    # what we computed as the line position (snapshot posY + height/2).
+    # Both derive from the same conversion, so delta near zero confirms the API roundtrip.
+    # Visual correctness is validated via Playwright screenshots.
+    delta = abs(center_doc - snapshot_center)
     verdict = 'PASS' if delta < threshold else 'FAIL'
 
-    row = f"{layout},{role_id},{pos_y_doc:.4f},{h_doc:.4f},{bottom_doc:.4f},{pos_y_anchor:.4f},{delta:.4f},{verdict}"
+    row = f"{layout},{role_id},{pos_y_doc:.4f},{h_doc:.4f},{center_doc:.4f},{snapshot_center:.4f},{delta:.4f},{verdict}"
     rows.append(row)
-    print(f"  role={role_id[:8]} posY={pos_y_doc:.4f} h={h_doc:.4f} anchor={pos_y_anchor:.4f} delta={delta:.4f} -> {verdict}")
+    print(f"  role={role_id[:8]} posY={pos_y_doc:.4f} h={h_doc:.4f} center={center_doc:.4f} expected_center={snapshot_center:.4f} delta={delta:.4f} -> {verdict}")
 
 with open(csv_out, 'a') as f:
     for r in rows:
