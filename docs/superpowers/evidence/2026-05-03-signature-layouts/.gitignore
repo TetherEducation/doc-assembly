@@ -1,0 +1,3 @@
+# Numeric results are captured in Task 6 (baseline capture).
+# Do not commit partial or smoke-run data.
+numeric_results.csv
