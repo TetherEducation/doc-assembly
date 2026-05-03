@@ -1,0 +1,33 @@
+---meta---
+title: Test alineación firma — dual-left
+description: Fixture E2E para validar que el signature box queda sobre la línea en Documenso.
+language: es
+page: LETTER
+margins: 72
+
+---roles---
+apoderado: Apoderado/a [order:1]
+estudiante: Estudiante [order:2]
+
+---workflow---
+mode: sequential
+
+---content---
+@center **TEST DE ALINEACIÓN — dual-left**
+
+Este documento prueba que el signature box generado por Documenso queda visualmente sobre la línea de firma renderizada por Typst.
+
+Texto de relleno para empujar la firma hacia el medio/abajo de la página y reproducir la alineación real:
+
+[student_first_name|Nombre Estudiante] [student_first_last_name|Apellido].
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+@signature(dual-left, md)
+  | apoderado: Firma Apoderado/a | Apoderado/a
+  | estudiante: Firma Estudiante | Estudiante
+
+**FIRMA ELECTRÓNICA**
+Este documento es suscrito mediante firma electrónica simple, conforme a la Ley N° 19.799.
+
+**Fecha:** [today|Fecha]
