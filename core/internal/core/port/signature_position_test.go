@@ -7,11 +7,12 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
-// Invariant: Documenso centers the artwork vertically in the field, so the
-// center of the field must align with the anchor (= the signature line).
+// Invariant: the field rect sits ENTIRELY ABOVE the signature line so the line
+// acts as a baseline, not a strikethrough. This means the rect's BOTTOM aligns
+// with the anchor:
 //
-//	center_pct = posY + height/2  ≈  100 - (PDFPointY / PDFPageH) * 100
-func TestConvertFieldToDocumensoPosition_CenterAlignsToLine(t *testing.T) {
+//	posY + height ≈ 100 - (PDFPointY / PDFPageH) * 100  (= line_top_pct)
+func TestConvertFieldToDocumensoPosition_BottomAlignsToLine(t *testing.T) {
 	f := port.SignatureField{
 		PositionX: 0, PositionY: 0,
 		Width: 30, Height: 8,
@@ -20,11 +21,10 @@ func TestConvertFieldToDocumensoPosition_CenterAlignsToLine(t *testing.T) {
 	}
 	posX, posY := port.ConvertFieldToDocumensoPosition(f)
 
-	// The anchor Y in Documenso top-down percentage coordinates
-	wantCenter := 100 - (336.0/792.0)*100 // = 57.57...%
-	gotCenter := posY + f.Height/2
-	if math.Abs(gotCenter-wantCenter) > 0.01 {
-		t.Fatalf("center mismatch: got %v want %v", gotCenter, wantCenter)
+	wantLine := 100 - (336.0/792.0)*100 // ≈ 57.575%
+	gotBottom := posY + f.Height
+	if math.Abs(gotBottom-wantLine) > 0.01 {
+		t.Fatalf("bottom mismatch: got %v want %v", gotBottom, wantLine)
 	}
 	if posX < 0 || posX > 100-f.Width {
 		t.Fatalf("posX out of range: %v", posX)
@@ -34,27 +34,19 @@ func TestConvertFieldToDocumensoPosition_CenterAlignsToLine(t *testing.T) {
 	}
 }
 
-// Table-driven test covering the 3 Y values observed from the 13-layout harness run:
-//
-//	line anchor (y_from_bottom_pt):   336.02  (single row / first row)
-//	                                  316.02  (second row, stacked layouts)
-//	quad-grid second row anchor:      ~316.XX (same second-row bucket)
-//
-// All coordinates derived from actual pdftotext extraction on single-center layout.
+// Table-driven test covering Y values observed from the 13-layout harness run.
+// All anchors are placed at dy:0 (= the signature line itself) by Typst.
 func TestConvertFieldToDocumensoPosition_TableDriven(t *testing.T) {
 	const pageW, pageH = 612.0, 792.0
 	const fieldW, fieldH = 20.0, 8.0
 
 	cases := []struct {
-		name        string
-		pdfPointY   float64 // anchor Y from PDF bottom
-		wantCenterY float64 // expected center % from top
+		name      string
+		pdfPointY float64 // anchor Y from PDF bottom (= line Y)
+		wantLine  float64 // expected line_top_pct (= field bottom %)
 	}{
-		// single-center: anchor at dy:0 on #line → y_from_bottom = 336.02
 		{"single-row-line", 336.02, 100 - (336.02/pageH)*100},
-		// dual-center second signature (stacked): second-row anchor
 		{"second-row-line", 316.02, 100 - (316.02/pageH)*100},
-		// quad-grid second row (slightly different due to grid spacing)
 		{"quad-second-row", 299.82, 100 - (299.82/pageH)*100},
 	}
 
@@ -66,9 +58,9 @@ func TestConvertFieldToDocumensoPosition_TableDriven(t *testing.T) {
 				PDFAnchorW: 10, PDFPageW: pageW, PDFPageH: pageH,
 			}
 			_, posY := port.ConvertFieldToDocumensoPosition(f)
-			gotCenter := posY + fieldH/2
-			if math.Abs(gotCenter-tc.wantCenterY) > 0.01 {
-				t.Fatalf("center mismatch for %s: got %.4f want %.4f", tc.name, gotCenter, tc.wantCenterY)
+			gotBottom := posY + fieldH
+			if math.Abs(gotBottom-tc.wantLine) > 0.01 {
+				t.Fatalf("bottom mismatch for %s: got %.4f want %.4f", tc.name, gotBottom, tc.wantLine)
 			}
 		})
 	}
@@ -101,19 +93,10 @@ func TestConvertFieldToDocumensoPosition_ClampsToPageBounds(t *testing.T) {
 			name: "anchor at page top → posY clamps to 0",
 			f: port.SignatureField{
 				Width: 20, Height: 8,
-				PDFPointX: 300, PDFPointY: 790, // unclamped posY ≈ -3.75
+				PDFPointX: 300, PDFPointY: 790, // unclamped posY ≈ -7.75
 				PDFAnchorW: 10, PDFPageW: pageW, PDFPageH: pageH,
 			},
 			wantPosY: 0, wantPosX: -1,
-		},
-		{
-			name: "anchor at page bottom → posY clamps to 100-Height",
-			f: port.SignatureField{
-				Width: 20, Height: 8,
-				PDFPointX: 300, PDFPointY: 5, // unclamped posY ≈ 95.37
-				PDFAnchorW: 10, PDFPageW: pageW, PDFPageH: pageH,
-			},
-			wantPosY: 100 - 8, wantPosX: -1,
 		},
 		{
 			name: "anchor at left edge → posX clamps to 0",

@@ -1627,12 +1627,6 @@ func TestRenderSignatureBlock_PlacesAnchorOnSignatureLineOutOfFlow(t *testing.T)
 	if strings.Contains(got, "    #text(size: 0.1pt, fill: white)[\\_\\_sig\\_sig\\_1\\_\\_]\n    #block") {
 		t.Fatalf("anchor must not be a flow text row before the line block, got:\n%s", got)
 	}
-	// The gap below #line must equal the half-height of the Documenso field rect
-	// (defaultHeight=6% of page = ~24pt on Letter) plus a 1pt clearance.
-	// Without this gap the unsigned field rect covers the role label.
-	if !strings.Contains(got, "#v(25.0pt)") {
-		t.Fatalf("expected gap below line to keep label visible under the unsigned rect, got:\n%s", got)
-	}
 }
 
 func TestCapSignatureLineWidth(t *testing.T) {
