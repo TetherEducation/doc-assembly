@@ -16,18 +16,19 @@ type DocumentCompletedHandler func(ctx context.Context, event DocumentCompletedE
 
 // DocumentCompletedEvent carries all relevant data about a completed document.
 type DocumentCompletedEvent struct {
-	DocumentID    string
-	ExternalID    *string
-	Title         *string
-	Status        entity.DocumentStatus
-	WorkspaceCode string
-	TenantCode    string
-	Environment   entity.Environment
-	CreatedAt     time.Time
-	UpdatedAt     *time.Time
-	ExpiresAt     *time.Time
-	Metadata      map[string]string
-	Recipients    []CompletedRecipient
+	DocumentID       string
+	ExternalID       *string
+	Title            *string
+	Status           entity.DocumentStatus
+	WorkspaceCode    string
+	DocumentTypeCode *string
+	TenantCode       string
+	Environment      entity.Environment
+	CreatedAt        time.Time
+	UpdatedAt        *time.Time
+	ExpiresAt        *time.Time
+	Metadata         map[string]string
+	Recipients       []CompletedRecipient
 }
 
 // CompletedRecipient holds signer information within a completed document event.
