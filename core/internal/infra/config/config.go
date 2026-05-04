@@ -171,6 +171,9 @@ func applyDatabaseEnvOverrides(cfg *DatabaseConfig) {
 	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_DATABASE_PORT")); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil {
 			cfg.Port = parsed
+		} else {
+			slog.WarnContext(context.Background(), "invalid DOC_ENGINE_DATABASE_PORT, keeping config default",
+				slog.String("value", v), slog.String("error", err.Error()))
 		}
 	}
 	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_DATABASE_USER")); v != "" {

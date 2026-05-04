@@ -4,6 +4,9 @@ package port
 // percentage coordinates. The returned (posX, posY) describe the field's TOP-LEFT
 // corner in % of page width/height.
 //
+// PDF coordinates are bottom-left origin; Documenso uses top-left percentage.
+// The formula `100 - (PDFPointY / PDFPageH) * 100` performs that inversion.
+//
 // The Typst anchor is placed at dy:0 inside the #block, so its PDF Y coordinate
 // equals the signature line's Y coordinate. Documenso centers the signature artwork
 // vertically in the field (verticalAlign="middle"), so the field must be centered on

@@ -7,10 +7,7 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
-// Sole source of truth for the Documenso coordinate conversion. If this test
-// fails to compile because of "undefined", someone re-duplicated the function.
-//
-// The invariant: Documenso centers the artwork vertically in the field, so the
+// Invariant: Documenso centers the artwork vertically in the field, so the
 // center of the field must align with the anchor (= the signature line).
 //
 //	center_pct = posY + height/2  ≈  100 - (PDFPointY / PDFPageH) * 100
@@ -85,5 +82,74 @@ func TestConvertFieldToDocumensoPosition_FallbackWhenNoPDFData(t *testing.T) {
 	x, y := port.ConvertFieldToDocumensoPosition(f)
 	if x != 35 || y != 55 {
 		t.Fatalf("fallback should preserve PositionX/Y: got (%v,%v)", x, y)
+	}
+}
+
+// Boundary cases: anchor near the page edges drives the unclamped formula
+// outside [0, 100-dim]. The clamp must cap it within range so we never send
+// out-of-page coordinates to Documenso.
+func TestConvertFieldToDocumensoPosition_ClampsToPageBounds(t *testing.T) {
+	const pageW, pageH = 612.0, 792.0
+
+	cases := []struct {
+		name     string
+		f        port.SignatureField
+		wantPosY float64 // -1 means "don't assert exact value, only that it's in range"
+		wantPosX float64
+	}{
+		{
+			name: "anchor at page top → posY clamps to 0",
+			f: port.SignatureField{
+				Width: 20, Height: 8,
+				PDFPointX: 300, PDFPointY: 790, // unclamped posY ≈ -3.75
+				PDFAnchorW: 10, PDFPageW: pageW, PDFPageH: pageH,
+			},
+			wantPosY: 0, wantPosX: -1,
+		},
+		{
+			name: "anchor at page bottom → posY clamps to 100-Height",
+			f: port.SignatureField{
+				Width: 20, Height: 8,
+				PDFPointX: 300, PDFPointY: 5, // unclamped posY ≈ 95.37
+				PDFAnchorW: 10, PDFPageW: pageW, PDFPageH: pageH,
+			},
+			wantPosY: 100 - 8, wantPosX: -1,
+		},
+		{
+			name: "anchor at left edge → posX clamps to 0",
+			f: port.SignatureField{
+				Width: 30, Height: 8,
+				PDFPointX: 0, PDFPointY: 400,
+				PDFAnchorW: 0, PDFPageW: pageW, PDFPageH: pageH,
+			},
+			wantPosX: 0, wantPosY: -1,
+		},
+		{
+			name: "anchor at right edge → posX clamps to 100-Width",
+			f: port.SignatureField{
+				Width: 30, Height: 8,
+				PDFPointX: pageW, PDFPointY: 400,
+				PDFAnchorW: 0, PDFPageW: pageW, PDFPageH: pageH,
+			},
+			wantPosX: 100 - 30, wantPosY: -1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			x, y := port.ConvertFieldToDocumensoPosition(tc.f)
+			if tc.wantPosX >= 0 && math.Abs(x-tc.wantPosX) > 0.01 {
+				t.Errorf("posX: got %.4f want %.4f", x, tc.wantPosX)
+			}
+			if tc.wantPosY >= 0 && math.Abs(y-tc.wantPosY) > 0.01 {
+				t.Errorf("posY: got %.4f want %.4f", y, tc.wantPosY)
+			}
+			if x < 0 || x > 100-tc.f.Width {
+				t.Errorf("posX out of clamp range [0, %v]: %v", 100-tc.f.Width, x)
+			}
+			if y < 0 || y > 100-tc.f.Height {
+				t.Errorf("posY out of clamp range [0, %v]: %v", 100-tc.f.Height, y)
+			}
+		})
 	}
 }
