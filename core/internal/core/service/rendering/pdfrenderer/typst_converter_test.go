@@ -1621,7 +1621,7 @@ func TestRenderSignatureBlock_PlacesAnchorOnSignatureLineOutOfFlow(t *testing.T)
 
 	got := c.renderSignatureBlock(attrs)
 
-	if !strings.Contains(got, `#place(top + center, dy: 20.0pt)[#text(size: 0.1pt, fill: white)[\_\_sig\_sig\_1\_\_]]`) {
+	if !strings.Contains(got, `#place(top + center, dy: 0.0pt)[#text(size: 0.1pt, fill: white)[\_\_sig\_sig\_1\_\_]]`) {
 		t.Fatalf("expected out-of-flow anchor placed at the signature line, got:\n%s", got)
 	}
 	if strings.Contains(got, "    #text(size: 0.1pt, fill: white)[\\_\\_sig\\_sig\\_1\\_\\_]\n    #block") {

@@ -266,33 +266,6 @@ func (s *DocumentService) createRecipients(ctx context.Context, docID string, cm
 	return recipients, nil
 }
 
-// convertFieldToProviderPosition converts raw PDF coordinates to provider-specific
-// percentage positions (0-100, Y from top). Falls back to default percentages when
-// raw extraction data is absent.
-func convertFieldToProviderPosition(f port.SignatureField) (posX, posY float64) {
-	posX, posY = f.PositionX, f.PositionY // defaults (percentages)
-
-	if f.PDFPageW > 0 && f.PDFPageH > 0 {
-		// Anchor text is centered in its grid cell, so its center X ≈ signature line center.
-		// Center the box horizontally on the anchor's center position.
-		anchorCenterPct := ((f.PDFPointX + f.PDFAnchorW/2) / f.PDFPageW) * 100
-		posX = anchorCenterPct - f.Width/2
-
-		// Flip Y: PDF bottom→top to provider top→bottom.
-		posY = 100 - ((f.PDFPointY / f.PDFPageH) * 100)
-		// Documenso positions fields by their top-left corner and vertically centers
-		// signature artwork within the field. Keep the provider field above the
-		// rendered signature line so the signature sits on that line instead of
-		// extending below it.
-		posY -= f.Height
-	}
-
-	// Clamp to valid range.
-	posX = max(0, min(posX, 100-f.Width))
-	posY = max(0, min(posY, 100-f.Height))
-	return posX, posY
-}
-
 // GetDocument retrieves a document by ID.
 func (s *DocumentService) GetDocument(ctx context.Context, id string) (*entity.Document, error) {
 	return s.documentRepo.FindByID(ctx, id)

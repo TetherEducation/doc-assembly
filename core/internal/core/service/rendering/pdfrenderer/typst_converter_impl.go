@@ -899,7 +899,7 @@ func (c *typstConverter) signature(node portabledoc.Node) string {
 
 // collectSignatureFields extracts signature field positions from the signature block.
 func (c *typstConverter) collectSignatureFields(attrs portabledoc.SignatureAttrs) {
-	const defaultHeight = 8.0 // 8% of page height
+	const defaultHeight = 8.0 // 8% of page height — Documenso field rect
 
 	// Calculate field width from line width in points.
 	fieldWidth := c.signatureFieldWidthPercent(attrs.LineWidth)
@@ -1195,9 +1195,6 @@ func (c *typstConverter) renderTypstSignatureItemContent(sig *portabledoc.Signat
 	// The image is placed out-of-flow (via #place) so its size never affects layout.
 	const slotHeightPt = 60.0 // matches editor h-20 (80px × 0.75 pxToPt)
 	const gapPt = 6.0         // matches editor mb-2 (8px × 0.75 pxToPt)
-	// Typst/pdf text extraction reports the top of this invisible marker. Nudge it
-	// down to the rendered line so provider fields can align against the real line.
-	const anchorLineOffsetPt = 20.0
 	fmt.Fprintf(&sb, "    #v(%.1fpt)\n", slotHeightPt)
 	fmt.Fprintf(&sb, "    #v(%.1fpt)\n", gapPt)
 
@@ -1218,10 +1215,10 @@ func (c *typstConverter) renderTypstSignatureItemContent(sig *portabledoc.Signat
 	}
 
 	fmt.Fprintf(&sb, "    #block(width: %s)[\n", lineWidthPt)
-	// Anchor text (invisible but present for PDF anchor extraction).
-	// It must be out-of-flow so it marks the signature line position without
-	// adding an invisible text row above the line.
-	fmt.Fprintf(&sb, "      #place(top + center, dy: %.1fpt)[#text(size: 0.1pt, fill: white)[%s]]\n", anchorLineOffsetPt, escapeTypst(anchorString))
+	// Anchor text (invisible, out-of-flow) placed at dy:0 so pdftotext reports
+	// its yMin at exactly the block top — the same Y as the #line below.
+	// The conversion formula then uses this anchor Y as the line Y directly.
+	fmt.Fprintf(&sb, "      #place(top + center, dy: 0.0pt)[#text(size: 0.1pt, fill: white)[%s]]\n", escapeTypst(anchorString))
 	if imgMarkup != "" {
 		// Float the image out-of-flow, centered above the line.
 		// dy moves the image's top edge up into the reserved slot so it sits over the line.

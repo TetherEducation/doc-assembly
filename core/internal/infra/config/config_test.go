@@ -25,6 +25,37 @@ func TestApplyServerEnvOverrides_PublicSigningFrameAncestors(t *testing.T) {
 	assert.Equal(t, []string{"https://foo.example", "https://bar.example/"}, cfg.PublicSigningFrameAncestors)
 }
 
+func TestApplyDatabaseEnvOverrides(t *testing.T) {
+	t.Setenv("DOC_ENGINE_DATABASE_HOST", "db.example")
+	t.Setenv("DOC_ENGINE_DATABASE_PORT", "6543")
+	t.Setenv("DOC_ENGINE_DATABASE_USER", "alice")
+	t.Setenv("DOC_ENGINE_DATABASE_PASSWORD", "s3cret")
+	t.Setenv("DOC_ENGINE_DATABASE_NAME", "doc_engine_test")
+	t.Setenv("DOC_ENGINE_DATABASE_SSL_MODE", "require")
+
+	cfg := &DatabaseConfig{
+		Host: "localhost", Port: 5432, User: "postgres",
+		Password: "postgres", Name: "doc_assembly", SSLMode: "disable",
+	}
+	applyDatabaseEnvOverrides(cfg)
+
+	assert.Equal(t, "db.example", cfg.Host)
+	assert.Equal(t, 6543, cfg.Port)
+	assert.Equal(t, "alice", cfg.User)
+	assert.Equal(t, "s3cret", cfg.Password)
+	assert.Equal(t, "doc_engine_test", cfg.Name)
+	assert.Equal(t, "require", cfg.SSLMode)
+}
+
+func TestApplyDatabaseEnvOverrides_InvalidPortKeepsConfigDefault(t *testing.T) {
+	t.Setenv("DOC_ENGINE_DATABASE_PORT", "not-a-port")
+
+	cfg := &DatabaseConfig{Port: 5432}
+	applyDatabaseEnvOverrides(cfg)
+
+	assert.Equal(t, 5432, cfg.Port, "invalid port must not clobber the existing config value")
+}
+
 func TestApplyStorageEnvOverrides(t *testing.T) {
 	t.Setenv("DOC_ENGINE_STORAGE_PROVIDER", "s3")
 	t.Setenv("DOC_ENGINE_STORAGE_LOCAL_DIR", "/tmp/doc-storage")

@@ -166,3 +166,7 @@ apps/doc-engine/tmp
 
 # Documenso local data (certs, etc.)
 .documenso/
+
+# Playwright MCP runtime artifacts
+.playwright-mcp/
+docs/superpowers/evidence/2026-05-03-signature-layouts/calibration-current.png
