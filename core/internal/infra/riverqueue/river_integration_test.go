@@ -131,6 +131,37 @@ func TestSigningAttemptConstraints_ActiveAttemptMustBelongToDocument(t *testing.
 	require.Error(t, err)
 }
 
+func TestSigningAttemptExecutor_CompletedEventCarriesDocumentTypeCode(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+
+	attempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, fx.documentID, fx.recipients(), fx.signerOrders())
+	require.NoError(t, err)
+	_, err = fx.pool.Exec(ctx, `UPDATE execution.signing_attempts SET status=$1 WHERE id=$2`, entity.SigningAttemptStatusCompleted, attempt.ID)
+	require.NoError(t, err)
+
+	var captured port.DocumentCompletedEvent
+	var calls atomic.Int32
+	executor := riverqueue.NewSigningAttemptExecutor(riverqueue.SigningAttemptExecutorConfig{
+		Pool:         fx.pool,
+		DocumentRepo: fx.docRepo,
+		AttemptRepo:  fx.attemptRepo,
+		CompletionHandler: port.DocumentCompletedHandler(func(_ context.Context, ev port.DocumentCompletedEvent) error {
+			captured = ev
+			calls.Add(1)
+			return nil
+		}),
+	})
+	require.NoError(t, executor.DispatchAttemptCompletion(ctx, attempt.ID))
+	require.Equal(t, int32(1), calls.Load())
+	require.Equal(t, fx.documentID, captured.DocumentID)
+	require.NotNil(t, captured.DocumentTypeCode)
+	require.Equal(t, fx.documentTypeCode, *captured.DocumentTypeCode)
+	require.Len(t, captured.Recipients, 1)
+}
+
 func TestSigningAttemptExecutor_StaleCompletionDispatchIsNoop(t *testing.T) {
 	ctx := context.Background()
 	fx := newAttemptFixture(t, ctx)
@@ -158,15 +189,16 @@ func TestSigningAttemptExecutor_StaleCompletionDispatchIsNoop(t *testing.T) {
 }
 
 type attemptFixture struct {
-	pool           *pgxpool.Pool
-	docRepo        port.DocumentRepository
-	attemptRepo    port.SigningAttemptRepository
-	tenantID       string
-	workspaceID    string
-	versionID      string
-	documentTypeID string
-	roleID         string
-	documentID     string
+	pool             *pgxpool.Pool
+	docRepo          port.DocumentRepository
+	attemptRepo      port.SigningAttemptRepository
+	tenantID         string
+	workspaceID      string
+	versionID        string
+	documentTypeID   string
+	documentTypeCode string
+	roleID           string
+	documentID       string
 }
 
 func newAttemptFixture(t *testing.T, ctx context.Context) *attemptFixture {
@@ -178,7 +210,8 @@ func newAttemptFixture(t *testing.T, ctx context.Context) *attemptFixture {
 	templateID := testhelper.CreateTestTemplate(t, pool, workspaceID, "Template", nil)
 	versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1", entity.VersionStatusPublished)
 	roleID := testhelper.CreateTestSignerRole(t, pool, versionID, "Signer", "__sig_signer__", 1)
-	documentTypeID := testhelper.CreateTestDocumentType(t, pool, tenantID, fmt.Sprintf("RIV_DOC_%d", suffix), "Document")
+	documentTypeCode := fmt.Sprintf("RIV_DOC_%d", suffix)
+	documentTypeID := testhelper.CreateTestDocumentType(t, pool, tenantID, documentTypeCode, "Document")
 	testhelper.SetTemplateDocumentType(t, pool, templateID, documentTypeID)
 	t.Cleanup(func() {
 		testhelper.CleanupWorkspace(t, pool, workspaceID)
@@ -186,14 +219,15 @@ func newAttemptFixture(t *testing.T, ctx context.Context) *attemptFixture {
 	})
 
 	fx := &attemptFixture{
-		pool:           pool,
-		docRepo:        documentrepo.New(pool),
-		attemptRepo:    signingattemptrepo.New(pool),
-		tenantID:       tenantID,
-		workspaceID:    workspaceID,
-		versionID:      versionID,
-		documentTypeID: documentTypeID,
-		roleID:         roleID,
+		pool:             pool,
+		docRepo:          documentrepo.New(pool),
+		attemptRepo:      signingattemptrepo.New(pool),
+		tenantID:         tenantID,
+		workspaceID:      workspaceID,
+		versionID:        versionID,
+		documentTypeID:   documentTypeID,
+		documentTypeCode: documentTypeCode,
+		roleID:           roleID,
 	}
 	fx.documentID = fx.createDocument(t, ctx, "attempt-doc")
 	return fx
