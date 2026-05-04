@@ -100,7 +100,20 @@ get_documenso_fields() {
   "
 }
 
-# get_provider_recipient_id <attempt_id> <role_id>
+# get_attempt_recipient_map <attempt_id>
+# Emits TSV: template_version_role_id<TAB>provider_recipient_id (one row per signer).
+# Use this once per attempt instead of N psql calls.
+get_attempt_recipient_map() {
+  local attempt_id="$1"
+  app_query "
+    SELECT template_version_role_id::text, provider_recipient_id
+    FROM execution.signing_attempt_recipients
+    WHERE attempt_id = '${attempt_id}'
+      AND provider_recipient_id IS NOT NULL
+  " | sed 's/|/\t/'
+}
+
+# get_provider_recipient_id <attempt_id> <template_version_role_id>
 # Returns Documenso integer recipientId for a given role in an attempt.
 get_provider_recipient_id() {
   local attempt_id="$1"
@@ -109,7 +122,7 @@ get_provider_recipient_id() {
     SELECT provider_recipient_id::int
     FROM execution.signing_attempt_recipients
     WHERE attempt_id = '${attempt_id}'
-      AND role_id = '${role_id}'
+      AND template_version_role_id = '${role_id}'
     LIMIT 1
   "
 }

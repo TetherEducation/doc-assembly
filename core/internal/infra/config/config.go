@@ -362,6 +362,7 @@ func LoadFromFile(filePath string) (*Config, error) {
 		}
 	}
 
+	applyDatabaseEnvOverrides(&cfg.Database)
 	applySigningEnvOverrides(&cfg.Signing)
 	applyStorageEnvOverrides(&cfg.Storage)
 	applyServerEnvOverrides(&cfg.Server)

@@ -11,7 +11,6 @@ If output.json is omitted, writes to stdout.
 
 import json
 import sys
-import os
 
 
 def patch(data: dict) -> dict:

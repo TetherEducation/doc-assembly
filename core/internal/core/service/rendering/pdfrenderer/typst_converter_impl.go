@@ -899,7 +899,9 @@ func (c *typstConverter) signature(node portabledoc.Node) string {
 
 // collectSignatureFields extracts signature field positions from the signature block.
 func (c *typstConverter) collectSignatureFields(attrs portabledoc.SignatureAttrs) {
-	const defaultHeight = 6.0 // 6% of page height (smaller → rect extends ~24pt below line, keeps label visible)
+	// 6% page height: drives the Documenso field rect size (≈47pt on Letter,
+	// extending ≈24pt below the centered line). See labelGapBelowLinePt.
+	const defaultHeight = 6.0
 
 	// Calculate field width from line width in points.
 	fieldWidth := c.signatureFieldWidthPercent(attrs.LineWidth)
@@ -1195,6 +1197,9 @@ func (c *typstConverter) renderTypstSignatureItemContent(sig *portabledoc.Signat
 	// The image is placed out-of-flow (via #place) so its size never affects layout.
 	const slotHeightPt = 60.0 // matches editor h-20 (80px × 0.75 pxToPt)
 	const gapPt = 6.0         // matches editor mb-2 (8px × 0.75 pxToPt)
+	// Gap below #line equals half the Documenso rect (defaultHeight=6% × 792pt ≈ 47pt
+	// on Letter → centered on line extends ≈24pt down) plus 1pt clearance.
+	const labelGapBelowLinePt = 25.0
 	fmt.Fprintf(&sb, "    #v(%.1fpt)\n", slotHeightPt)
 	fmt.Fprintf(&sb, "    #v(%.1fpt)\n", gapPt)
 
@@ -1225,10 +1230,7 @@ func (c *typstConverter) renderTypstSignatureItemContent(sig *portabledoc.Signat
 		fmt.Fprintf(&sb, "      #place(top + center, dy: -%.1fpt)[%s]\n", slotHeightPt+gapPt, imgMarkup)
 	}
 	sb.WriteString("      #line(length: 100%, stroke: 0.5pt)\n")
-	// Gap below the line so the unsigned Documenso field rect (centered on the line,
-	// extending ~24pt below) does not cover the label. With defaultHeight=6% on Letter:
-	// rect extends ≈24pt below line; 25pt gap places the label just below the rect bottom.
-	sb.WriteString("      #v(25.0pt)\n")
+	fmt.Fprintf(&sb, "      #v(%.1fpt)\n", labelGapBelowLinePt)
 	label := sig.Label
 	if label == "" {
 		label = "Firma"

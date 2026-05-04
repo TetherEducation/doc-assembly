@@ -132,18 +132,23 @@ set_layout_result() {
   LAYOUT_RESULTS_VALS="${LAYOUT_RESULTS_VALS}${2}|"
 }
 
-# get_layout_result <layout> — prints result or SKIPPED
+# get_layout_result <layout> — prints result or SKIPPED.
+# Bash 3.2 (macOS default) lacks `declare -A`, so we use parallel `|`-delimited
+# strings. Layout names are controlled constants (no `|`), so the workaround is safe.
 get_layout_result() {
   local key="$1"
   local i=0
-  local IFS='|'
+  local saved_IFS="$IFS"
+  IFS='|'
   for k in $LAYOUT_RESULTS_KEYS; do
     i=$((i+1))
     if [[ "$k" == "$key" ]]; then
+      IFS="$saved_IFS"
       echo "$LAYOUT_RESULTS_VALS" | cut -d'|' -f"$i"
       return
     fi
   done
+  IFS="$saved_IFS"
   echo "SKIPPED"
 }
 
@@ -354,7 +359,8 @@ with open('${DOC_PAYLOAD_FILE}', 'w') as f:
     # 13. Get attempt data
     ATTEMPT_ID=$(get_attempt_id "$DOC_ID" | tr -d '[:space:]')
     PROVIDER_DOC_ID=$(get_provider_document_id "$ATTEMPT_ID" | tr -d '[:space:]')
-    SNAPSHOT=$(get_signature_field_snapshot "$ATTEMPT_ID" | tr -d '[:space:]')
+    # JSON: strip only newlines so embedded spaces in string values survive.
+    SNAPSHOT=$(get_signature_field_snapshot "$ATTEMPT_ID" | tr -d '\n\r')
 
     if [[ -z "$ATTEMPT_ID" || -z "$PROVIDER_DOC_ID" || -z "$SNAPSHOT" || "$SNAPSHOT" == "null" ]]; then
       echo "ERROR[${LAYOUT}]: missing attempt data (attempt=${ATTEMPT_ID} provider=${PROVIDER_DOC_ID} snapshot_len=${#SNAPSHOT})" >&2
@@ -393,30 +399,28 @@ with open('${DOC_PAYLOAD_FILE}', 'w') as f:
 
     log "[${LAYOUT}] Documenso fields retrieved"
 
-    # 15. Compute deltas and emit CSV rows.
+    # 15. Pre-fetch role → recipientId mapping in one query, then compute deltas.
     # Metric: the field center (posY + height/2) must equal the anchor Y (= line Y).
     # The snapshot's PositionY stores the line_top_pct used as the anchor reference.
     # Both are in Documenso's top-down % coordinate system.
+    RECIPIENT_MAP=$(get_attempt_recipient_map "$ATTEMPT_ID")
+    HAS_FAIL=0
     python3 - \
       "${LAYOUT}" \
-      "${ATTEMPT_ID}" \
-      "${PROVIDER_DOC_ID}" \
       "${DELTA_THRESHOLD}" \
       "${CSV_OUT}" \
       "${SNAPSHOT}" \
-      "${DOCUMENSO_FIELDS}" <<'PYEOF'
+      "${DOCUMENSO_FIELDS}" \
+      "${RECIPIENT_MAP}" <<'PYEOF' || HAS_FAIL=$?
 import json
 import sys
-import os
-import subprocess
 
 layout = sys.argv[1]
-attempt_id = sys.argv[2]
-provider_doc_id = sys.argv[3]
-threshold = float(sys.argv[4])
-csv_out = sys.argv[5]
-snapshot_raw = sys.argv[6]
-documenso_raw = sys.argv[7]
+threshold = float(sys.argv[2])
+csv_out = sys.argv[3]
+snapshot_raw = sys.argv[4]
+documenso_raw = sys.argv[5]
+recipient_map_raw = sys.argv[6]
 
 snapshot = json.loads(snapshot_raw)
 
@@ -433,8 +437,16 @@ for line in documenso_raw.strip().split('\n'):
         center = float(parts[3].strip())
         documenso_map[rec_id] = {'positionY': pos_y, 'height': h, 'center_pct': center}
 
-env = {**os.environ, 'PGPASSWORD': 'postgres'}
+# Parse role_id → provider_recipient_id mapping (TSV from get_attempt_recipient_map)
+role_to_recipient = {}
+for line in recipient_map_raw.strip().split('\n'):
+    if not line.strip():
+        continue
+    parts = line.split('\t')
+    if len(parts) == 2:
+        role_to_recipient[parts[0].strip()] = parts[1].strip()
 
+any_fail = False
 rows = []
 for field in snapshot:
     role_id = (field.get('RoleID') or field.get('roleId') or field.get('role_id', '')).strip()
@@ -445,15 +457,7 @@ for field in snapshot:
     # The line position (center_pct that Documenso field should center on) is:
     snapshot_center = snapshot_pos_y + snapshot_height / 2
 
-    # Look up Documenso recipient ID from app DB
-    result = subprocess.run(
-        ['psql', '-h', 'localhost', '-p', '5432', '-U', 'postgres', '-d', 'doc_assembly',
-         '-t', '-A',
-         '-c', f"SELECT provider_recipient_id FROM execution.signing_attempt_recipients "
-               f"WHERE attempt_id = '{attempt_id}' AND template_version_role_id = '{role_id}' LIMIT 1"],
-        env=env, capture_output=True, text=True
-    )
-    prov_rec_id_str = result.stdout.strip()
+    prov_rec_id_str = role_to_recipient.get(role_id, '')
 
     if not prov_rec_id_str:
         print(f"  WARN: no provider_recipient_id for role {role_id[:8]}", file=sys.stderr)
@@ -492,28 +496,26 @@ with open(csv_out, 'a') as f:
     for r in rows:
         f.write(r + '\n')
 
-# Check for any ERROR or FAIL
-has_error = any(',ERROR' in r or ',FAIL' in r for r in rows)
-sys.exit(1 if has_error else 0)
+# Distinguish verdict mismatch (FAIL=1) from infrastructure error (ERROR=2)
+# so the bash summary can route them to separate counters.
+has_fail = any(',FAIL' in r for r in rows)
+has_err = any(',ERROR' in r for r in rows)
+sys.exit(2 if has_err else (1 if has_fail else 0))
 PYEOF
 
     log "[${LAYOUT}] Done"
+    exit "${HAS_FAIL:-0}"
+  )
+  LAYOUT_RC=$?
 
-  ) && {
-    LAYOUT_STATUS="PASS"
-    log "[${LAYOUT}] Result: PASS"
-  } || {
-    LAYOUT_STATUS="ERROR"
-    log "[${LAYOUT}] Result: ERROR — continuing with next layout"
-  }
-
-  case "$LAYOUT_STATUS" in
-    PASS)  PASS_COUNT=$((PASS_COUNT + 1)) ;;
-    ERROR) ERROR_COUNT=$((ERROR_COUNT + 1)) ;;
+  case "$LAYOUT_RC" in
+    0) LAYOUT_STATUS="PASS";  PASS_COUNT=$((PASS_COUNT + 1)) ;;
+    1) LAYOUT_STATUS="FAIL";  FAIL_COUNT=$((FAIL_COUNT + 1)) ;;
+    *) LAYOUT_STATUS="ERROR"; ERROR_COUNT=$((ERROR_COUNT + 1)) ;;
   esac
 
+  log "[${LAYOUT}] Result: ${LAYOUT_STATUS}"
   set_layout_result "$LAYOUT" "$LAYOUT_STATUS"
-
 done
 
 # ---- Summary ---------------------------------------------------------------
@@ -526,9 +528,10 @@ for LAYOUT in "${LAYOUTS[@]}"; do
   log "  ${LAYOUT}: ${result}"
 done
 log ""
-log "Layouts processed: $((PASS_COUNT + ERROR_COUNT))"
-log "Successful: ${PASS_COUNT}"
-log "Errors: ${ERROR_COUNT}"
+log "Layouts processed: $((PASS_COUNT + FAIL_COUNT + ERROR_COUNT))"
+log "PASS:   ${PASS_COUNT}"
+log "FAIL:   ${FAIL_COUNT}"
+log "ERROR:  ${ERROR_COUNT}"
 log ""
 log "CSV output: ${CSV_OUT}"
 
