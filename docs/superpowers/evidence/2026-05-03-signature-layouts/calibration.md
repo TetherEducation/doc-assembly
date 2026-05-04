@@ -90,3 +90,42 @@ signature line, covering the role label and subtitle rendered in the Typst PDF b
 **Numerical verification (rerun with new binary, all 13 layouts):**
 All `delta_pct = 0.0000` (center of 6% field exactly on the anchor line).
 Height confirmed as `6.0000` in Documenso field table for all 32 fields.
+
+## 2026-05-04 update: rect-above-line invariant (commit `d268255`)
+
+**Problem:** The center-alignment formula (`posY = lineTopPct - height/2`) placed the field center
+on the line, meaning the bottom half of the rect crossed below the line. User screenshot confirmed
+the cursive "Firma" text inside the rect visually bisected the signature line.
+
+**New invariant:** Rect must sit *entirely above* the line — the line acts as the baseline beneath
+the signature artwork. This is the conventional placement for signature blocks in legal documents:
+artwork above, line below, label below line.
+
+**New formula:**
+```
+posY = lineTopPct - height
+```
+
+Where `posY + height = lineTopPct` (rect bottom exactly on the line).
+
+**Consequences:**
+- `posY` shifts up by `height/2` relative to the center-align formula.
+- The `#v(25.0pt)` Typst gap added in iteration 2 is no longer needed because the rect no longer
+  crosses the line and cannot obscure the label below it.
+- `defaultHeight` restored to `8%` (6% was only needed to minimize the below-line intrusion).
+- With `height=8%` and rect entirely above the line, the label sits directly below the rect bottom
+  (= line position), with ample vertical separation.
+
+**Updated metric (harness):**
+- SQL: `(positionY + height) AS bottom_pct`  (was `positionY + height/2 AS center_pct`)
+- Python: `delta = |bottom_doc - snapshot_line_top|`  where `snapshot_line_top = snapshot_pos_y + snapshot_height`
+- CSV column: `bottom_pct` (was `center_pct`)
+
+**Numerical verification (rerun with new binary mtime 21:10:07, all 13 layouts):**
+All `delta_pct = 0.0000` (bottom of 8% field exactly on the anchor line).
+Height confirmed as `8.0000` in Documenso field table for all 38 fields.
+
+**Visual verification:** Playwright screenshots for all 13 layouts confirm:
+- Active green rect sits entirely above the signature line.
+- "Firma" cursive artwork is centered inside the rect (near bottom of rect since bottom=line).
+- Below the line: role label ("Firma Apoderado/a") and subtitle ("Apoderado/a") fully visible.

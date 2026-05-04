@@ -50,3 +50,20 @@ covering the role label and subtitle text in the rendered PDF background.
 **Rerun verification:** All 13 layouts rerun with fresh documents using new binary (mtime 14:18:45, after both fix commits). All numeric: delta=0.0000, height=6.0000. All visual: Playwright screenshots show rect on line, label and subtitle fully visible.
 
 **All 13 layouts pass visual bar:** rect-on-line=YES, label-visible=YES, subtitle-visible=YES.
+
+## Third iteration fix — rect-above-line invariant (commit `d268255`)
+
+**Problem discovered:** User screenshot confirmed the green rect was crossing the signature line —
+the cursive "Firma" artwork inside the rect visually bisected the line.
+The `posY = lineTopPct - height/2` formula placed the field *center* on the line,
+so the bottom half of the rect extended below the line into the label area.
+
+**Fix applied:**
+- `signature_position.go`: `posY = lineTopPct - height` (was `- height/2`). Rect bottom now sits exactly on the line; entire rect is above the line.
+- `typst_converter_impl.go`: removed `labelGapBelowLinePt` and the `#v(25.0pt)` write (no longer needed — the rect no longer crosses the line). Restored `defaultHeight = 8%` (was 6%).
+- Tests updated to bottom-aligns invariant: `posY + height == lineTopPct`.
+- Harness `run_e2e.sh`: metric updated from center_pct (posY+h/2) to bottom_pct (posY+h); SQL query updated; CSV header updated; Python delta changed to `|bottom_doc - line_top_pct|`.
+
+**Rerun verification:** All 13 layouts rerun with fresh documents using new binary (mtime 21:10:07, after commit d268255). All numeric: delta=0.0000, height=8.0000. All visual: Playwright screenshots show rect entirely above the signature line, label and subtitle fully visible below.
+
+**All 13 layouts pass visual bar:** rect-above-line=YES, label-visible=YES, subtitle-visible=YES.
