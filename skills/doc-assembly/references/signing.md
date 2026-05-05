@@ -1,0 +1,152 @@
+# Signing Providers and the Attempt Model
+
+doc-assembly handles signing via an *attempt-scoped* model executed by River jobs. Your wrapper plugs in the external signing service.
+
+## Mental model in 60 seconds
+
+- `signing_attempts` is the technical source of truth for one attempt to sign one document. `documents` is a business projection updated only when `document.active_attempt_id` matches the attempt the worker is processing.
+- Every state transition + next River job enqueue happens in **one PostgreSQL transaction**. There is no race where a state change is committed but its job is missing (or vice-versa).
+- Job kinds (defined inside the lib): `render_attempt_pdf`, `submit_attempt_to_provider`, `reconcile_provider_submission`, `refresh_attempt_provider_status`, `cleanup_provider_attempt`, `dispatch_attempt_completion`.
+- Uniqueness is `attempt_id + phase` for 24 h. Regenerating a document creates a new attempt; old jobs for the old attempt cannot mutate the new one.
+- A **correlation key** of the form `{document_id}:{attempt_id}` is what links your provider record back to the engine. You must persist it on the provider side and accept it on lookups.
+
+You implement the *boundary* (one provider, one webhook parser). The lib drives everything else.
+
+## When you need a custom provider
+
+Built-in: `mock` (dev), `documenso` (production-ready). Implement your own when integrating PandaDoc, DocuSign, or any other signature service.
+
+```go
+engine.SetSigningProvider(&MyProvider{
+    apiClient: ...,
+})
+engine.SetWebhookHandlers(map[string]sdk.WebhookHandler{
+    "myprovider": &MyWebhookHandler{},
+})
+```
+
+Once `SetSigningProvider` is called the `signing.provider` config key is ignored; other `signing.*` config (api_key, base_url, webhook_secret) is still loaded and you may consume it via `sdk.NewWithConfig` if you want.
+
+## SigningProvider interface
+
+`sdk.SigningProvider` (alias of `port.SigningProvider`) requires:
+
+| Method | Called from | Purpose |
+|---|---|---|
+| `SubmitAttemptDocument` | `submit_attempt_to_provider` worker | Upload the immutable PDF + recipients to the provider. Persist the returned `ProviderDocumentID` and per-recipient IDs. Use the `CorrelationKey` you receive — do NOT mint a new one. |
+| `FindProviderDocumentByCorrelationKey` | `reconcile_provider_submission` worker | When the engine is unsure whether a previous submission landed (timeout, ambiguous error), look up by correlation key and return the canonical state. Return `Found: false` if no record exists. |
+| `GetProviderDocumentStatus` | `refresh_attempt_provider_status` worker | Fetch current status + per-recipient state by `ProviderDocumentID`. |
+| `GetAttemptRecipientEmbeddedURL` | embedded signing endpoint | Return the iframe URL + CSP frame-src domain for a recipient. Return `port.ErrEmbeddingNotSupported` if the provider only emails. |
+| `DownloadCompletedPDF` | public/admin completed download fallback | Stream the signed PDF when local storage does not have one. Required when `ProviderCapabilities.CanDownloadCompletedPDF` is true. |
+| `CleanupProviderDocument` | `cleanup_provider_attempt` worker | Best-effort cancel/void/delete for superseded attempts. Idempotent. |
+| `ProviderCapabilities()` | scheduling + reconciliation | Static description of what your provider supports. Misreporting causes wrong recovery decisions. |
+| `ProviderName()` | logging + webhook routing | Stable identifier; matches the key used in `SetWebhookHandlers` and in the webhook URL `/webhooks/signing/{name}`. |
+
+### `ProviderCapabilities`
+
+```go
+type ProviderCapabilities struct {
+    CanFindByCorrelationKey bool
+    CanCancel               bool
+    CanVoid                 bool
+    CanDelete               bool
+    CanEmbedSigning         bool
+    CanDownloadCompletedPDF bool
+    WebhookIncludesIDs      bool
+}
+```
+
+If `WebhookIncludesIDs == false` the engine will resolve attempts purely by correlation key (set `CanFindByCorrelationKey == true`), so make sure your `FindProviderDocumentByCorrelationKey` is reliable.
+
+### `ProviderError`
+
+Wrap provider failures so the engine can decide what to do:
+
+```go
+return nil, &port.ProviderError{
+    Class:          entity.ProviderErrorTransient,  // or Permanent / Ambiguous
+    Phase:          entity.ProviderSubmitPhaseUpload,
+    ProviderName:   "myprovider",
+    Retryable:      true,
+    SafeToResubmit: false,
+    Message:        "rate limited",
+    Cause:          err,
+}
+```
+
+Classification meanings:
+
+| Class | Engine reaction |
+|---|---|
+| `ProviderErrorTransient` | River retries the same attempt with backoff. |
+| `ProviderErrorPermanent` | Attempt fails terminally; no retry. |
+| `ProviderErrorAmbiguous` | Engine reconciles by correlation key (you must support `CanFindByCorrelationKey` for this to work). |
+| `ProviderErrorStaleConflict` | The active attempt changed under us; this job is a no-op. |
+
+If you return a generic error (not a `ProviderError`), the engine treats it as transient with default retry policy.
+
+## WebhookHandler interface
+
+You ONLY parse; the engine applies. The lib handles the HTTP route at `/webhooks/signing/{providerName}`.
+
+```go
+type MyWebhookHandler struct{ secret string }
+
+func (h *MyWebhookHandler) ParseWebhook(ctx context.Context, req *sdk.ParseWebhookRequest) (*sdk.WebhookEvent, error) {
+    if !verifyHMAC(req.Body, req.Signature, h.secret) {
+        return nil, errors.New("invalid signature")
+    }
+    var p providerEvent
+    if err := json.Unmarshal(req.Body, &p); err != nil {
+        return nil, err
+    }
+    return &sdk.WebhookEvent{
+        EventType:              p.Type,
+        ProviderName:           "myprovider",
+        ProviderDocumentID:     p.DocumentID,
+        ProviderCorrelationKey: p.CorrelationKey, // required when WebhookIncludesIDs is false
+        ProviderRecipientID:    p.RecipientID,
+        DocumentStatus:         mapDocStatus(p.Status),
+        RecipientStatus:        mapRecipientStatus(p.RecipientStatus),
+        Timestamp:              p.Timestamp,
+        RawPayload:             req.Body,
+    }, nil
+}
+```
+
+Always validate the signature/secret before parsing. Never trust event ordering: the engine reconciles concurrent / out-of-order events using the attempt model.
+
+## Recipient ordering
+
+`SubmitAttemptDocumentRequest.Recipients` is sorted by `SignerOrder` (sequential signing). Forward this order to the provider verbatim — if the provider supports parallel-only signing and you collapse the order, audit trails diverge.
+
+## SignatureFieldPosition
+
+The lib gives you per-role coordinates with origin **bottom-left** and units in PDF points (1 pt = 1/72 in). Translate to your provider's coordinate system inside `SubmitAttemptDocument`. Roles are matched by `RoleID`, not by name, so you can rename signer roles in the editor without re-mapping fields.
+
+## Capacity / safety rules
+
+- Submission MUST be idempotent. The engine may re-call `SubmitAttemptDocument` for the same `(DocumentID, AttemptID)` after a partial failure. Use the `CorrelationKey` to detect "already submitted" and return the existing IDs instead of creating a duplicate.
+- Cleanup MUST be idempotent. `CleanupProviderDocument` may run multiple times against the same provider doc; second call should succeed silently.
+- `DownloadCompletedPDF` MUST stream actual signed bytes — do not return a redirect URL; the engine writes those bytes to local storage.
+
+## Local Documenso (built-in option)
+
+If you do not need a custom provider, the easiest setup is:
+
+```yaml
+signing:
+  provider: documenso
+  base_url: http://localhost:3000
+  signing_base_url: http://localhost:3000
+  api_key: <token>
+  webhook_secret: <secret>
+  webhook_url: http://host.docker.internal:8080/webhooks/signing/documenso
+```
+
+Spin up the bundled stack from the lib repo: `docker compose -f docker-compose.documenso.yml up -d`. Then create a webhook in Documenso targeting `webhook_url`.
+
+## See also
+
+- [completion-events.md](completion-events.md) — once everyone signs, your `OnDocumentCompleted` runs.
+- [pitfalls.md](pitfalls.md) — common signing-provider mistakes (lost correlation keys, non-idempotent submit, etc.).
