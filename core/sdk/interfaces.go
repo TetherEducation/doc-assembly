@@ -37,6 +37,18 @@ type TemplateVersionSearchParams = port.TemplateVersionSearchParams
 // TemplateVersionSearchItem is one search result item.
 type TemplateVersionSearchItem = port.TemplateVersionSearchItem
 
+// InternalTemplateContextResolver can resolve a full internal template context in one read model.
+type InternalTemplateContextResolver = port.InternalTemplateContextResolver
+
+// InternalTemplateContextSearchAdapter exposes full context search to resolvers.
+type InternalTemplateContextSearchAdapter = port.InternalTemplateContextSearchAdapter
+
+// InternalTemplateContextSearchParams are filters for full context search.
+type InternalTemplateContextSearchParams = port.InternalTemplateContextSearchParams
+
+// InternalTemplateContext is the full context resolved for internal create.
+type InternalTemplateContext = port.InternalTemplateContext
+
 // --- Process Resolution ---
 
 // ProcessResolver provides process discovery and validation.
@@ -49,6 +61,9 @@ type ProcessInfo = port.ProcessInfo
 
 // WorkspaceInjectableProvider supplies workspace-specific injectable definitions.
 type WorkspaceInjectableProvider = port.WorkspaceInjectableProvider
+
+// FilteredWorkspaceInjectableProvider optionally supplies only requested injectable definitions.
+type FilteredWorkspaceInjectableProvider = port.FilteredWorkspaceInjectableProvider
 
 // PublicDocumentAccessAuthenticator provides custom auth for /public/doc/:documentId.
 type PublicDocumentAccessAuthenticator = port.PublicDocumentAccessAuthenticator

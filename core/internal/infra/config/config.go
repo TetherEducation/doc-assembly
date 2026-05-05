@@ -16,6 +16,8 @@ const serverPublicSigningFrameAncestorsEnv = "DOC_ENGINE_SERVER_PUBLIC_SIGNING_F
 // Load reads configuration from YAML files and environment variables.
 // Environment variables take precedence over YAML values.
 // Env prefix: DOC_ENGINE_ (e.g., DOC_ENGINE_SERVER_PORT)
+//
+//nolint:funlen // Configuration loading is intentionally linear so precedence remains easy to audit.
 func Load() (*Config, error) {
 	v := viper.New()
 
@@ -81,6 +83,7 @@ func Load() (*Config, error) {
 	applyStorageEnvOverrides(&cfg.Storage)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
 	applySigningSessionAuthEnvOverrides(&cfg.SigningSessionAuth)
+	applyInternalAPIEnvOverrides(&cfg.InternalAPI)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
 	applyWorkerEnvOverrides(&cfg.Worker)
 
@@ -128,6 +131,7 @@ func setDefaults(v *viper.Viper) {
 
 	// Internal API defaults
 	v.SetDefault("internal_api.enabled", true)
+	v.SetDefault("internal_api.api_key_auth_mode", InternalAPIKeyAuthModeMemory)
 
 	// Worker defaults
 	v.SetDefault("worker.enabled", false)
@@ -371,6 +375,7 @@ func LoadFromFile(filePath string) (*Config, error) {
 	applyServerEnvOverrides(&cfg.Server)
 	applyAuthPanelEnvOverrides(cfg.Auth.Panel)
 	applySigningSessionAuthEnvOverrides(&cfg.SigningSessionAuth)
+	applyInternalAPIEnvOverrides(&cfg.InternalAPI)
 	applyBootstrapEnvOverrides(&cfg.Bootstrap)
 
 	if err := cfg.Auth.DiscoverAll(context.Background()); err != nil {
@@ -379,6 +384,24 @@ func LoadFromFile(filePath string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// applyInternalAPIEnvOverrides reads DOC_ENGINE_INTERNAL_API_* env vars.
+func applyInternalAPIEnvOverrides(cfg *InternalAPIConfig) {
+	if cfg == nil {
+		return
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_INTERNAL_API_ENABLED")); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.Enabled = parsed
+		} else {
+			slog.WarnContext(context.Background(), "invalid DOC_ENGINE_INTERNAL_API_ENABLED, keeping config default",
+				slog.String("value", v), slog.String("error", err.Error()))
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("DOC_ENGINE_INTERNAL_API_API_KEY_AUTH_MODE")); v != "" {
+		cfg.APIKeyAuthMode = v
+	}
 }
 
 // MustLoad loads configuration and panics on error.

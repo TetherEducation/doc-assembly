@@ -14,6 +14,9 @@ type SystemInjectableRepository interface {
 	// Both the definition and assignment must be active (is_active = true).
 	FindActiveKeysForWorkspace(ctx context.Context, workspaceID string) ([]string, error)
 
+	// FindActiveKeysForWorkspaceAndKeys returns active system injectable keys restricted to the requested keys.
+	FindActiveKeysForWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]string, error)
+
 	// FindAllDefinitions returns a map of all definition keys to their is_active status.
 	FindAllDefinitions(ctx context.Context) (map[string]bool, error)
 

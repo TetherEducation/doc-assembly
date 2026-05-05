@@ -25,6 +25,13 @@ type WorkspaceInjectableProvider interface {
 	ResolveInjectables(ctx context.Context, req *ResolveInjectablesRequest) (*ResolveInjectablesResult, error)
 }
 
+// FilteredWorkspaceInjectableProvider can be optionally implemented by providers that can
+// list only requested injectable codes. Providers that don't implement it keep using
+// WorkspaceInjectableProvider.GetInjectables.
+type FilteredWorkspaceInjectableProvider interface {
+	GetInjectablesByCodes(ctx context.Context, injCtx *entity.InjectorContext, codes []string) (*GetInjectablesResult, error)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET INJECTABLES (listing for editor)
 // ─────────────────────────────────────────────────────────────────────────────

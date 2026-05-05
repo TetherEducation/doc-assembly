@@ -61,7 +61,7 @@ func (r *Repository) CreateBatch(ctx context.Context, recipients []*entity.Docum
 	}
 
 	results := r.pool.SendBatch(ctx, batch)
-	defer results.Close()
+	defer func() { _ = results.Close() }()
 
 	for i := 0; i < len(recipients); i++ {
 		var id string

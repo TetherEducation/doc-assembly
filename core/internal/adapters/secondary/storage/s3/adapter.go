@@ -88,7 +88,7 @@ func (a *Adapter) Download(ctx context.Context, req *port.StorageRequest) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("s3: getting object: %w", err)
 	}
-	defer result.Body.Close()
+	defer func() { _ = result.Body.Close() }()
 
 	data, err := io.ReadAll(result.Body)
 	if err != nil {

@@ -124,6 +124,333 @@ const (
 		WHERE tt.template_id = ANY($1)
 		ORDER BY t.name`
 
+	queryFindInternalTemplateBaseContext = `
+		WITH tenant AS (
+			SELECT id, code, name, description, is_system, status, COALESCE(settings, '{}') AS settings, created_at, updated_at
+			FROM tenancy.tenants
+			WHERE code = UPPER(TRIM($1))
+			LIMIT 1
+		), workspace AS (
+			SELECT w.id, w.tenant_id, w.name, w.code, w.type, w.status,
+			       w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at
+			FROM tenancy.workspaces w
+			JOIN tenant t ON w.tenant_id = t.id
+			WHERE w.code = UPPER(TRIM($2))
+			  AND w.is_sandbox = FALSE
+			LIMIT 1
+		), sys_tenant AS (
+			SELECT id
+			FROM tenancy.tenants
+			WHERE is_system = true
+			LIMIT 1
+		), doc_type AS (
+			SELECT dt.id, dt.tenant_id, dt.code, dt.name, COALESCE(dt.description, '{}') AS description,
+			       CASE WHEN dt.tenant_id != (SELECT id FROM tenant) THEN true ELSE false END AS is_global,
+			       dt.created_at, dt.updated_at
+			FROM content.document_types dt
+			JOIN tenant t ON TRUE
+			LEFT JOIN sys_tenant st ON TRUE
+			WHERE dt.code = UPPER(TRIM($3))
+			  AND (dt.tenant_id = t.id OR dt.tenant_id = st.id)
+			ORDER BY CASE WHEN dt.tenant_id = t.id THEN 0 ELSE 1 END
+			LIMIT 1
+		)
+		SELECT
+			t.id, t.code, t.name, t.description, t.is_system, t.status, t.settings, t.created_at, t.updated_at,
+			w.id, w.tenant_id, w.name, w.code, w.type, w.status, w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at,
+			dt.id, dt.tenant_id, dt.code, dt.name, dt.description, dt.is_global, dt.created_at, dt.updated_at
+		FROM tenant t
+		LEFT JOIN workspace w ON TRUE
+		LEFT JOIN doc_type dt ON TRUE
+	`
+
+	queryFindTemplateWorkspaceByTemplateID = `
+		SELECT
+			t.id, t.workspace_id, t.folder_id, t.document_type_id, t.title,
+			t.is_public_library, t.process, t.process_type, t.created_at, t.updated_at,
+			w.id, w.tenant_id, w.name, w.code, w.type, w.status,
+			w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at
+		FROM content.templates t
+		JOIN tenancy.workspaces w ON w.id = t.workspace_id
+		WHERE t.id = $1
+	`
+
+	queryFindResolutionCandidates = `
+		WITH input_workspaces AS (
+			SELECT UPPER(TRIM(code)) AS code, ordinality::int AS priority
+			FROM unnest($2::text[]) WITH ORDINALITY AS w(code, ordinality)
+			WHERE TRIM(code) <> ''
+		), requested_tags AS (
+			SELECT UPPER(TRIM(tag)) AS name
+			FROM unnest($5::text[]) AS tags(tag)
+			WHERE TRIM(tag) <> ''
+		), tenant AS (
+			SELECT id, code
+			FROM tenancy.tenants
+			WHERE code = UPPER(TRIM($1))
+			LIMIT 1
+		), sys_tenant AS (
+			SELECT id
+			FROM tenancy.tenants
+			WHERE is_system = true
+			LIMIT 1
+		), doc_type AS (
+			SELECT dt.id, dt.code
+			FROM content.document_types dt
+			JOIN tenant t ON TRUE
+			LEFT JOIN sys_tenant st ON TRUE
+			WHERE dt.code = UPPER(TRIM($3))
+			  AND (dt.tenant_id = t.id OR dt.tenant_id = st.id)
+			ORDER BY CASE WHEN dt.tenant_id = t.id THEN 0 ELSE 1 END
+			LIMIT 1
+		), workspace_candidates AS (
+			SELECT w.id, w.code, iw.priority
+			FROM input_workspaces iw
+			JOIN tenant t ON TRUE
+			JOIN tenancy.workspaces w ON w.tenant_id = t.id AND w.code = iw.code
+		), template_candidates AS (
+			SELECT
+				wc.id AS workspace_id,
+				wc.code AS workspace_code,
+				wc.priority,
+				dt.id AS document_type_id,
+				dt.code AS document_type_code,
+				tpl.id AS template_id,
+				tpl.process,
+				CASE WHEN tpl.process = normalized.process THEN 0 ELSE 1 END AS process_priority
+			FROM workspace_candidates wc
+			JOIN doc_type dt ON TRUE
+			CROSS JOIN LATERAL (
+				SELECT COALESCE(NULLIF(UPPER(TRIM($4)), ''), 'DEFAULT') AS process
+			) normalized
+			JOIN content.templates tpl ON tpl.workspace_id = wc.id
+				AND tpl.document_type_id = dt.id
+				AND tpl.process IN (normalized.process, 'DEFAULT')
+		), ranked_templates AS (
+			SELECT *
+			FROM (
+				SELECT tc.*, ROW_NUMBER() OVER (PARTITION BY tc.workspace_id ORDER BY tc.process_priority ASC) AS rn
+				FROM template_candidates tc
+			) ranked
+			WHERE rn = 1
+		), version_candidates AS (
+			SELECT
+				t.id AS tenant_id,
+				t.code AS tenant_code,
+				rt.workspace_id,
+				rt.workspace_code,
+				rt.document_type_id,
+				rt.document_type_code,
+				rt.template_id,
+				tv.id AS version_id,
+				rt.priority
+			FROM ranked_templates rt
+			JOIN tenant t ON TRUE
+			JOIN content.template_versions tv ON tv.template_id = rt.template_id
+			WHERE (
+				$6::boolean IS NULL
+				OR ($6::boolean = TRUE AND tv.status = 'PUBLISHED')
+				OR ($6::boolean = FALSE AND tv.status <> 'PUBLISHED')
+			)
+		), candidates_with_tags AS (
+			SELECT
+				vc.tenant_id,
+				vc.tenant_code,
+				vc.workspace_id,
+				vc.workspace_code,
+				vc.document_type_id,
+				vc.document_type_code,
+				vc.template_id,
+				vc.version_id,
+				COALESCE(array_agg(UPPER(t.name) ORDER BY UPPER(t.name)) FILTER (WHERE t.name IS NOT NULL), ARRAY[]::text[]) AS tags,
+				vc.priority
+			FROM version_candidates vc
+			LEFT JOIN content.template_tags tt ON tt.template_id = vc.template_id AND cardinality($5::text[]) > 0
+			LEFT JOIN organizer.tags t ON t.id = tt.tag_id AND cardinality($5::text[]) > 0
+			GROUP BY vc.tenant_id, vc.tenant_code, vc.workspace_id, vc.workspace_code,
+				vc.document_type_id, vc.document_type_code, vc.template_id, vc.version_id, vc.priority
+		)
+		SELECT tenant_id, tenant_code, workspace_id, workspace_code,
+		       document_type_id, document_type_code, template_id, version_id, tags, priority
+		FROM candidates_with_tags c
+		WHERE NOT EXISTS (SELECT 1 FROM requested_tags)
+		   OR EXISTS (
+		       SELECT 1 FROM requested_tags rt
+		       WHERE rt.name = ANY(c.tags)
+		   )
+		ORDER BY priority ASC
+	`
+
+	queryFindInternalTemplateContext = `
+		WITH input_workspaces AS (
+			SELECT UPPER(TRIM(code)) AS code, ordinality::int AS priority
+			FROM unnest($3::text[]) WITH ORDINALITY AS w(code, ordinality)
+			WHERE TRIM(code) <> ''
+		), requested_tags AS (
+			SELECT UPPER(TRIM(tag)) AS name
+			FROM unnest($6::text[]) AS tags(tag)
+			WHERE TRIM(tag) <> ''
+		), tenant AS (
+			SELECT id, code, name, description, is_system, status, COALESCE(settings, '{}') AS settings, created_at, updated_at
+			FROM tenancy.tenants
+			WHERE code = UPPER(TRIM($1))
+			LIMIT 1
+		), requested_workspace AS (
+			SELECT w.id, w.tenant_id, w.name, w.code, w.type, w.status,
+			       w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at
+			FROM tenancy.workspaces w
+			JOIN tenant t ON w.tenant_id = t.id
+			WHERE w.code = UPPER(TRIM($2))
+			  AND w.is_sandbox = FALSE
+			LIMIT 1
+		), sys_tenant AS (
+			SELECT id
+			FROM tenancy.tenants
+			WHERE is_system = true
+			LIMIT 1
+		), doc_type AS (
+			SELECT dt.id, dt.tenant_id, dt.code, dt.name, COALESCE(dt.description, '{}') AS description,
+			       CASE WHEN dt.tenant_id != (SELECT id FROM tenant) THEN true ELSE false END AS is_global,
+			       dt.created_at, dt.updated_at
+			FROM content.document_types dt
+			JOIN tenant t ON TRUE
+			LEFT JOIN sys_tenant st ON TRUE
+			WHERE dt.code = UPPER(TRIM($4))
+			  AND (dt.tenant_id = t.id OR dt.tenant_id = st.id)
+			ORDER BY CASE WHEN dt.tenant_id = t.id THEN 0 ELSE 1 END
+			LIMIT 1
+		), workspace_candidates AS (
+			SELECT w.id, w.code, iw.priority
+			FROM input_workspaces iw
+			JOIN tenant t ON TRUE
+			JOIN tenancy.workspaces w ON w.tenant_id = t.id AND w.code = iw.code
+		), template_candidates AS (
+			SELECT
+				wc.id AS workspace_id,
+				wc.code AS workspace_code,
+				wc.priority,
+				dt.id AS document_type_id,
+				dt.code AS document_type_code,
+				tpl.id AS template_id,
+				tpl.process,
+				CASE WHEN tpl.process = normalized.process THEN 0 ELSE 1 END AS process_priority
+			FROM workspace_candidates wc
+			JOIN doc_type dt ON TRUE
+			CROSS JOIN LATERAL (
+				SELECT COALESCE(NULLIF(UPPER(TRIM($5)), ''), 'DEFAULT') AS process
+			) normalized
+			JOIN content.templates tpl ON tpl.workspace_id = wc.id
+				AND tpl.document_type_id = dt.id
+				AND tpl.process IN (normalized.process, 'DEFAULT')
+		), ranked_templates AS (
+			SELECT *
+			FROM (
+				SELECT tc.*, ROW_NUMBER() OVER (PARTITION BY tc.workspace_id ORDER BY tc.process_priority ASC) AS rn
+				FROM template_candidates tc
+			) ranked
+			WHERE rn = 1
+		), version_candidates AS (
+			SELECT
+				rt.workspace_id,
+				rt.workspace_code,
+				rt.template_id,
+				tv.id AS version_id,
+				rt.priority
+			FROM ranked_templates rt
+			JOIN content.template_versions tv ON tv.template_id = rt.template_id
+			WHERE (
+				$7::boolean IS NULL
+				OR ($7::boolean = TRUE AND tv.status = 'PUBLISHED')
+				OR ($7::boolean = FALSE AND tv.status <> 'PUBLISHED')
+			)
+		), candidates_with_tags AS (
+			SELECT
+				vc.workspace_id,
+				vc.workspace_code,
+				vc.template_id,
+				vc.version_id,
+				COALESCE(array_agg(UPPER(t.name) ORDER BY UPPER(t.name)) FILTER (WHERE t.name IS NOT NULL), ARRAY[]::text[]) AS tags,
+				vc.priority
+			FROM version_candidates vc
+			LEFT JOIN content.template_tags tt ON tt.template_id = vc.template_id AND cardinality($6::text[]) > 0
+			LEFT JOIN organizer.tags t ON t.id = tt.tag_id AND cardinality($6::text[]) > 0
+			GROUP BY vc.workspace_id, vc.workspace_code, vc.template_id, vc.version_id, vc.priority
+		), selected AS (
+			SELECT workspace_id, workspace_code, template_id, version_id
+			FROM candidates_with_tags c
+			WHERE NOT EXISTS (SELECT 1 FROM requested_tags)
+			   OR EXISTS (
+			       SELECT 1 FROM requested_tags rt
+			       WHERE rt.name = ANY(c.tags)
+			   )
+			ORDER BY priority ASC
+			LIMIT 1
+		)
+		SELECT
+			ten.id, ten.code, ten.name, ten.description, ten.is_system, ten.status, ten.settings, ten.created_at, ten.updated_at,
+			rw.id, rw.tenant_id, rw.name, rw.code, rw.type, rw.status, rw.is_sandbox, rw.sandbox_of_id, rw.created_at, rw.updated_at,
+			dt.id, dt.tenant_id, dt.code, dt.name, dt.description, dt.is_global, dt.created_at, dt.updated_at,
+			tv.id, tv.template_id, tv.version_number, tv.name, tv.description, tv.content_structure,
+			tv.status, tv.scheduled_publish_at, tv.scheduled_archive_at, tv.signing_workflow_config,
+			tv.published_at, tv.archived_at, tv.published_by, tv.archived_by, tv.created_by, tv.created_at, tv.updated_at,
+			COALESCE(injectables.items, '[]'::jsonb) AS injectables,
+			COALESCE(signer_roles.items, '[]'::jsonb) AS signer_roles,
+			tpl.id, tpl.workspace_id, tpl.folder_id, tpl.document_type_id, tpl.title,
+			tpl.is_public_library, tpl.process, tpl.process_type, tpl.created_at, tpl.updated_at,
+			w.id, w.tenant_id, w.name, w.code, w.type, w.status,
+			w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at
+		FROM tenant ten
+		LEFT JOIN requested_workspace rw ON TRUE
+		JOIN doc_type dt ON TRUE
+		JOIN selected s ON TRUE
+		JOIN content.template_versions tv ON tv.id = s.version_id
+		JOIN content.templates tpl ON tpl.id = s.template_id
+		JOIN tenancy.workspaces w ON w.id = s.workspace_id
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', tvi.id,
+					'templateVersionId', tvi.template_version_id,
+					'injectableDefinitionId', tvi.injectable_definition_id,
+					'systemInjectableKey', tvi.system_injectable_key,
+					'isRequired', tvi.is_required,
+					'defaultValue', tvi.default_value,
+					'createdAt', tvi.created_at,
+					'definition', CASE WHEN id.id IS NULL THEN NULL ELSE jsonb_build_object(
+						'id', id.id,
+						'workspaceId', id.workspace_id,
+						'key', id.key,
+						'label', id.label,
+						'description', id.description,
+						'dataType', id.data_type,
+						'createdAt', id.created_at,
+						'updatedAt', id.updated_at
+					) END
+				)
+				ORDER BY COALESCE(id.key, tvi.system_injectable_key)
+			) AS items
+			FROM content.template_version_injectables tvi
+			LEFT JOIN content.injectable_definitions id ON tvi.injectable_definition_id = id.id
+			WHERE tvi.template_version_id = tv.id
+		) injectables ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', id,
+					'templateVersionId', template_version_id,
+					'roleName', role_name,
+					'anchorString', anchor_string,
+					'signerOrder', signer_order,
+					'createdAt', created_at,
+					'updatedAt', updated_at
+				)
+				ORDER BY signer_order
+			) AS items
+			FROM content.template_version_signer_roles
+			WHERE template_version_id = tv.id
+		) signer_roles ON TRUE
+	`
+
 	// Document Type queries
 	queryFindByDocumentType = `
 		SELECT id, workspace_id, folder_id, document_type_id, title, is_public_library, process, process_type, created_at, updated_at

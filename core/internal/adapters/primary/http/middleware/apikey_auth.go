@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -33,7 +34,6 @@ func InternalKeyAuth(keyRepo port.AutomationAPIKeyRepository) gin.HandlerFunc {
 		}
 
 		keyHash := hashAPIKey(rawKey)
-
 		key, err := keyRepo.FindByHash(c.Request.Context(), keyHash)
 		if err != nil || key == nil {
 			abortWithError(c, http.StatusUnauthorized, entity.ErrInvalidAPIKey)
@@ -46,14 +46,75 @@ func InternalKeyAuth(keyRepo port.AutomationAPIKeyRepository) gin.HandlerFunc {
 			return
 		}
 
-		// Fire and forget: update last used timestamp with bounded timeout
-		// to prevent goroutine/connection leaks under load.
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-			_ = keyRepo.TouchLastUsed(ctx, key.ID)
-		}()
+		touchInternalAPIKeyLastUsed(keyRepo, key.ID)
 
 		c.Next()
 	}
+}
+
+// InternalKeyAuthPreloaded creates a middleware that validates internal API keys
+// from a snapshot loaded once at service startup. It intentionally avoids any
+// request-path lookup; key changes require service restart when this mode is used.
+func InternalKeyAuthPreloaded(keyRepo port.AutomationAPIKeyRepository) gin.HandlerFunc {
+	keyIDsByHash, err := loadInternalAPIKeys(context.Background(), keyRepo)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "loading internal API keys failed",
+			slog.String("error", err.Error()))
+		return func(c *gin.Context) {
+			abortWithError(c, http.StatusUnauthorized, entity.ErrInvalidAPIKey)
+		}
+	}
+
+	slog.InfoContext(context.Background(), "internal API keys loaded in memory",
+		slog.Int("keys_count", len(keyIDsByHash)))
+
+	return func(c *gin.Context) {
+		rawKey := c.GetHeader(APIKeyHeader)
+		if rawKey == "" {
+			abortWithError(c, http.StatusUnauthorized, entity.ErrMissingAPIKey)
+			return
+		}
+
+		keyID, ok := keyIDsByHash[hashAPIKey(rawKey)]
+		if !ok {
+			abortWithError(c, http.StatusUnauthorized, entity.ErrInvalidAPIKey)
+			return
+		}
+
+		touchInternalAPIKeyLastUsed(keyRepo, keyID)
+
+		c.Next()
+	}
+}
+
+func loadInternalAPIKeys(
+	ctx context.Context,
+	keyRepo port.AutomationAPIKeyRepository,
+) (map[string]string, error) {
+	keys, err := keyRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	keyIDsByHash := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if key == nil {
+			continue
+		}
+		if !key.IsActive || key.IsRevoked() || key.KeyType != entity.KeyTypeInternal {
+			continue
+		}
+		keyIDsByHash[key.KeyHash] = key.ID
+	}
+	return keyIDsByHash, nil
+}
+
+func touchInternalAPIKeyLastUsed(keyRepo port.AutomationAPIKeyRepository, keyID string) {
+	// Fire and forget: update last used timestamp with bounded timeout
+	// to prevent goroutine/connection leaks under load.
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = keyRepo.TouchLastUsed(ctx, keyID)
+	}()
 }

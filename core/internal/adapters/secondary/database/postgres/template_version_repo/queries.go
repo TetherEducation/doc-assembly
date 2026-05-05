@@ -18,21 +18,117 @@ const (
 		FROM content.template_versions
 		WHERE id = $1`
 
-	queryInjectablesWithDefinitions = `
+	queryFindByIDWithDetails = `
 		SELECT
-			tvi.id, tvi.template_version_id, tvi.injectable_definition_id, tvi.system_injectable_key,
-			tvi.is_required, tvi.default_value, tvi.created_at,
-			id.id, id.workspace_id, id.key, id.label, id.description, id.data_type, id.created_at, id.updated_at
-		FROM content.template_version_injectables tvi
-		LEFT JOIN content.injectable_definitions id ON tvi.injectable_definition_id = id.id
-		WHERE tvi.template_version_id = $1
-		ORDER BY COALESCE(id.key, tvi.system_injectable_key)`
+			tv.id, tv.template_id, tv.version_number, tv.name, tv.description, tv.content_structure,
+			tv.status, tv.scheduled_publish_at, tv.scheduled_archive_at, tv.signing_workflow_config,
+			tv.published_at, tv.archived_at, tv.published_by, tv.archived_by, tv.created_by, tv.created_at, tv.updated_at,
+			COALESCE(injectables.items, '[]'::jsonb) AS injectables,
+			COALESCE(signer_roles.items, '[]'::jsonb) AS signer_roles
+		FROM content.template_versions tv
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', tvi.id,
+					'templateVersionId', tvi.template_version_id,
+					'injectableDefinitionId', tvi.injectable_definition_id,
+					'systemInjectableKey', tvi.system_injectable_key,
+					'isRequired', tvi.is_required,
+					'defaultValue', tvi.default_value,
+					'createdAt', tvi.created_at,
+					'definition', CASE WHEN id.id IS NULL THEN NULL ELSE jsonb_build_object(
+						'id', id.id,
+						'workspaceId', id.workspace_id,
+						'key', id.key,
+						'label', id.label,
+						'description', id.description,
+						'dataType', id.data_type,
+						'createdAt', id.created_at,
+						'updatedAt', id.updated_at
+					) END
+				)
+				ORDER BY COALESCE(id.key, tvi.system_injectable_key)
+			) AS items
+			FROM content.template_version_injectables tvi
+			LEFT JOIN content.injectable_definitions id ON tvi.injectable_definition_id = id.id
+			WHERE tvi.template_version_id = tv.id
+		) injectables ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', id,
+					'templateVersionId', template_version_id,
+					'roleName', role_name,
+					'anchorString', anchor_string,
+					'signerOrder', signer_order,
+					'createdAt', created_at,
+					'updatedAt', updated_at
+				)
+				ORDER BY signer_order
+			) AS items
+			FROM content.template_version_signer_roles
+			WHERE template_version_id = tv.id
+		) signer_roles ON TRUE
+		WHERE tv.id = $1`
 
-	querySignerRoles = `
-		SELECT id, template_version_id, role_name, anchor_string, signer_order, created_at, updated_at
-		FROM content.template_version_signer_roles
-		WHERE template_version_id = $1
-		ORDER BY signer_order`
+	queryFindByIDWithDetailsAndTemplateWorkspace = `
+		SELECT
+			tv.id, tv.template_id, tv.version_number, tv.name, tv.description, tv.content_structure,
+			tv.status, tv.scheduled_publish_at, tv.scheduled_archive_at, tv.signing_workflow_config,
+			tv.published_at, tv.archived_at, tv.published_by, tv.archived_by, tv.created_by, tv.created_at, tv.updated_at,
+			COALESCE(injectables.items, '[]'::jsonb) AS injectables,
+			COALESCE(signer_roles.items, '[]'::jsonb) AS signer_roles,
+			t.id, t.workspace_id, t.folder_id, t.document_type_id, t.title,
+			t.is_public_library, t.process, t.process_type, t.created_at, t.updated_at,
+			w.id, w.tenant_id, w.name, w.code, w.type, w.status,
+			w.is_sandbox, w.sandbox_of_id, w.created_at, w.updated_at
+		FROM content.template_versions tv
+		JOIN content.templates t ON t.id = tv.template_id
+		JOIN tenancy.workspaces w ON w.id = t.workspace_id
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', tvi.id,
+					'templateVersionId', tvi.template_version_id,
+					'injectableDefinitionId', tvi.injectable_definition_id,
+					'systemInjectableKey', tvi.system_injectable_key,
+					'isRequired', tvi.is_required,
+					'defaultValue', tvi.default_value,
+					'createdAt', tvi.created_at,
+					'definition', CASE WHEN id.id IS NULL THEN NULL ELSE jsonb_build_object(
+						'id', id.id,
+						'workspaceId', id.workspace_id,
+						'key', id.key,
+						'label', id.label,
+						'description', id.description,
+						'dataType', id.data_type,
+						'createdAt', id.created_at,
+						'updatedAt', id.updated_at
+					) END
+				)
+				ORDER BY COALESCE(id.key, tvi.system_injectable_key)
+			) AS items
+			FROM content.template_version_injectables tvi
+			LEFT JOIN content.injectable_definitions id ON tvi.injectable_definition_id = id.id
+			WHERE tvi.template_version_id = tv.id
+		) injectables ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', id,
+					'templateVersionId', template_version_id,
+					'roleName', role_name,
+					'anchorString', anchor_string,
+					'signerOrder', signer_order,
+					'createdAt', created_at,
+					'updatedAt', updated_at
+				)
+				ORDER BY signer_order
+			) AS items
+			FROM content.template_version_signer_roles
+			WHERE template_version_id = tv.id
+		) signer_roles ON TRUE
+		WHERE tv.id = $1`
 
 	queryFindByTemplateID = `
 		SELECT id, template_id, version_number, name, description, content_structure,

@@ -14,6 +14,13 @@ type TemplateVersionFilters struct {
 	Offset int
 }
 
+// TemplateVersionContext contains a version with the template/workspace context needed by generation.
+type TemplateVersionContext struct {
+	Version   *entity.TemplateVersionWithDetails
+	Template  *entity.Template
+	Workspace *entity.Workspace
+}
+
 // TemplateVersionRepository defines the interface for template version data access.
 type TemplateVersionRepository interface {
 	// Create creates a new template version.
@@ -24,6 +31,9 @@ type TemplateVersionRepository interface {
 
 	// FindByIDWithDetails finds a template version by ID with all related data (injectables, signer roles).
 	FindByIDWithDetails(ctx context.Context, id string) (*entity.TemplateVersionWithDetails, error)
+
+	// FindByIDWithDetailsAndTemplateWorkspace finds a template version with details plus template/workspace context.
+	FindByIDWithDetailsAndTemplateWorkspace(ctx context.Context, id string) (*TemplateVersionContext, error)
 
 	// FindByTemplateID lists all versions for a template.
 	FindByTemplateID(ctx context.Context, templateID string) ([]*entity.TemplateVersion, error)

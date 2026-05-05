@@ -157,7 +157,7 @@ func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef 
 	if err != nil {
 		return "", fmt.Errorf("executing request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
@@ -207,7 +207,7 @@ func (a *Adapter) addRecipients(ctx context.Context, envelopeID string, recipien
 	if err != nil {
 		return nil, fmt.Errorf("executing recipients request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
@@ -310,7 +310,7 @@ func (a *Adapter) sendFieldsToAPI(ctx context.Context, envelopeID string, fieldP
 	if err != nil {
 		return fmt.Errorf("executing fields request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
@@ -472,7 +472,7 @@ func (a *Adapter) DownloadCompletedPDF(ctx context.Context, req *port.DownloadCo
 	if err != nil {
 		return nil, fmt.Errorf("executing completed PDF request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -507,7 +507,7 @@ func (a *Adapter) fetchEnvelope(ctx context.Context, providerDocID string) (*env
 	if err != nil {
 		return nil, fmt.Errorf("executing request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -627,7 +627,7 @@ func (a *Adapter) postEnvelopeAction(
 	if err != nil {
 		return fmt.Errorf("%s: %w", execReqErrMsg, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)

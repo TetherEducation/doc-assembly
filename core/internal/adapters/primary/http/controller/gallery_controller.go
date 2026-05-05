@@ -130,7 +130,7 @@ func (c *GalleryController) UploadAsset(ctx *gin.Context) {
 		respondError(ctx, http.StatusBadRequest, err)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	data, err := io.ReadAll(file)
 	if err != nil {

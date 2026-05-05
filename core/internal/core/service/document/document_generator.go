@@ -72,15 +72,17 @@ func NewDocumentGenerator(
 
 // generationContext holds intermediate state during document generation.
 type generationContext struct {
-	workspaceID     string
-	injectables     []*entity.InjectableDefinition
-	version         *entity.TemplateVersionWithDetails
-	portableDoc     *portable_doc.Document
-	referencedCodes []string
-	payload         any
-	resolvedValues  map[string]any
-	resolveErrors   map[string]error
-	recipients      []*entity.DocumentRecipient
+	workspaceID      string
+	injectables      []*entity.InjectableDefinition
+	dbInjectables    []*entity.InjectableDefinition
+	activeSystemKeys []string
+	version          *entity.TemplateVersionWithDetails
+	portableDoc      *portable_doc.Document
+	referencedCodes  []string
+	payload          any
+	resolvedValues   map[string]any
+	resolveErrors    map[string]error
+	recipients       []*entity.DocumentRecipient
 }
 
 // GenerateDocument is the centralized method for document generation.
@@ -136,12 +138,71 @@ func (g *DocumentGenerator) PrepareDocument(
 	}, nil
 }
 
+// prepareDocumentWithResolvedTemplate resolves injectables and recipients using template data
+// already loaded by the caller. It avoids reloading template/version during internal create.
+func (g *DocumentGenerator) prepareDocumentWithResolvedTemplate(
+	ctx context.Context,
+	mapCtx *port.MapperContext,
+	workspaceID string,
+	version *entity.TemplateVersionWithDetails,
+	dbInjectables []*entity.InjectableDefinition,
+	activeSystemKeys []string,
+) (*PreparedDocumentData, error) {
+	genCtx, err := g.prepareGenerationContextWithResolvedTemplate(
+		ctx,
+		mapCtx,
+		workspaceID,
+		version,
+		dbInjectables,
+		activeSystemKeys,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PreparedDocumentData{
+		WorkspaceID:    genCtx.workspaceID,
+		Version:        genCtx.version,
+		PortableDoc:    genCtx.portableDoc,
+		ResolvedValues: genCtx.resolvedValues,
+		Recipients:     genCtx.recipients,
+	}, nil
+}
+
 // prepareGenerationContext fetches all required data and resolves injectables.
 func (g *DocumentGenerator) prepareGenerationContext(
 	ctx context.Context,
 	mapCtx *port.MapperContext,
 ) (*generationContext, error) {
 	genCtx, err := g.fetchTemplateData(ctx, mapCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := g.resolveAndBuildRecipients(ctx, mapCtx, genCtx); err != nil {
+		return nil, err
+	}
+
+	return genCtx, nil
+}
+
+// prepareGenerationContextWithResolvedTemplate resolves injectables and recipients from already loaded template data.
+func (g *DocumentGenerator) prepareGenerationContextWithResolvedTemplate(
+	ctx context.Context,
+	mapCtx *port.MapperContext,
+	workspaceID string,
+	version *entity.TemplateVersionWithDetails,
+	dbInjectables []*entity.InjectableDefinition,
+	activeSystemKeys []string,
+) (*generationContext, error) {
+	genCtx, err := g.fetchTemplateDataFromResolved(
+		ctx,
+		mapCtx,
+		workspaceID,
+		version,
+		dbInjectables,
+		activeSystemKeys,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -178,22 +239,6 @@ func (g *DocumentGenerator) fetchTemplateData(ctx context.Context, mapCtx *port.
 		return nil, err
 	}
 
-	// Build InjectorContext for provider integration during injectable listing
-	injCtx := entity.NewInjectorContext(
-		mapCtx.ExternalID,
-		mapCtx.TemplateID,
-		mapCtx.TransactionalID,
-		string(mapCtx.Operation),
-		mapCtx.Environment,
-		mapCtx.Headers,
-		nil,
-	)
-
-	genCtx.injectables, err = g.fetchAvailableInjectables(ctx, genCtx.workspaceID, injCtx)
-	if err != nil {
-		return nil, err
-	}
-
 	if genCtx.version == nil {
 		genCtx.version, err = g.findPublishedVersion(ctx, templateID)
 		if err != nil {
@@ -201,9 +246,53 @@ func (g *DocumentGenerator) fetchTemplateData(ctx context.Context, mapCtx *port.
 		}
 	}
 
+	if err := g.finishTemplateData(ctx, mapCtx, genCtx); err != nil {
+		return nil, err
+	}
+
+	return genCtx, nil
+}
+
+func (g *DocumentGenerator) fetchTemplateDataFromResolved(
+	ctx context.Context,
+	mapCtx *port.MapperContext,
+	workspaceID string,
+	version *entity.TemplateVersionWithDetails,
+	dbInjectables []*entity.InjectableDefinition,
+	activeSystemKeys []string,
+) (*generationContext, error) {
+	if workspaceID == "" {
+		return nil, fmt.Errorf("workspace id is required to prepare resolved template")
+	}
+	if version == nil {
+		return nil, fmt.Errorf("template version is required to prepare resolved template")
+	}
+	if !version.IsPublished() {
+		return nil, entity.ErrInternalTemplateResolutionNotFound
+	}
+	mapCtx.TemplateID = version.TemplateID
+
+	genCtx := &generationContext{
+		workspaceID:      workspaceID,
+		version:          version,
+		dbInjectables:    dbInjectables,
+		activeSystemKeys: activeSystemKeys,
+	}
+	if err := g.finishTemplateData(ctx, mapCtx, genCtx); err != nil {
+		return nil, err
+	}
+	return genCtx, nil
+}
+
+func (g *DocumentGenerator) finishTemplateData(
+	ctx context.Context,
+	mapCtx *port.MapperContext,
+	genCtx *generationContext,
+) error {
+	var err error
 	genCtx.portableDoc, err = g.parseContentStructure(genCtx.version.ContentStructure)
 	if err != nil {
-		return nil, fmt.Errorf("parsing content structure: %w", err)
+		return fmt.Errorf("parsing content structure: %w", err)
 	}
 
 	versionCodes := collectVersionInjectableCodes(genCtx.version.Injectables)
@@ -219,20 +308,43 @@ func (g *DocumentGenerator) fetchTemplateData(ctx context.Context, mapCtx *port.
 		"version_codes", versionCodes,
 		"role_codes", roleCodes,
 	)
+
+	// Build InjectorContext for provider integration during injectable listing
+	injCtx := entity.NewInjectorContext(
+		mapCtx.ExternalID,
+		mapCtx.TemplateID,
+		mapCtx.TransactionalID,
+		string(mapCtx.Operation),
+		mapCtx.Environment,
+		mapCtx.Headers,
+		nil,
+	)
+	usedPreloadedInjectables := genCtx.preloadedInjectablesCoverReferencedCodes()
+	if usedPreloadedInjectables {
+		genCtx.injectables, err = g.completePreloadedInjectables(ctx, genCtx, injCtx)
+	} else {
+		genCtx.injectables, err = g.fetchAvailableInjectables(ctx, genCtx.workspaceID, injCtx, genCtx.referencedCodes)
+	}
+	if err != nil {
+		return err
+	}
 	slog.InfoContext(ctx, "available injectables for generation",
 		"workspace_id", genCtx.workspaceID,
 		"available_injectables_count", len(genCtx.injectables),
+		"preloaded", usedPreloadedInjectables,
 	)
-	slog.DebugContext(ctx, "available injectable keys",
-		"workspace_id", genCtx.workspaceID,
-		"keys", extractInjectableKeys(genCtx.injectables),
-	)
-
-	if err := g.validateRequiredInjectables(ctx, genCtx.referencedCodes, genCtx.injectables); err != nil {
-		return nil, err
+	if slog.Default().Enabled(ctx, slog.LevelDebug) {
+		slog.DebugContext(ctx, "available injectable keys",
+			"workspace_id", genCtx.workspaceID,
+			"keys", extractInjectableKeys(genCtx.injectables),
+		)
 	}
 
-	return genCtx, nil
+	if err := g.validateRequiredInjectables(ctx, genCtx.referencedCodes, genCtx.injectables); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (g *DocumentGenerator) findVersionByID(
@@ -299,15 +411,70 @@ func (g *DocumentGenerator) findWorkspaceID(ctx context.Context, templateID stri
 	return template.WorkspaceID, nil
 }
 
+func (g *generationContext) preloadedInjectablesCoverReferencedCodes() bool {
+	if len(g.dbInjectables) == 0 && len(g.activeSystemKeys) == 0 {
+		return false
+	}
+
+	available := make(map[string]struct{}, len(g.dbInjectables)+len(g.activeSystemKeys))
+	for _, injectable := range g.dbInjectables {
+		if injectable == nil || injectable.Key == "" {
+			continue
+		}
+		available[injectable.Key] = struct{}{}
+	}
+	for _, key := range g.activeSystemKeys {
+		if key == "" {
+			continue
+		}
+		available[key] = struct{}{}
+	}
+	for _, code := range g.referencedCodes {
+		if _, ok := available[code]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (g *DocumentGenerator) completePreloadedInjectables(
+	ctx context.Context,
+	genCtx *generationContext,
+	injCtx *entity.InjectorContext,
+) ([]*entity.InjectableDefinition, error) {
+	result, err := g.injectableUC.CompleteGenerationInjectables(ctx, &injectable_uc.CompleteGenerationInjectablesRequest{
+		WorkspaceID:      genCtx.workspaceID,
+		Environment:      injCtx.Environment(),
+		Codes:            genCtx.referencedCodes,
+		DBInjectables:    genCtx.dbInjectables,
+		ActiveSystemKeys: genCtx.activeSystemKeys,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("completing preloaded injectables: %w", err)
+	}
+
+	slog.InfoContext(ctx, "completed preloaded injectables",
+		"workspace_id", genCtx.workspaceID,
+		"requested_codes_count", len(genCtx.referencedCodes),
+		"db_injectables_count", len(genCtx.dbInjectables),
+		"active_system_keys_count", len(genCtx.activeSystemKeys),
+		"injectables_count", len(result.Injectables),
+		"groups_count", len(result.Groups),
+	)
+	return result.Injectables, nil
+}
+
 // fetchAvailableInjectables retrieves all injectables available for the workspace.
 func (g *DocumentGenerator) fetchAvailableInjectables(
 	ctx context.Context,
 	workspaceID string,
 	injCtx *entity.InjectorContext,
+	codes []string,
 ) ([]*entity.InjectableDefinition, error) {
 	result, err := g.injectableUC.ListInjectables(ctx, &injectable_uc.ListInjectablesRequest{
 		WorkspaceID: workspaceID,
 		Environment: injCtx.Environment(),
+		Codes:       codes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing available injectables: %w", err)
@@ -315,13 +482,16 @@ func (g *DocumentGenerator) fetchAvailableInjectables(
 
 	slog.InfoContext(ctx, "listed available injectables",
 		"workspace_id", workspaceID,
+		"requested_codes_count", len(codes),
 		"injectables_count", len(result.Injectables),
 		"groups_count", len(result.Groups),
 	)
-	slog.DebugContext(ctx, "listed available injectable keys",
-		"workspace_id", workspaceID,
-		"keys", extractInjectableKeys(result.Injectables),
-	)
+	if slog.Default().Enabled(ctx, slog.LevelDebug) {
+		slog.DebugContext(ctx, "listed available injectable keys",
+			"workspace_id", workspaceID,
+			"keys", extractInjectableKeys(result.Injectables),
+		)
+	}
 	return result.Injectables, nil
 }
 

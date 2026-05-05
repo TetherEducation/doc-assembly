@@ -279,7 +279,7 @@ func downloadImage(ctx context.Context, url string, httpClient *http.Client) ([]
 	if err != nil {
 		return nil, "", fmt.Errorf("downloading %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", fmt.Errorf("downloading %s: status %d", url, resp.StatusCode)

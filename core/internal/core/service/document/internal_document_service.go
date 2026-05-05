@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
@@ -78,6 +79,16 @@ func (s *InternalDocumentService) CreateDocument(
 		return nil, err
 	}
 
+	if !cmd.ForceCreate {
+		replay, ok, err := s.findInternalCreateReplay(ctx, cmd, resolved)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			return replay, nil
+		}
+	}
+
 	mapCtx := &port.MapperContext{
 		ExternalID:        cmd.ExternalID,
 		TemplateID:        resolved.template.ID,
@@ -104,7 +115,14 @@ func (s *InternalDocumentService) CreateDocument(
 		"payload_bytes", len(mapCtx.RawBody),
 	)
 
-	prepared, err := s.generator.PrepareDocument(ctx, mapCtx)
+	prepared, err := s.generator.prepareDocumentWithResolvedTemplate(
+		ctx,
+		mapCtx,
+		resolved.workspace.ID,
+		resolved.version,
+		resolved.dbInjectables,
+		resolved.activeSystemKeys,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("preparing internal document: %w", err)
 	}
@@ -128,24 +146,67 @@ func (s *InternalDocumentService) CreateDocument(
 		return nil, fmt.Errorf("persisting internal document: %w", err)
 	}
 
-	stored, err := s.documentRepo.FindByIDWithRecipients(ctx, txResult.DocumentID)
-	if err != nil {
-		return nil, fmt.Errorf("loading internal document after persistence: %w", err)
+	stored := txResult.Document
+	if stored == nil {
+		var err error
+		stored, err = s.documentRepo.FindByIDWithRecipients(ctx, txResult.DocumentID)
+		if err != nil {
+			return nil, fmt.Errorf("loading internal document after persistence: %w", err)
+		}
 	}
 
-	return &documentuc.InternalCreateResult{
+	result := &documentuc.InternalCreateResult{
 		Document:                     stored,
 		IdempotentReplay:             txResult.IdempotentReplay,
 		SupersededPreviousDocumentID: txResult.SupersededPreviousDocumentID,
-	}, nil
+	}
+
+	return result, nil
+}
+
+func (s *InternalDocumentService) findInternalCreateReplay(
+	ctx context.Context,
+	cmd documentuc.InternalCreateCommand,
+	resolved *internalResolvedContext,
+) (*documentuc.InternalCreateResult, bool, error) {
+	docID, ok, err := s.documentRepo.FindInternalCreateReplay(
+		ctx,
+		resolved.workspace.ID,
+		resolved.documentType.ID,
+		cmd.ExternalID,
+		cmd.TransactionalID,
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("checking internal document replay: %w", err)
+	}
+	if !ok {
+		return nil, false, nil
+	}
+
+	stored, err := s.documentRepo.FindByIDWithRecipients(ctx, docID)
+	if err != nil {
+		return nil, false, fmt.Errorf("loading internal document replay: %w", err)
+	}
+
+	slog.InfoContext(ctx, "internal create replay found before generation",
+		"document_id", docID,
+		"external_id", cmd.ExternalID,
+		"transactional_id", cmd.TransactionalID,
+	)
+	return &documentuc.InternalCreateResult{
+		Document:         stored,
+		IdempotentReplay: true,
+	}, true, nil
 }
 
 type internalResolvedContext struct {
-	tenant       *entity.Tenant
-	workspace    *entity.Workspace
-	documentType *entity.DocumentType
-	template     *entity.Template
-	version      *entity.TemplateVersionWithDetails
+	tenant           *entity.Tenant
+	workspace        *entity.Workspace
+	documentType     *entity.DocumentType
+	template         *entity.Template
+	version          *entity.TemplateVersionWithDetails
+	dbInjectables    []*entity.InjectableDefinition
+	activeSystemKeys []string
 }
 
 //nolint:funlen,gocognit,gocyclo // Resolution has explicit fallback and validation stages.
@@ -165,29 +226,6 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		"document_type_code", documentTypeCode,
 	)
 
-	tenant, err := s.tenantRepo.FindByCode(ctx, tenantCode)
-	if err != nil {
-		return nil, fmt.Errorf("resolving tenant by code: %w", err)
-	}
-	slog.InfoContext(ctx, "resolved tenant", slog.String("tenant_id", tenant.ID), slog.String("tenant_code", tenantCode))
-
-	workspace, err := s.workspaceRepo.FindByCode(ctx, tenant.ID, workspaceCode)
-	if err != nil {
-		if !errors.Is(err, entity.ErrWorkspaceNotFound) || s.customResolver == nil {
-			return nil, fmt.Errorf("resolving workspace by code: %w", err)
-		}
-		slog.InfoContext(ctx, "workspace not found, deferring to template resolver",
-			slog.String("workspace_code", workspaceCode))
-	} else {
-		slog.InfoContext(ctx, "resolved workspace", slog.String("workspace_id", workspace.ID), slog.String("workspace_code", workspaceCode))
-	}
-
-	docType, err := s.docTypeRepo.FindByCodeWithGlobalFallback(ctx, tenant.ID, documentTypeCode)
-	if err != nil {
-		return nil, fmt.Errorf("resolving document type by code: %w", err)
-	}
-	slog.InfoContext(ctx, "resolved document type", slog.String("document_type_id", docType.ID), slog.String("document_type_code", documentTypeCode))
-
 	process := strings.ToUpper(strings.TrimSpace(cmd.Process))
 	if process == "" {
 		process = entity.DefaultProcess
@@ -196,7 +234,6 @@ func (s *InternalDocumentService) resolveTemplateContext(
 	if processType == "" {
 		processType = string(entity.DefaultProcessType)
 	}
-
 	resolverReq := &port.TemplateResolverRequest{
 		TenantCode:      tenantCode,
 		WorkspaceCode:   workspaceCode,
@@ -212,6 +249,49 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		Environment:     cmd.Environment,
 	}
 
+	if resolved, ok, err := s.resolveInternalTemplateContextFast(ctx, resolverReq); ok || err != nil {
+		return resolved, err
+	}
+
+	baseQuery := port.InternalTemplateBaseQuery{
+		TenantCode:    tenantCode,
+		WorkspaceCode: workspaceCode,
+		DocumentType:  documentTypeCode,
+	}
+	baseContextStartedAt := time.Now()
+	baseContext, err := s.templateRepo.FindInternalTemplateBaseContext(ctx, baseQuery)
+	slog.InfoContext(ctx, "internal template base context timing",
+		slog.Duration("duration", time.Since(baseContextStartedAt)),
+		slog.String("tenant_code", tenantCode),
+		slog.String("workspace_code", workspaceCode),
+		slog.String("document_type_code", documentTypeCode),
+	)
+	if err != nil {
+		if errors.Is(err, entity.ErrTenantNotFound) {
+			return nil, fmt.Errorf("resolving tenant by code: %w", err)
+		}
+		if errors.Is(err, entity.ErrDocumentTypeNotFound) {
+			return nil, fmt.Errorf("resolving document type by code: %w", err)
+		}
+		return nil, fmt.Errorf("resolving internal template base context: %w", err)
+	}
+	tenant := baseContext.Tenant
+	workspace := baseContext.Workspace
+	docType := baseContext.DocumentType
+	slog.InfoContext(ctx, "resolved tenant", slog.String("tenant_id", tenant.ID), slog.String("tenant_code", tenantCode))
+
+	if workspace == nil {
+		if s.customResolver == nil {
+			return nil, fmt.Errorf("resolving workspace by code: %w", entity.ErrWorkspaceNotFound)
+		}
+		slog.InfoContext(ctx, "workspace not found, deferring to template resolver",
+			slog.String("workspace_code", workspaceCode))
+	} else {
+		slog.InfoContext(ctx, "resolved workspace", slog.String("workspace_id", workspace.ID), slog.String("workspace_code", workspaceCode))
+	}
+
+	slog.InfoContext(ctx, "resolved document type", slog.String("document_type_id", docType.ID), slog.String("document_type_code", documentTypeCode))
+
 	if workspace != nil {
 		if err := s.applySandboxWorkspaceCode(ctx, resolverReq, workspace.ID, cmd.Environment); err != nil {
 			return nil, err
@@ -223,27 +303,28 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		return nil, err
 	}
 
-	version, err := s.versionRepo.FindByIDWithDetails(ctx, *versionID)
+	versionContextStartedAt := time.Now()
+	versionContext, err := s.versionRepo.FindByIDWithDetailsAndTemplateWorkspace(ctx, *versionID)
+	slog.InfoContext(ctx, "internal template context timing",
+		slog.String("stage", "load_version_context"),
+		slog.String("version_id", *versionID),
+		slog.Duration("duration", time.Since(versionContextStartedAt)),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("loading resolved template version: %w", err)
+		return nil, fmt.Errorf("loading resolved template version context: %w", err)
 	}
+	version := versionContext.Version
 	if !version.IsPublished() {
 		return nil, entity.ErrInternalTemplateResolutionNotFound
 	}
 
-	template, err := s.templateRepo.FindByID(ctx, version.TemplateID)
-	if err != nil {
-		return nil, fmt.Errorf("loading resolved template: %w", err)
-	}
+	template := versionContext.Template
 	if template.DocumentTypeID == nil || *template.DocumentTypeID != docType.ID {
 		return nil, entity.ErrInternalTemplateResolutionNotFound
 	}
 
 	if workspace == nil {
-		workspace, err = s.workspaceRepo.FindByID(ctx, template.WorkspaceID)
-		if err != nil {
-			return nil, fmt.Errorf("resolving workspace from resolved template: %w", err)
-		}
+		workspace = versionContext.Workspace
 	}
 	slog.InfoContext(ctx, "resolved internal create context",
 		"tenant_id", tenant.ID,
@@ -263,6 +344,60 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		template:     template,
 		version:      version,
 	}, nil
+}
+
+func (s *InternalDocumentService) resolveInternalTemplateContextFast(
+	ctx context.Context,
+	req *port.TemplateResolverRequest,
+) (*internalResolvedContext, bool, error) {
+	resolver, ok := s.customResolver.(port.InternalTemplateContextResolver)
+	if !ok {
+		return nil, false, nil
+	}
+
+	startedAt := time.Now()
+	resolved, err := resolver.ResolveInternalTemplateContext(ctx, req, s.searchAdapter.(port.InternalTemplateContextSearchAdapter))
+	slog.InfoContext(ctx, "internal template fast context timing",
+		slog.Duration("duration", time.Since(startedAt)),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "custom template context resolver error", slog.Any("error", err))
+		return nil, true, fmt.Errorf("custom template context resolver failed: %w", err)
+	}
+	if resolved == nil {
+		return nil, false, nil
+	}
+	if resolved.Tenant == nil || resolved.DocumentType == nil || resolved.Template == nil ||
+		resolved.Workspace == nil || resolved.Version == nil {
+		return nil, true, entity.ErrInternalTemplateResolutionNotFound
+	}
+	if !resolved.Version.IsPublished() {
+		return nil, true, entity.ErrInternalTemplateResolutionNotFound
+	}
+	if resolved.Template.DocumentTypeID == nil || *resolved.Template.DocumentTypeID != resolved.DocumentType.ID {
+		return nil, true, entity.ErrInternalTemplateResolutionNotFound
+	}
+
+	slog.InfoContext(ctx, "resolved internal create context",
+		"tenant_id", resolved.Tenant.ID,
+		"tenant_code", resolved.Tenant.Code,
+		"workspace_id", resolved.Workspace.ID,
+		"workspace_code", resolved.Workspace.Code,
+		"document_type_id", resolved.DocumentType.ID,
+		"document_type_code", resolved.DocumentType.Code,
+		"template_id", resolved.Template.ID,
+		"version_id", resolved.Version.ID,
+		"fast_context", true,
+	)
+	return &internalResolvedContext{
+		tenant:           resolved.Tenant,
+		workspace:        resolved.Workspace,
+		documentType:     resolved.DocumentType,
+		template:         resolved.Template,
+		version:          resolved.Version,
+		dbInjectables:    resolved.DBInjectables,
+		activeSystemKeys: resolved.ActiveSystemKeys,
+	}, true, nil
 }
 
 // applySandboxWorkspaceCode populates SandboxWorkspaceCode when environment is dev.

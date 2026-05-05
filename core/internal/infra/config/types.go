@@ -163,7 +163,22 @@ type OIDCProvider struct {
 
 // InternalAPIConfig holds configuration for internal service-to-service API.
 type InternalAPIConfig struct {
-	Enabled bool `mapstructure:"enabled"`
+	Enabled        bool   `mapstructure:"enabled"`
+	APIKeyAuthMode string `mapstructure:"api_key_auth_mode"`
+}
+
+const (
+	InternalAPIKeyAuthModeMemory = "memory"
+	InternalAPIKeyAuthModeDB     = "db"
+)
+
+// NormalizedAPIKeyAuthMode returns the configured internal API key auth mode.
+func (c InternalAPIConfig) NormalizedAPIKeyAuthMode() string {
+	mode := strings.ToLower(strings.TrimSpace(c.APIKeyAuthMode))
+	if mode == "" {
+		return InternalAPIKeyAuthModeMemory
+	}
+	return mode
 }
 
 // SigningConfig holds signing provider configuration.

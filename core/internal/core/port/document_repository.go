@@ -32,6 +32,7 @@ type InternalCreateRequest struct {
 // InternalCreateResult represents the outcome of internal create/replay processing.
 type InternalCreateResult struct {
 	DocumentID                   string
+	Document                     *entity.DocumentWithRecipients
 	IdempotentReplay             bool
 	SupersededPreviousDocumentID *string
 }
@@ -73,6 +74,9 @@ type DocumentRepository interface {
 
 	// CountByStatus returns the count of documents by status in a workspace.
 	CountByStatus(ctx context.Context, workspaceID string, status entity.DocumentStatus) (int, error)
+
+	// FindInternalCreateReplay finds an already-created document for an internal-create request before expensive preparation.
+	FindInternalCreateReplay(ctx context.Context, workspaceID, documentTypeID, externalID, transactionalID string) (string, bool, error)
 
 	// InternalCreateOrReplay executes transactional create/replay/supersede logic for internal create endpoint.
 	InternalCreateOrReplay(ctx context.Context, req *InternalCreateRequest) (*InternalCreateResult, error)

@@ -194,7 +194,7 @@ func (s *Service) resolveRemoteImages(ctx context.Context, images map[string]str
 		slog.WarnContext(ctx, "some images failed to download", slog.Any("error", dlErr))
 	}
 
-	return tmpDir, renames, func() { os.RemoveAll(tmpDir) }, nil
+	return tmpDir, renames, func() { _ = os.RemoveAll(tmpDir) }, nil
 }
 
 // resolveSignerRoleValues resolves signer role values from the document and injectables.
@@ -296,15 +296,19 @@ func (s *Service) writeTempPDF(ctx context.Context, pdfBytes []byte) (string, fu
 	}
 
 	tmpPath := tmpFile.Name()
-	cleanup := func() { os.Remove(tmpPath) }
+	cleanup := func() { _ = os.Remove(tmpPath) }
 
 	if _, err := tmpFile.Write(pdfBytes); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		cleanup()
 		slog.WarnContext(ctx, "failed to write temp PDF", "error", err)
 		return "", nil, err
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		cleanup()
+		slog.WarnContext(ctx, "failed to close temp PDF", "error", err)
+		return "", nil, err
+	}
 
 	return tmpPath, cleanup, nil
 }

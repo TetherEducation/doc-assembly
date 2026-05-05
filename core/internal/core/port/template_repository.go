@@ -20,6 +20,74 @@ type TemplateFilters struct {
 	Offset              int
 }
 
+// InternalTemplateBaseQuery contains the base identifiers needed before running template resolution.
+type InternalTemplateBaseQuery struct {
+	TenantCode    string
+	WorkspaceCode string
+	DocumentType  string
+}
+
+// InternalTemplateBaseContext is a lightweight read model for the base internal-create context.
+type InternalTemplateBaseContext struct {
+	Tenant       *entity.Tenant
+	Workspace    *entity.Workspace
+	DocumentType *entity.DocumentType
+}
+
+// InternalTemplateContextQuery contains the inputs needed to resolve the full
+// internal-create template context in one read model query.
+type InternalTemplateContextQuery struct {
+	TenantCode             string
+	RequestedWorkspaceCode string
+	WorkspaceCodes         []string
+	DocumentType           string
+	Process                string
+	Tags                   []string
+	Published              *bool
+}
+
+// InternalTemplateContext contains the full internal-create template context.
+type InternalTemplateContext struct {
+	Tenant             *entity.Tenant
+	RequestedWorkspace *entity.Workspace
+	DocumentType       *entity.DocumentType
+	Template           *entity.Template
+	Workspace          *entity.Workspace
+	Version            *entity.TemplateVersionWithDetails
+	DBInjectables      []*entity.InjectableDefinition
+	ActiveSystemKeys   []string
+}
+
+// TemplateWorkspace contains a template and its owning workspace loaded as one read model.
+type TemplateWorkspace struct {
+	Template  *entity.Template
+	Workspace *entity.Workspace
+}
+
+// TemplateResolutionQuery contains the inputs needed to resolve template-version candidates in one read model query.
+type TemplateResolutionQuery struct {
+	TenantCode     string
+	WorkspaceCodes []string
+	DocumentType   string
+	Process        string
+	Tags           []string
+	Published      *bool
+}
+
+// TemplateResolutionCandidate is a lightweight read model for template-version resolution.
+type TemplateResolutionCandidate struct {
+	TenantID         string
+	TenantCode       string
+	WorkspaceID      string
+	WorkspaceCode    string
+	DocumentTypeID   string
+	DocumentTypeCode string
+	TemplateID       string
+	VersionID        string
+	Tags             []string
+	Priority         int
+}
+
 // TemplateRepository defines the interface for template data access.
 type TemplateRepository interface {
 	// Create creates a new template.
@@ -57,6 +125,19 @@ type TemplateRepository interface {
 
 	// CountByFolder returns the number of templates in a folder.
 	CountByFolder(ctx context.Context, folderID string) (int, error)
+
+	// FindInternalTemplateBaseContext resolves tenant, optional workspace, and document type in one query.
+	FindInternalTemplateBaseContext(ctx context.Context, query InternalTemplateBaseQuery) (*InternalTemplateBaseContext, error)
+
+	// FindInternalTemplateContext resolves tenant, optional requested workspace, document type,
+	// best template candidate, version details, template, and resolved workspace in one query.
+	FindInternalTemplateContext(ctx context.Context, query InternalTemplateContextQuery) (*InternalTemplateContext, error)
+
+	// FindTemplateWorkspaceByTemplateID loads a template and its owning workspace in one query.
+	FindTemplateWorkspaceByTemplateID(ctx context.Context, templateID string) (*TemplateWorkspace, error)
+
+	// FindResolutionCandidates finds lightweight template-version candidates for internal template resolution.
+	FindResolutionCandidates(ctx context.Context, query TemplateResolutionQuery) ([]TemplateResolutionCandidate, error)
 
 	// FindByDocumentType finds the template assigned to a document type and process in a workspace.
 	// Returns nil if no template is assigned to this type+process in the workspace.
