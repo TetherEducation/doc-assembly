@@ -25,6 +25,9 @@ FROM content.system_injectable_definitions sid
 JOIN best_assignment ba ON sid.key = ba.injectable_key
 WHERE sid.is_active AND ba.is_active`
 
+	queryFindActiveKeysForWorkspaceAndKeys = queryFindActiveKeysForWorkspace + `
+  AND sid.key = ANY($2)`
+
 	// queryFindAllDefinitions returns all definition keys with their is_active status.
 	queryFindAllDefinitions = `
 SELECT key, is_active FROM content.system_injectable_definitions`

@@ -15,6 +15,12 @@ type InjectableRepository interface {
 	// FindByWorkspace lists all injectable definitions for a workspace (including global).
 	FindByWorkspace(ctx context.Context, workspaceID string) ([]*entity.InjectableDefinition, error)
 
+	// FindByWorkspaceAndKeys lists injectable definitions for a workspace restricted to keys.
+	FindByWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]*entity.InjectableDefinition, error)
+
+	// FindGenerationAvailableByWorkspaceAndKeys lists DB injectables and active system keys in one read model query.
+	FindGenerationAvailableByWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]*entity.InjectableDefinition, []string, error)
+
 	// FindGlobal lists all global injectable definitions.
 	FindGlobal(ctx context.Context) ([]*entity.InjectableDefinition, error)
 

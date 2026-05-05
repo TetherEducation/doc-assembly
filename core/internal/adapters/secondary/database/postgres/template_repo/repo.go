@@ -2,6 +2,8 @@ package templaterepo
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -531,6 +533,416 @@ func (r *Repository) CountByFolder(ctx context.Context, folderID string) (int, e
 	}
 
 	return count, nil
+}
+
+// FindInternalTemplateBaseContext resolves tenant, optional workspace, and document type in one query.
+//
+//nolint:funlen // Single DB projection scan; splitting the scan list makes column-order drift harder to audit.
+func (r *Repository) FindInternalTemplateBaseContext(ctx context.Context, query port.InternalTemplateBaseQuery) (*port.InternalTemplateBaseContext, error) {
+	var tenant entity.Tenant
+	var workspaceID, workspaceTenantID, workspaceName, workspaceCode, workspaceType, workspaceStatus sql.NullString
+	var workspaceIsSandbox sql.NullBool
+	var workspaceSandboxOfID sql.NullString
+	var workspaceCreatedAt sql.NullTime
+	var workspaceUpdatedAt sql.NullTime
+	var docTypeID, docTypeTenantID, docTypeCode sql.NullString
+	var docTypeName, docTypeDescription entity.I18nText
+	var docTypeIsGlobal sql.NullBool
+	var docTypeCreatedAt sql.NullTime
+	var docTypeUpdatedAt sql.NullTime
+
+	err := r.pool.QueryRow(ctx, queryFindInternalTemplateBaseContext,
+		query.TenantCode,
+		query.WorkspaceCode,
+		query.DocumentType,
+	).Scan(
+		&tenant.ID,
+		&tenant.Code,
+		&tenant.Name,
+		&tenant.Description,
+		&tenant.IsSystem,
+		&tenant.Status,
+		&tenant.Settings,
+		&tenant.CreatedAt,
+		&tenant.UpdatedAt,
+		&workspaceID,
+		&workspaceTenantID,
+		&workspaceName,
+		&workspaceCode,
+		&workspaceType,
+		&workspaceStatus,
+		&workspaceIsSandbox,
+		&workspaceSandboxOfID,
+		&workspaceCreatedAt,
+		&workspaceUpdatedAt,
+		&docTypeID,
+		&docTypeTenantID,
+		&docTypeCode,
+		&docTypeName,
+		&docTypeDescription,
+		&docTypeIsGlobal,
+		&docTypeCreatedAt,
+		&docTypeUpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, entity.ErrTenantNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("querying internal template base context: %w", err)
+	}
+	if !docTypeID.Valid {
+		return nil, entity.ErrDocumentTypeNotFound
+	}
+
+	out := &port.InternalTemplateBaseContext{
+		Tenant: &tenant,
+		DocumentType: &entity.DocumentType{
+			ID:          docTypeID.String,
+			TenantID:    docTypeTenantID.String,
+			Code:        docTypeCode.String,
+			Name:        docTypeName,
+			Description: docTypeDescription,
+			IsGlobal:    docTypeIsGlobal.Bool,
+			CreatedAt:   docTypeCreatedAt.Time,
+		},
+	}
+	if docTypeUpdatedAt.Valid {
+		out.DocumentType.UpdatedAt = &docTypeUpdatedAt.Time
+	}
+	if workspaceID.Valid {
+		out.Workspace = &entity.Workspace{
+			ID:        workspaceID.String,
+			Name:      workspaceName.String,
+			Code:      workspaceCode.String,
+			Type:      entity.WorkspaceType(workspaceType.String),
+			Status:    entity.WorkspaceStatus(workspaceStatus.String),
+			IsSandbox: workspaceIsSandbox.Bool,
+			CreatedAt: workspaceCreatedAt.Time,
+		}
+		if workspaceTenantID.Valid {
+			out.Workspace.TenantID = &workspaceTenantID.String
+		}
+		if workspaceSandboxOfID.Valid {
+			out.Workspace.SandboxOfID = &workspaceSandboxOfID.String
+		}
+		if workspaceUpdatedAt.Valid {
+			out.Workspace.UpdatedAt = &workspaceUpdatedAt.Time
+		}
+	}
+	return out, nil
+}
+
+// FindInternalTemplateContext resolves the full internal-create template context in one query.
+func (r *Repository) FindInternalTemplateContext(
+	ctx context.Context,
+	query port.InternalTemplateContextQuery,
+) (*port.InternalTemplateContext, error) {
+	result, err := scanInternalTemplateContext(r.pool.QueryRow(ctx, queryFindInternalTemplateContext,
+		query.TenantCode,
+		query.RequestedWorkspaceCode,
+		query.WorkspaceCodes,
+		query.DocumentType,
+		query.Process,
+		query.Tags,
+		query.Published,
+	))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, entity.ErrInternalTemplateResolutionNotFound
+		}
+		return nil, fmt.Errorf("finding internal template context: %w", err)
+	}
+	return result, nil
+}
+
+//nolint:funlen,nestif // Single DB projection scan; keeping columns together makes the SQL/Scan contract auditable.
+func scanInternalTemplateContext(row pgx.Row) (*port.InternalTemplateContext, error) {
+	var tenant entity.Tenant
+	var requestedWorkspaceID, requestedWorkspaceTenantID, requestedWorkspaceName, requestedWorkspaceCode sql.NullString
+	var requestedWorkspaceType, requestedWorkspaceStatus sql.NullString
+	var requestedWorkspaceIsSandbox sql.NullBool
+	var requestedWorkspaceSandboxOfID sql.NullString
+	var requestedWorkspaceCreatedAt, requestedWorkspaceUpdatedAt sql.NullTime
+
+	var docType entity.DocumentType
+	var version entity.TemplateVersion
+	var template entity.Template
+	var workspace entity.Workspace
+	var workspaceTenantID, workspaceSandboxOfID sql.NullString
+	var injectablesJSON, signerRolesJSON []byte
+
+	if err := row.Scan(
+		&tenant.ID,
+		&tenant.Code,
+		&tenant.Name,
+		&tenant.Description,
+		&tenant.IsSystem,
+		&tenant.Status,
+		&tenant.Settings,
+		&tenant.CreatedAt,
+		&tenant.UpdatedAt,
+		&requestedWorkspaceID,
+		&requestedWorkspaceTenantID,
+		&requestedWorkspaceName,
+		&requestedWorkspaceCode,
+		&requestedWorkspaceType,
+		&requestedWorkspaceStatus,
+		&requestedWorkspaceIsSandbox,
+		&requestedWorkspaceSandboxOfID,
+		&requestedWorkspaceCreatedAt,
+		&requestedWorkspaceUpdatedAt,
+		&docType.ID,
+		&docType.TenantID,
+		&docType.Code,
+		&docType.Name,
+		&docType.Description,
+		&docType.IsGlobal,
+		&docType.CreatedAt,
+		&docType.UpdatedAt,
+		&version.ID,
+		&version.TemplateID,
+		&version.VersionNumber,
+		&version.Name,
+		&version.Description,
+		&version.ContentStructure,
+		&version.Status,
+		&version.ScheduledPublishAt,
+		&version.ScheduledArchiveAt,
+		&version.SigningWorkflowConfig,
+		&version.PublishedAt,
+		&version.ArchivedAt,
+		&version.PublishedBy,
+		&version.ArchivedBy,
+		&version.CreatedBy,
+		&version.CreatedAt,
+		&version.UpdatedAt,
+		&injectablesJSON,
+		&signerRolesJSON,
+		&template.ID,
+		&template.WorkspaceID,
+		&template.FolderID,
+		&template.DocumentTypeID,
+		&template.Title,
+		&template.IsPublicLibrary,
+		&template.Process,
+		&template.ProcessType,
+		&template.CreatedAt,
+		&template.UpdatedAt,
+		&workspace.ID,
+		&workspaceTenantID,
+		&workspace.Name,
+		&workspace.Code,
+		&workspace.Type,
+		&workspace.Status,
+		&workspace.IsSandbox,
+		&workspaceSandboxOfID,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	var requestedWorkspace *entity.Workspace
+	if requestedWorkspaceID.Valid {
+		requestedWorkspace = &entity.Workspace{
+			ID:        requestedWorkspaceID.String,
+			Name:      requestedWorkspaceName.String,
+			Code:      requestedWorkspaceCode.String,
+			Type:      entity.WorkspaceType(requestedWorkspaceType.String),
+			Status:    entity.WorkspaceStatus(requestedWorkspaceStatus.String),
+			IsSandbox: requestedWorkspaceIsSandbox.Bool,
+		}
+		if requestedWorkspaceTenantID.Valid {
+			requestedWorkspace.TenantID = &requestedWorkspaceTenantID.String
+		}
+		if requestedWorkspaceSandboxOfID.Valid {
+			requestedWorkspace.SandboxOfID = &requestedWorkspaceSandboxOfID.String
+		}
+		if requestedWorkspaceCreatedAt.Valid {
+			requestedWorkspace.CreatedAt = requestedWorkspaceCreatedAt.Time
+		}
+		if requestedWorkspaceUpdatedAt.Valid {
+			requestedWorkspace.UpdatedAt = &requestedWorkspaceUpdatedAt.Time
+		}
+	}
+
+	if workspaceTenantID.Valid {
+		workspace.TenantID = &workspaceTenantID.String
+	}
+	if workspaceSandboxOfID.Valid {
+		workspace.SandboxOfID = &workspaceSandboxOfID.String
+	}
+
+	versionDetails := &entity.TemplateVersionWithDetails{TemplateVersion: version}
+	if err := json.Unmarshal(injectablesJSON, &versionDetails.Injectables); err != nil {
+		return nil, fmt.Errorf("unmarshaling version injectables: %w", err)
+	}
+	if err := json.Unmarshal(signerRolesJSON, &versionDetails.SignerRoles); err != nil {
+		return nil, fmt.Errorf("unmarshaling version signer roles: %w", err)
+	}
+
+	dbInjectables, activeSystemKeys := generationInjectablesFromVersion(versionDetails.Injectables)
+
+	return &port.InternalTemplateContext{
+		Tenant:             &tenant,
+		RequestedWorkspace: requestedWorkspace,
+		DocumentType:       &docType,
+		Template:           &template,
+		Workspace:          &workspace,
+		Version:            versionDetails,
+		DBInjectables:      dbInjectables,
+		ActiveSystemKeys:   activeSystemKeys,
+	}, nil
+}
+
+func generationInjectablesFromVersion(
+	versionInjectables []*entity.VersionInjectableWithDefinition,
+) ([]*entity.InjectableDefinition, []string) {
+	dbInjectables := make([]*entity.InjectableDefinition, 0, len(versionInjectables))
+	activeSystemKeys := make([]string, 0, len(versionInjectables))
+	seenDB := make(map[string]struct{}, len(versionInjectables))
+	seenSystem := make(map[string]struct{}, len(versionInjectables))
+
+	for _, versionInjectable := range versionInjectables {
+		dbInjectables = appendUniqueDBInjectable(dbInjectables, seenDB, versionInjectable)
+		activeSystemKeys = appendUniqueSystemInjectable(activeSystemKeys, seenSystem, versionInjectable)
+	}
+
+	return dbInjectables, activeSystemKeys
+}
+
+func appendUniqueDBInjectable(
+	dbInjectables []*entity.InjectableDefinition,
+	seen map[string]struct{},
+	versionInjectable *entity.VersionInjectableWithDefinition,
+) []*entity.InjectableDefinition {
+	if versionInjectable == nil || versionInjectable.Definition == nil {
+		return dbInjectables
+	}
+
+	key := versionInjectable.Definition.Key
+	if key == "" {
+		return dbInjectables
+	}
+	if _, ok := seen[key]; ok {
+		return dbInjectables
+	}
+
+	seen[key] = struct{}{}
+	return append(dbInjectables, versionInjectable.Definition)
+}
+
+func appendUniqueSystemInjectable(
+	activeSystemKeys []string,
+	seen map[string]struct{},
+	versionInjectable *entity.VersionInjectableWithDefinition,
+) []string {
+	if versionInjectable == nil || versionInjectable.Definition != nil {
+		return activeSystemKeys
+	}
+	if versionInjectable.SystemInjectableKey == nil || *versionInjectable.SystemInjectableKey == "" {
+		return activeSystemKeys
+	}
+
+	key := *versionInjectable.SystemInjectableKey
+	if _, ok := seen[key]; ok {
+		return activeSystemKeys
+	}
+
+	seen[key] = struct{}{}
+	return append(activeSystemKeys, key)
+}
+
+// FindTemplateWorkspaceByTemplateID loads a template and its owning workspace in one query.
+func (r *Repository) FindTemplateWorkspaceByTemplateID(ctx context.Context, templateID string) (*port.TemplateWorkspace, error) {
+	template := &entity.Template{}
+	workspace := &entity.Workspace{}
+	var workspaceTenantID sql.NullString
+	var workspaceSandboxOfID sql.NullString
+
+	err := r.pool.QueryRow(ctx, queryFindTemplateWorkspaceByTemplateID, templateID).Scan(
+		&template.ID,
+		&template.WorkspaceID,
+		&template.FolderID,
+		&template.DocumentTypeID,
+		&template.Title,
+		&template.IsPublicLibrary,
+		&template.Process,
+		&template.ProcessType,
+		&template.CreatedAt,
+		&template.UpdatedAt,
+		&workspace.ID,
+		&workspaceTenantID,
+		&workspace.Name,
+		&workspace.Code,
+		&workspace.Type,
+		&workspace.Status,
+		&workspace.IsSandbox,
+		&workspaceSandboxOfID,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, entity.ErrTemplateNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("finding template workspace %s: %w", templateID, err)
+	}
+	if workspaceTenantID.Valid {
+		workspace.TenantID = &workspaceTenantID.String
+	}
+	if workspaceSandboxOfID.Valid {
+		workspace.SandboxOfID = &workspaceSandboxOfID.String
+	}
+	return &port.TemplateWorkspace{
+		Template:  template,
+		Workspace: workspace,
+	}, nil
+}
+
+// FindResolutionCandidates finds lightweight template-version candidates for internal template resolution.
+func (r *Repository) FindResolutionCandidates(ctx context.Context, query port.TemplateResolutionQuery) ([]port.TemplateResolutionCandidate, error) {
+	var published *bool
+	if query.Published != nil {
+		value := *query.Published
+		published = &value
+	}
+	rows, err := r.pool.Query(ctx, queryFindResolutionCandidates,
+		query.TenantCode,
+		query.WorkspaceCodes,
+		query.DocumentType,
+		query.Process,
+		query.Tags,
+		published,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying template resolution candidates: %w", err)
+	}
+	defer rows.Close()
+
+	candidates := make([]port.TemplateResolutionCandidate, 0)
+	for rows.Next() {
+		var candidate port.TemplateResolutionCandidate
+		if err := rows.Scan(
+			&candidate.TenantID,
+			&candidate.TenantCode,
+			&candidate.WorkspaceID,
+			&candidate.WorkspaceCode,
+			&candidate.DocumentTypeID,
+			&candidate.DocumentTypeCode,
+			&candidate.TemplateID,
+			&candidate.VersionID,
+			&candidate.Tags,
+			&candidate.Priority,
+		); err != nil {
+			return nil, fmt.Errorf("scanning template resolution candidate: %w", err)
+		}
+		candidates = append(candidates, candidate)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating template resolution candidates: %w", err)
+	}
+	return candidates, nil
 }
 
 // FindByDocumentType finds the template assigned to a document type and process in a workspace.

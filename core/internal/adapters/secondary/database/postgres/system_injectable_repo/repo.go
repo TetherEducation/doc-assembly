@@ -29,6 +29,24 @@ func (r *Repository) FindActiveKeysForWorkspace(ctx context.Context, workspaceID
 	}
 	defer rows.Close()
 
+	return collectSystemInjectableKeys(rows)
+}
+
+// FindActiveKeysForWorkspaceAndKeys returns active system injectable keys restricted to requested keys.
+func (r *Repository) FindActiveKeysForWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	rows, err := r.pool.Query(ctx, queryFindActiveKeysForWorkspaceAndKeys, workspaceID, keys)
+	if err != nil {
+		return nil, fmt.Errorf("querying active system injectable keys by keys: %w", err)
+	}
+	defer rows.Close()
+
+	return collectSystemInjectableKeys(rows)
+}
+
+func collectSystemInjectableKeys(rows pgx.Rows) ([]string, error) {
 	var keys []string
 	for rows.Next() {
 		var key string
@@ -202,7 +220,7 @@ func (r *Repository) CreatePublicAssignments(ctx context.Context, keys []string)
 	}
 
 	results := r.pool.SendBatch(ctx, batch)
-	defer results.Close()
+	defer func() { _ = results.Close() }()
 
 	created := 0
 	for i := 0; i < len(keys); i++ {

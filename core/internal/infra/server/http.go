@@ -167,13 +167,19 @@ func NewHTTPServer(
 	}
 }
 
-// registerInternalRoutes registers internal API routes with DB-backed API key authentication.
+// registerInternalRoutes registers internal API routes with configured API key authentication.
 func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocController *controller.InternalDocumentController, keyRepo port.AutomationAPIKeyRepository) {
 	if cfg.InternalAPI.Enabled {
 		internalV1 := router.Group("/api/v1")
 		internalV1.Use(middleware.Operation())
-		internalDocController.RegisterRoutes(internalV1, keyRepo)
-		slog.InfoContext(context.Background(), "internal API routes registered")
+		authMode := cfg.InternalAPI.NormalizedAPIKeyAuthMode()
+		authMiddleware := middleware.InternalKeyAuth(keyRepo)
+		if authMode == config.InternalAPIKeyAuthModeMemory {
+			authMiddleware = middleware.InternalKeyAuthPreloaded(keyRepo)
+		}
+		internalDocController.RegisterRoutes(internalV1, authMiddleware)
+		slog.InfoContext(context.Background(), "internal API routes registered",
+			slog.String("api_key_auth_mode", authMode))
 	} else {
 		slog.WarnContext(context.Background(), "internal API routes disabled")
 	}
@@ -642,7 +648,7 @@ func spaHandler(fsys fs.FS, basePath string) gin.HandlerFunc {
 		// Try serving the exact file
 		f, err := fsys.Open(cleanPath)
 		if err == nil {
-			f.Close()
+			_ = f.Close()
 			if strings.HasPrefix(cleanPath, "assets/") {
 				c.Header("Cache-Control", "public, max-age=31536000, immutable")
 			}
@@ -662,7 +668,7 @@ func serveIndexHTML(c *gin.Context, fsys fs.FS) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	defer indexFile.Close()
+	defer func() { _ = indexFile.Close() }()
 
 	c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Header("Content-Type", "text/html; charset=utf-8")

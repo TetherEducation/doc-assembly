@@ -62,6 +62,7 @@ signing_session_auth:
 # Internal API for service-to-service communication
 internal_api:
   enabled: true
+  api_key_auth_mode: memory # DOC_ENGINE_INTERNAL_API_API_KEY_AUTH_MODE - "memory" preloads keys at startup, "db" validates on each request
 
 # Signing provider configuration (Documenso self-hosted)
 signing:

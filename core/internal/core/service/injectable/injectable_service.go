@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
@@ -57,12 +58,13 @@ func (s *InjectableService) GetInjectable(ctx context.Context, id string) (*enti
 func (s *InjectableService) ListInjectables(
 	ctx context.Context, req *injectableuc.ListInjectablesRequest,
 ) (*injectableuc.ListInjectablesResult, error) {
-	dbInjectables, err := s.injectableRepo.FindByWorkspace(ctx, req.WorkspaceID)
+	requestedCodes := uniqueNonEmptyCodes(req.Codes)
+	dbInjectables, activeSystemKeys, err := s.findBaseInjectables(ctx, req.WorkspaceID, requestedCodes)
 	if err != nil {
 		return nil, fmt.Errorf("listing injectables: %w", err)
 	}
 
-	systemInjectables, err := s.getSystemInjectables(ctx, req.WorkspaceID)
+	systemInjectables, err := s.getSystemInjectables(ctx, req.WorkspaceID, requestedCodes, activeSystemKeys)
 	if err != nil {
 		return nil, fmt.Errorf("listing system injectables: %w", err)
 	}
@@ -72,6 +74,7 @@ func (s *InjectableService) ListInjectables(
 		ctx,
 		req.WorkspaceID,
 		req.Environment,
+		requestedCodes,
 		dbInjectables,
 		systemInjectables,
 	)
@@ -98,18 +101,73 @@ func (s *InjectableService) ListInjectables(
 	}, nil
 }
 
+// CompleteGenerationInjectables hydrates preloaded DB/system injectables and only calls
+// the optional workspace provider when one is registered. It avoids the DB listing query
+// on hot generation paths that already loaded the read model.
+func (s *InjectableService) CompleteGenerationInjectables(
+	ctx context.Context,
+	req *injectableuc.CompleteGenerationInjectablesRequest,
+) (*injectableuc.ListInjectablesResult, error) {
+	requestedCodes := uniqueNonEmptyCodes(req.Codes)
+	systemInjectables, err := s.getSystemInjectables(ctx, req.WorkspaceID, requestedCodes, req.ActiveSystemKeys)
+	if err != nil {
+		return nil, fmt.Errorf("listing system injectables: %w", err)
+	}
+
+	providerInjectables, providerGroups, err := s.getProviderInjectablesAndGroups(
+		ctx,
+		req.WorkspaceID,
+		req.Environment,
+		requestedCodes,
+		req.DBInjectables,
+		systemInjectables,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	allInjectables := s.mergeInjectables(req.DBInjectables, systemInjectables)
+	allInjectables = append(allInjectables, providerInjectables...)
+
+	var registryGroups []port.GroupConfig
+	if s.injectorRegistry != nil {
+		registryGroups = s.injectorRegistry.GetAllGroups()
+	}
+	allGroups := make([]port.GroupConfig, 0, len(registryGroups)+len(providerGroups))
+	allGroups = append(allGroups, registryGroups...)
+	allGroups = append(allGroups, providerGroups...)
+
+	return &injectableuc.ListInjectablesResult{
+		Injectables: allInjectables,
+		Groups:      allGroups,
+	}, nil
+}
+
+func (s *InjectableService) findBaseInjectables(
+	ctx context.Context,
+	workspaceID string,
+	codes []string,
+) ([]*entity.InjectableDefinition, []string, error) {
+	if len(codes) > 0 {
+		return s.injectableRepo.FindGenerationAvailableByWorkspaceAndKeys(ctx, workspaceID, codes)
+	}
+	dbInjectables, err := s.injectableRepo.FindByWorkspace(ctx, workspaceID)
+	return dbInjectables, nil, err
+}
+
 // getProviderInjectablesAndGroups fetches and validates provider injectables and groups.
 func (s *InjectableService) getProviderInjectablesAndGroups(
 	ctx context.Context,
 	workspaceID string,
 	env entity.Environment,
+	codes []string,
 	dbInjectables, systemInjectables []*entity.InjectableDefinition,
 ) ([]*entity.InjectableDefinition, []port.GroupConfig, error) {
 	if s.workspaceProvider == nil {
 		return nil, nil, nil
 	}
 
-	providerResult, err := s.fetchProviderResult(ctx, workspaceID, env)
+	providerResult, err := s.fetchProviderResult(ctx, workspaceID, env, codes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting provider injectables: %w", err)
 	}
@@ -130,15 +188,18 @@ func (s *InjectableService) getProviderInjectablesAndGroups(
 
 // getSystemInjectables returns system injectables filtered by active assignments for the workspace.
 func (s *InjectableService) getSystemInjectables(
-	ctx context.Context, workspaceID string,
+	ctx context.Context, workspaceID string, codes []string, activeKeys []string,
 ) ([]*entity.InjectableDefinition, error) {
 	if s.injectorRegistry == nil || s.systemInjectableRepo == nil {
 		return nil, nil
 	}
 
-	activeKeys, err := s.systemInjectableRepo.FindActiveKeysForWorkspace(ctx, workspaceID)
-	if err != nil {
-		return nil, err
+	if len(codes) == 0 {
+		var err error
+		activeKeys, err = s.systemInjectableRepo.FindActiveKeysForWorkspace(ctx, workspaceID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	activeKeySet := make(map[string]bool, len(activeKeys))
@@ -204,6 +265,26 @@ func (s *InjectableService) injectorToDefinition(inj port.Injector) *entity.Inje
 		CreatedAt:    time.Time{},
 		UpdatedAt:    nil,
 	}
+}
+
+func uniqueNonEmptyCodes(codes []string) []string {
+	if len(codes) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(codes))
+	result := make([]string, 0, len(codes))
+	for _, code := range codes {
+		if code == "" {
+			continue
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		seen[code] = struct{}{}
+		result = append(result, code)
+	}
+	sort.Strings(result)
+	return result
 }
 
 // buildInjectorMetadata builds metadata for table and list schema providers.
@@ -280,6 +361,7 @@ func (s *InjectableService) fetchProviderResult(
 	ctx context.Context,
 	workspaceID string,
 	env entity.Environment,
+	codes []string,
 ) (*port.GetInjectablesResult, error) {
 	tenantCode, workspaceCode, err := s.getWorkspaceCodes(ctx, workspaceID)
 	if err != nil {
@@ -293,10 +375,11 @@ func (s *InjectableService) fetchProviderResult(
 		"tenant_code", tenantCode,
 		"workspace_code", workspaceCode,
 		"environment", env,
+		"requested_codes_count", len(codes),
 	)
 
 	injCtx := entity.NewInjectorContextWithCodes("", "", "", "list", tenantCode, workspaceCode, env, nil, nil)
-	result, err := s.workspaceProvider.GetInjectables(ctx, injCtx)
+	result, err := s.fetchProviderInjectables(ctx, injCtx, codes)
 	if err != nil {
 		return nil, err
 	}
@@ -315,22 +398,36 @@ func (s *InjectableService) fetchProviderResult(
 		"tenant_code", tenantCode,
 		"workspace_code", workspaceCode,
 		"environment", env,
+		"requested_codes_count", len(codes),
 		"injectables_count", len(result.Injectables),
 		"groups_count", len(result.Groups),
 	)
 
-	codes := make([]string, 0, len(result.Injectables))
+	resultCodes := make([]string, 0, len(result.Injectables))
 	for _, injectable := range result.Injectables {
 		if injectable.Code != "" {
-			codes = append(codes, injectable.Code)
+			resultCodes = append(resultCodes, injectable.Code)
 		}
 	}
 	slog.DebugContext(ctx, "provider injectable codes",
 		"workspace_id", workspaceID,
-		"codes", codes,
+		"codes", resultCodes,
 	)
 
 	return result, nil
+}
+
+func (s *InjectableService) fetchProviderInjectables(
+	ctx context.Context,
+	injCtx *entity.InjectorContext,
+	codes []string,
+) (*port.GetInjectablesResult, error) {
+	if len(codes) > 0 {
+		if provider, ok := s.workspaceProvider.(port.FilteredWorkspaceInjectableProvider); ok {
+			return provider.GetInjectablesByCodes(ctx, injCtx, codes)
+		}
+	}
+	return s.workspaceProvider.GetInjectables(ctx, injCtx)
 }
 
 // getWorkspaceCodes retrieves tenant code and workspace code from workspace ID.

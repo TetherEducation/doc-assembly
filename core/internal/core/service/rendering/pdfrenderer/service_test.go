@@ -14,7 +14,7 @@ func TestRenderPreview_Basic(t *testing.T) {
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
-	defer service.Close()
+	defer func() { _ = service.Close() }()
 
 	// Create a simple document
 	doc := &portabledoc.Document{
@@ -137,7 +137,7 @@ func TestRenderPreview_EmptyInjectables(t *testing.T) {
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
-	defer service.Close()
+	defer func() { _ = service.Close() }()
 
 	doc := &portabledoc.Document{
 		Version: portabledoc.CurrentVersion,
@@ -187,7 +187,7 @@ func TestRenderPreview_RoleVariableFromInjectables(t *testing.T) {
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
-	defer service.Close()
+	defer func() { _ = service.Close() }()
 
 	doc := &portabledoc.Document{
 		Version: portabledoc.CurrentVersion,

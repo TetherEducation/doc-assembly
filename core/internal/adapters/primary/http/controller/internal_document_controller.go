@@ -9,9 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
@@ -54,9 +52,9 @@ func NewInternalDocumentController(
 
 // RegisterRoutes registers all internal document routes.
 // The API key is validated via middleware.
-func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, keyRepo port.AutomationAPIKeyRepository) {
+func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	internal := api.Group("/internal/documents")
-	internal.Use(middleware.InternalKeyAuth(keyRepo))
+	internal.Use(authMiddleware)
 	{
 		internal.POST("/create", c.CreateDocument)
 	}

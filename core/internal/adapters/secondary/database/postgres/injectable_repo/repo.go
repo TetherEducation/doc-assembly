@@ -2,6 +2,7 @@ package injectablerepo
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -59,6 +60,82 @@ func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string) ([
 	}
 	defer rows.Close()
 
+	return collectInjectableDefinitions(rows)
+}
+
+// FindByWorkspaceAndKeys lists injectable definitions for a workspace restricted to keys.
+func (r *Repository) FindByWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]*entity.InjectableDefinition, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	rows, err := r.pool.Query(ctx, queryFindByWorkspaceAndKeys, workspaceID, keys)
+	if err != nil {
+		return nil, fmt.Errorf("querying injectable definitions by keys: %w", err)
+	}
+	defer rows.Close()
+
+	return collectInjectableDefinitions(rows)
+}
+
+// FindGenerationAvailableByWorkspaceAndKeys lists DB injectables and active system keys in one read model query.
+func (r *Repository) FindGenerationAvailableByWorkspaceAndKeys(ctx context.Context, workspaceID string, keys []string) ([]*entity.InjectableDefinition, []string, error) {
+	if len(keys) == 0 {
+		return nil, nil, nil
+	}
+	rows, err := r.pool.Query(ctx, queryFindGenerationAvailableByWorkspaceAndKeys, workspaceID, keys)
+	if err != nil {
+		return nil, nil, fmt.Errorf("querying generation injectables by keys: %w", err)
+	}
+	defer rows.Close()
+
+	var dbInjectables []*entity.InjectableDefinition
+	var systemKeys []string
+	for rows.Next() {
+		var source string
+		var id, workspaceID, label, description, dataType sql.NullString
+		var createdAt sql.NullTime
+		injectable := &entity.InjectableDefinition{}
+		if err := rows.Scan(
+			&source,
+			&id,
+			&workspaceID,
+			&injectable.Key,
+			&label,
+			&description,
+			&dataType,
+			&injectable.Metadata,
+			&injectable.FormatConfig,
+			&injectable.IsActive,
+			&injectable.IsDeleted,
+			&createdAt,
+			&injectable.UpdatedAt,
+		); err != nil {
+			return nil, nil, fmt.Errorf("scanning generation injectable: %w", err)
+		}
+		switch source {
+		case "system":
+			systemKeys = append(systemKeys, injectable.Key)
+		default:
+			injectable.ID = id.String
+			if workspaceID.Valid {
+				injectable.WorkspaceID = &workspaceID.String
+			}
+			injectable.Label = label.String
+			injectable.Description = description.String
+			injectable.DataType = entity.InjectableDataType(dataType.String)
+			injectable.CreatedAt = createdAt.Time
+			injectable.SourceType = entity.InjectableSourceTypeInternal
+			dbInjectables = append(dbInjectables, injectable)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("iterating generation injectables: %w", err)
+	}
+
+	return dbInjectables, systemKeys, nil
+}
+
+func collectInjectableDefinitions(rows pgx.Rows) ([]*entity.InjectableDefinition, error) {
 	var injectables []*entity.InjectableDefinition
 	for rows.Next() {
 		injectable := &entity.InjectableDefinition{}

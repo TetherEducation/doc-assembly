@@ -2,6 +2,8 @@ package templateversionrepo
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -9,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/common"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
@@ -66,116 +67,27 @@ func (r *Repository) FindByID(ctx context.Context, id string) (*entity.TemplateV
 
 // FindByIDWithDetails finds a template version by ID with all related data.
 func (r *Repository) FindByIDWithDetails(ctx context.Context, id string) (*entity.TemplateVersionWithDetails, error) {
-	version, err := r.FindByID(ctx, id)
+	details, err := scanTemplateVersionWithDetails(r.pool.QueryRow(ctx, queryFindByIDWithDetails, id))
 	if err != nil {
-		return nil, err
-	}
-
-	details := &entity.TemplateVersionWithDetails{
-		TemplateVersion: *version,
-	}
-
-	details.Injectables, err = r.loadInjectablesWithDefinitions(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	details.SignerRoles, err = r.loadSignerRoles(ctx, id)
-	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, entity.ErrVersionNotFound
+		}
+		return nil, fmt.Errorf("finding template version with details %s: %w", id, err)
 	}
 
 	return details, nil
 }
 
-// loadInjectablesWithDefinitions loads version injectables with their definitions.
-// Handles both workspace injectables (with definition) and system injectables (with system_injectable_key).
-func (r *Repository) loadInjectablesWithDefinitions(ctx context.Context, versionID string) ([]*entity.VersionInjectableWithDefinition, error) {
-	rows, err := r.pool.Query(ctx, queryInjectablesWithDefinitions, versionID)
+// FindByIDWithDetailsAndTemplateWorkspace finds a version plus template/workspace context in one query.
+func (r *Repository) FindByIDWithDetailsAndTemplateWorkspace(ctx context.Context, id string) (*port.TemplateVersionContext, error) {
+	result, err := scanTemplateVersionContext(r.pool.QueryRow(ctx, queryFindByIDWithDetailsAndTemplateWorkspace, id))
 	if err != nil {
-		return nil, fmt.Errorf("querying version injectables: %w", err)
-	}
-	defer rows.Close()
-
-	var injectables []*entity.VersionInjectableWithDefinition
-	for rows.Next() {
-		iwd, err := scanVersionInjectable(rows)
-		if err != nil {
-			return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, entity.ErrVersionNotFound
 		}
-		injectables = append(injectables, iwd)
+		return nil, fmt.Errorf("finding template version context %s: %w", id, err)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating version injectables: %w", err)
-	}
-	return injectables, nil
-}
-
-// injectableRow is a scannable interface for rows.
-type injectableRow interface {
-	Scan(dest ...any) error
-}
-
-// scanVersionInjectable scans a single row into a VersionInjectableWithDefinition.
-func scanVersionInjectable(row injectableRow) (*entity.VersionInjectableWithDefinition, error) {
-	iwd := &entity.VersionInjectableWithDefinition{}
-	var defID, defWorkspaceID, defKey, defLabel, defDescription, defDataType *string
-	var defCreatedAt, defUpdatedAt *time.Time
-
-	if err := row.Scan(
-		&iwd.ID, &iwd.TemplateVersionID, &iwd.InjectableDefinitionID, &iwd.SystemInjectableKey,
-		&iwd.IsRequired, &iwd.DefaultValue, &iwd.CreatedAt,
-		&defID, &defWorkspaceID, &defKey, &defLabel, &defDescription, &defDataType, &defCreatedAt, &defUpdatedAt,
-	); err != nil {
-		return nil, fmt.Errorf("scanning version injectable: %w", err)
-	}
-
-	if defID != nil {
-		iwd.Definition = &entity.InjectableDefinition{
-			ID:          *defID,
-			WorkspaceID: defWorkspaceID,
-			Key:         common.SafeString(defKey),
-			Label:       common.SafeString(defLabel),
-			Description: common.SafeString(defDescription),
-			DataType:    entity.InjectableDataType(common.SafeString(defDataType)),
-			CreatedAt:   common.SafeTime(defCreatedAt),
-			UpdatedAt:   defUpdatedAt,
-		}
-	}
-	return iwd, nil
-}
-
-// loadSignerRoles loads signer roles for a version.
-func (r *Repository) loadSignerRoles(ctx context.Context, versionID string) ([]*entity.TemplateVersionSignerRole, error) {
-	rows, err := r.pool.Query(ctx, querySignerRoles, versionID)
-	if err != nil {
-		return nil, fmt.Errorf("querying version signer roles: %w", err)
-	}
-	defer rows.Close()
-
-	var roles []*entity.TemplateVersionSignerRole
-	for rows.Next() {
-		role := &entity.TemplateVersionSignerRole{}
-		if err := rows.Scan(
-			&role.ID,
-			&role.TemplateVersionID,
-			&role.RoleName,
-			&role.AnchorString,
-			&role.SignerOrder,
-			&role.CreatedAt,
-			&role.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scanning version signer role: %w", err)
-		}
-		roles = append(roles, role)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating version signer roles: %w", err)
-	}
-
-	return roles, nil
+	return result, nil
 }
 
 // FindByTemplateID lists all versions for a template.
@@ -277,6 +189,116 @@ func scanTemplateVersion(row templateVersionRow) (*entity.TemplateVersion, error
 		return nil, err
 	}
 	return version, nil
+}
+
+func scanTemplateVersionWithDetails(row templateVersionRow) (*entity.TemplateVersionWithDetails, error) {
+	version := &entity.TemplateVersion{}
+	var injectablesJSON, signerRolesJSON []byte
+	if err := row.Scan(
+		&version.ID,
+		&version.TemplateID,
+		&version.VersionNumber,
+		&version.Name,
+		&version.Description,
+		&version.ContentStructure,
+		&version.Status,
+		&version.ScheduledPublishAt,
+		&version.ScheduledArchiveAt,
+		&version.SigningWorkflowConfig,
+		&version.PublishedAt,
+		&version.ArchivedAt,
+		&version.PublishedBy,
+		&version.ArchivedBy,
+		&version.CreatedBy,
+		&version.CreatedAt,
+		&version.UpdatedAt,
+		&injectablesJSON,
+		&signerRolesJSON,
+	); err != nil {
+		return nil, err
+	}
+
+	details := &entity.TemplateVersionWithDetails{TemplateVersion: *version}
+	if err := json.Unmarshal(injectablesJSON, &details.Injectables); err != nil {
+		return nil, fmt.Errorf("unmarshaling version injectables: %w", err)
+	}
+	if err := json.Unmarshal(signerRolesJSON, &details.SignerRoles); err != nil {
+		return nil, fmt.Errorf("unmarshaling version signer roles: %w", err)
+	}
+	return details, nil
+}
+
+//nolint:funlen // Single DB projection scan; keeping columns together makes the SQL/Scan contract auditable.
+func scanTemplateVersionContext(row templateVersionRow) (*port.TemplateVersionContext, error) {
+	version := &entity.TemplateVersion{}
+	template := &entity.Template{}
+	workspace := &entity.Workspace{}
+	var injectablesJSON, signerRolesJSON []byte
+	var workspaceTenantID sql.NullString
+	var workspaceSandboxOfID sql.NullString
+	if err := row.Scan(
+		&version.ID,
+		&version.TemplateID,
+		&version.VersionNumber,
+		&version.Name,
+		&version.Description,
+		&version.ContentStructure,
+		&version.Status,
+		&version.ScheduledPublishAt,
+		&version.ScheduledArchiveAt,
+		&version.SigningWorkflowConfig,
+		&version.PublishedAt,
+		&version.ArchivedAt,
+		&version.PublishedBy,
+		&version.ArchivedBy,
+		&version.CreatedBy,
+		&version.CreatedAt,
+		&version.UpdatedAt,
+		&injectablesJSON,
+		&signerRolesJSON,
+		&template.ID,
+		&template.WorkspaceID,
+		&template.FolderID,
+		&template.DocumentTypeID,
+		&template.Title,
+		&template.IsPublicLibrary,
+		&template.Process,
+		&template.ProcessType,
+		&template.CreatedAt,
+		&template.UpdatedAt,
+		&workspace.ID,
+		&workspaceTenantID,
+		&workspace.Name,
+		&workspace.Code,
+		&workspace.Type,
+		&workspace.Status,
+		&workspace.IsSandbox,
+		&workspaceSandboxOfID,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	if workspaceTenantID.Valid {
+		workspace.TenantID = &workspaceTenantID.String
+	}
+	if workspaceSandboxOfID.Valid {
+		workspace.SandboxOfID = &workspaceSandboxOfID.String
+	}
+
+	details := &entity.TemplateVersionWithDetails{TemplateVersion: *version}
+	if err := json.Unmarshal(injectablesJSON, &details.Injectables); err != nil {
+		return nil, fmt.Errorf("unmarshaling version injectables: %w", err)
+	}
+	if err := json.Unmarshal(signerRolesJSON, &details.SignerRoles); err != nil {
+		return nil, fmt.Errorf("unmarshaling version signer roles: %w", err)
+	}
+
+	return &port.TemplateVersionContext{
+		Version:   details,
+		Template:  template,
+		Workspace: workspace,
+	}, nil
 }
 
 func collectTemplateVersions(rows pgx.Rows, scanErrMsg, iterateErrMsg string) ([]*entity.TemplateVersion, error) {
