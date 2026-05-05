@@ -13,12 +13,15 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
-type stubTemplateVersionSearchAdapter struct {
-	responses map[string][]port.TemplateVersionSearchItem
+type stubInternalTemplateContextSearchAdapter struct {
+	responses map[string]*port.InternalTemplateContext
 	errors    map[string]error
 }
 
-func (s *stubTemplateVersionSearchAdapter) SearchTemplateVersions(_ context.Context, params port.TemplateVersionSearchParams) ([]port.TemplateVersionSearchItem, error) {
+func (s *stubInternalTemplateContextSearchAdapter) ResolveInternalTemplateContext(
+	_ context.Context,
+	params port.InternalTemplateContextSearchParams,
+) (*port.InternalTemplateContext, error) {
 	workspaceCode := ""
 	if len(params.WorkspaceCodes) > 0 {
 		workspaceCode = params.WorkspaceCodes[0]
@@ -39,64 +42,77 @@ func TestDefaultTemplateResolver_Resolve(t *testing.T) {
 	}
 
 	t.Run("level 1 hit", func(t *testing.T) {
-		adapter := &stubTemplateVersionSearchAdapter{
-			responses: map[string][]port.TemplateVersionSearchItem{
-				"TENANT_A|CLIENT_WS|CONTRACT": {{VersionID: "v-level-1", Published: true}},
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"TENANT_A|CLIENT_WS|CONTRACT": templateContext("v-level-1"),
 			},
 		}
 
-		versionID, err := resolver.Resolve(context.Background(), req, adapter)
+		resolved, err := resolver.Resolve(context.Background(), req, adapter)
 		require.NoError(t, err)
-		require.NotNil(t, versionID)
-		assert.Equal(t, "v-level-1", *versionID)
+		require.NotNil(t, resolved)
+		assert.Equal(t, "v-level-1", resolved.Version.ID)
 	})
 
 	t.Run("level 2 fallback hit", func(t *testing.T) {
-		adapter := &stubTemplateVersionSearchAdapter{
-			responses: map[string][]port.TemplateVersionSearchItem{
-				"TENANT_A|SYS_WRKSP|CONTRACT": {{VersionID: "v-level-2", Published: true}},
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"TENANT_A|SYS_WRKSP|CONTRACT": templateContext("v-level-2"),
 			},
 		}
 
-		versionID, err := resolver.Resolve(context.Background(), req, adapter)
+		resolved, err := resolver.Resolve(context.Background(), req, adapter)
 		require.NoError(t, err)
-		require.NotNil(t, versionID)
-		assert.Equal(t, "v-level-2", *versionID)
+		require.NotNil(t, resolved)
+		assert.Equal(t, "v-level-2", resolved.Version.ID)
 	})
 
 	t.Run("level 3 fallback hit", func(t *testing.T) {
-		adapter := &stubTemplateVersionSearchAdapter{
-			responses: map[string][]port.TemplateVersionSearchItem{
-				"SYS|SYS_WRKSP|CONTRACT": {{VersionID: "v-level-3", Published: true}},
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"SYS|SYS_WRKSP|CONTRACT": templateContext("v-level-3"),
 			},
 		}
 
-		versionID, err := resolver.Resolve(context.Background(), req, adapter)
+		resolved, err := resolver.Resolve(context.Background(), req, adapter)
 		require.NoError(t, err)
-		require.NotNil(t, versionID)
-		assert.Equal(t, "v-level-3", *versionID)
+		require.NotNil(t, resolved)
+		assert.Equal(t, "v-level-3", resolved.Version.ID)
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		adapter := &stubTemplateVersionSearchAdapter{responses: map[string][]port.TemplateVersionSearchItem{}}
+		adapter := &stubInternalTemplateContextSearchAdapter{responses: map[string]*port.InternalTemplateContext{}}
 
-		versionID, err := resolver.Resolve(context.Background(), req, adapter)
+		resolved, err := resolver.Resolve(context.Background(), req, adapter)
 		require.ErrorIs(t, err, entity.ErrInternalTemplateResolutionNotFound)
-		assert.Nil(t, versionID)
+		assert.Nil(t, resolved)
 	})
 
 	t.Run("adapter error", func(t *testing.T) {
 		expectedErr := errors.New("db failed")
-		adapter := &stubTemplateVersionSearchAdapter{
+		adapter := &stubInternalTemplateContextSearchAdapter{
 			errors: map[string]error{
 				"TENANT_A|CLIENT_WS|CONTRACT": expectedErr,
 			},
 		}
 
-		versionID, err := resolver.Resolve(context.Background(), req, adapter)
+		resolved, err := resolver.Resolve(context.Background(), req, adapter)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "default template resolution failed at stage tenant_workspace")
 		assert.ErrorContains(t, err, "db failed")
-		assert.Nil(t, versionID)
+		assert.Nil(t, resolved)
 	})
+}
+
+func templateContext(versionID string) *port.InternalTemplateContext {
+	docTypeID := "dt-1"
+	return &port.InternalTemplateContext{
+		Tenant:       &entity.Tenant{ID: "t-1", Code: "TENANT_A"},
+		DocumentType: &entity.DocumentType{ID: docTypeID, Code: "CONTRACT"},
+		Template:     &entity.Template{ID: "tpl-1", DocumentTypeID: &docTypeID},
+		Workspace:    &entity.Workspace{ID: "w-1", Code: "CLIENT_WS"},
+		Version: &entity.TemplateVersionWithDetails{
+			TemplateVersion: entity.TemplateVersion{ID: versionID, Status: entity.VersionStatusPublished},
+		},
+	}
 }

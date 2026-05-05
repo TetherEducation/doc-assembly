@@ -23,28 +23,14 @@ type TemplateResolverRequest struct {
 	Environment          entity.Environment
 }
 
-// TemplateResolver allows custom template version selection before default fallback.
+// TemplateResolver resolves the full internal template context for document creation.
+// Return nil to let the engine continue with the default resolver fallback.
 type TemplateResolver interface {
-	// Resolve returns:
-	//   - non-nil version ID: use this version
-	//   - nil version ID: use default resolver fallback
-	//   - error: abort request
-	Resolve(ctx context.Context, req *TemplateResolverRequest, adapter TemplateVersionSearchAdapter) (*string, error)
-}
-
-// InternalTemplateContextResolver can resolve the full internal template context.
-// Implementers should return nil to let the standard resolver fallback run.
-type InternalTemplateContextResolver interface {
-	ResolveInternalTemplateContext(
+	Resolve(
 		ctx context.Context,
 		req *TemplateResolverRequest,
 		adapter InternalTemplateContextSearchAdapter,
 	) (*InternalTemplateContext, error)
-}
-
-// TemplateVersionSearchAdapter exposes read-only template version search for custom resolvers.
-type TemplateVersionSearchAdapter interface {
-	SearchTemplateVersions(ctx context.Context, params TemplateVersionSearchParams) ([]TemplateVersionSearchItem, error)
 }
 
 // InternalTemplateContextSearchAdapter exposes a full template context read model
@@ -62,23 +48,4 @@ type InternalTemplateContextSearchParams struct {
 	Process                string
 	Tags                   []string
 	Published              *bool
-}
-
-// TemplateVersionSearchParams filters the read-only search.
-type TemplateVersionSearchParams struct {
-	TenantCode     string
-	WorkspaceCodes []string
-	DocumentType   string
-	Process        string
-	Tags           []string
-	Published      *bool
-}
-
-// TemplateVersionSearchItem is one candidate returned by SearchTemplateVersions.
-type TemplateVersionSearchItem struct {
-	Published     bool
-	TenantCode    string
-	WorkspaceCode string
-	VersionID     string
-	Tags          []string
 }
