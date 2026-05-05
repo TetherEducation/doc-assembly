@@ -319,6 +319,7 @@ func (g *DocumentGenerator) finishTemplateData(
 		mapCtx.Headers,
 		nil,
 	)
+	injCtx.SetDocumentType(mapCtx.DocumentTypeCode)
 	usedPreloadedInjectables := genCtx.preloadedInjectablesCoverReferencedCodes()
 	if usedPreloadedInjectables {
 		genCtx.injectables, err = g.completePreloadedInjectables(ctx, genCtx, injCtx)
@@ -681,6 +682,7 @@ func (g *DocumentGenerator) resolveInjectables(
 			payload,
 		)
 	}
+	injCtx.SetDocumentType(mapCtx.DocumentTypeCode)
 	slog.InfoContext(ctx, "resolving injectables for generation",
 		"tenant_code", mapCtx.TenantCode,
 		"workspace_code", mapCtx.WorkspaceCode,

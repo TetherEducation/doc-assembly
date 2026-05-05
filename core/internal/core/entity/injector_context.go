@@ -163,6 +163,7 @@ type InjectorContext struct {
 	operation       string
 	tenantCode      string
 	workspaceCode   string
+	documentType    string
 	environment     Environment
 	headers         map[string]string
 	resolvedValues  map[string]any
@@ -268,6 +269,13 @@ func (c *InjectorContext) WorkspaceCode() string {
 	return c.workspaceCode
 }
 
+// DocumentType returns the document type code.
+func (c *InjectorContext) DocumentType() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.documentType
+}
+
 // SetTenantCode sets the tenant code (internal use).
 func (c *InjectorContext) SetTenantCode(code string) {
 	c.mu.Lock()
@@ -280,6 +288,13 @@ func (c *InjectorContext) SetWorkspaceCode(code string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.workspaceCode = code
+}
+
+// SetDocumentType sets the document type code (internal use).
+func (c *InjectorContext) SetDocumentType(code string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.documentType = code
 }
 
 // Environment returns the environment (dev/prod).
