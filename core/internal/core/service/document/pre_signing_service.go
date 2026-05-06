@@ -17,6 +17,8 @@ import (
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
+const publicProcessingSoftLimit = 10 * time.Minute
+
 // PreSigningService implements the public signing use case.
 type PreSigningService struct {
 	accessTokenRepo   port.DocumentAccessTokenRepository
@@ -552,12 +554,36 @@ func (s *PreSigningService) buildProcessingResponse(
 ) *documentuc.PublicSigningResponse {
 	title := documentTitle(doc)
 	resp := &documentuc.PublicSigningResponse{
-		Step:          documentuc.StepProcessing,
-		DocumentTitle: title,
-		RecipientName: recipient.Name,
+		Step:              documentuc.StepProcessing,
+		DocumentTitle:     title,
+		RecipientName:     recipient.Name,
+		ProcessingReason:  "preparing_document",
+		RetryAfterSeconds: 5,
 	}
 	s.applyAccessFlags(resp, doc, recipient, token)
 	return resp
+}
+
+func applyLongRunningProcessingMetadata(resp *documentuc.PublicSigningResponse, attempt *entity.SigningAttempt) {
+	if !isLongRunningProcessingAttempt(attempt) {
+		return
+	}
+	resp.ProcessingReason = "recovering_provider_submission"
+	resp.SupportCode = attempt.ID
+}
+
+func attemptProcessingAge(attempt *entity.SigningAttempt) time.Duration {
+	if attempt == nil {
+		return 0
+	}
+	if attempt.UpdatedAt != nil {
+		return time.Since(*attempt.UpdatedAt)
+	}
+	return time.Since(attempt.CreatedAt)
+}
+
+func isLongRunningProcessingAttempt(attempt *entity.SigningAttempt) bool {
+	return attemptProcessingAge(attempt) > publicProcessingSoftLimit
 }
 
 // buildPreviewPDFResponse builds a preview response with the PDF URL for on-demand rendering.
@@ -601,7 +627,9 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 	case entity.SigningAttemptStatusCreated, entity.SigningAttemptStatusRendering, entity.SigningAttemptStatusPDFReady,
 		entity.SigningAttemptStatusReadyToSubmit, entity.SigningAttemptStatusSubmittingProvider,
 		entity.SigningAttemptStatusProviderRetryWaiting, entity.SigningAttemptStatusSubmissionUnknown, entity.SigningAttemptStatusReconcilingProvider:
-		return s.buildProcessingResponse(doc, recipient, accessToken.Token), nil
+		resp := s.buildProcessingResponse(doc, recipient, accessToken.Token)
+		applyLongRunningProcessingMetadata(resp, attempt)
+		return resp, nil
 	case entity.SigningAttemptStatusSuperseded, entity.SigningAttemptStatusInvalidated, entity.SigningAttemptStatusCancelled:
 		return s.buildDocumentUpdatedResponse(doc, recipient, accessToken.Token), nil
 	case entity.SigningAttemptStatusFailedPermanent, entity.SigningAttemptStatusRequiresReview:
@@ -624,7 +652,9 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 		return waitResp, nil
 	}
 	if attempt.ProviderDocumentID == nil || attemptRecipient.ProviderRecipientID == nil {
-		return s.buildProcessingResponse(doc, recipient, accessToken.Token), nil
+		resp := s.buildProcessingResponse(doc, recipient, accessToken.Token)
+		applyLongRunningProcessingMetadata(resp, attempt)
+		return resp, nil
 	}
 	embeddedResult, err := s.signingProvider.GetAttemptRecipientEmbeddedURL(ctx, &port.GetAttemptRecipientEmbeddedURLRequest{
 		ProviderDocumentID:  *attempt.ProviderDocumentID,

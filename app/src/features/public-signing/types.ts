@@ -60,6 +60,9 @@ export interface PublicSigningResponse {
   documentTitle: string
   recipientName: string
   documentStatus?: string
+  processingReason?: 'preparing_document' | 'recovering_provider_submission'
+  retryAfterSeconds?: number
+  supportCode?: string
   hasCurrentUserSigned: boolean
   canSign: boolean
   canDownload: boolean

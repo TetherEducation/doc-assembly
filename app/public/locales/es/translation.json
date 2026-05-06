@@ -1867,7 +1867,10 @@
     },
     "processing": {
       "title": "Preparando documento",
-      "message": "Estamos preparando tu sesión de firma. Esta página se actualizará automáticamente."
+      "message": "Estamos preparando tu sesión de firma. Esta página se actualizará automáticamente.",
+      "recoveringTitle": "Seguimos preparando tu documento",
+      "recoveringMessage": "Esto está tardando más de lo habitual. Estamos recuperando tu sesión de firma de forma segura y esta página se actualizará automáticamente.",
+      "supportCode": "Código de soporte: {{code}}"
     },
     "documentUpdated": {
       "title": "Documento actualizado",
