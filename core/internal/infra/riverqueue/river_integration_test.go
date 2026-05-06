@@ -278,6 +278,34 @@ func TestSigningAttemptExecutor_StaleCompletionDispatchIsNoop(t *testing.T) {
 	require.Equal(t, int32(0), calls.Load())
 }
 
+func TestSigningExecutionUnitOfWork_TransitionAndEnqueueNoopsForTerminalAttempt(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+	attempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, fx.documentID, fx.recipients(), fx.signerOrders())
+	require.NoError(t, err)
+
+	stale := *attempt
+	providerDocumentID := "provider-terminal"
+	_, err = fx.pool.Exec(ctx, `
+		UPDATE execution.signing_attempts
+		SET status=$2, provider_document_id=$3, terminal_at=now()
+		WHERE id=$1`, attempt.ID, entity.SigningAttemptStatusCompleted, providerDocumentID)
+	require.NoError(t, err)
+
+	stale.Status = entity.SigningAttemptStatusSigningReady
+	stale.ProviderDocumentID = &providerDocumentID
+	require.NoError(t, riverSvc.SigningExecutionUOW().TransitionAndEnqueue(ctx, &stale, port.SigningJobPhaseRefreshProviderStatus, "STALE_PUBLIC_REFRESH"))
+
+	current := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusCompleted, current.Status)
+
+	var refreshJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='refresh_attempt_provider_status' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&refreshJobs))
+	require.Equal(t, 0, refreshJobs)
+}
+
 func TestSigningAttemptExecutor_ReconcileProviderPartialEnvelopeResumesWithoutUnknownLoop(t *testing.T) {
 	ctx := context.Background()
 	fx := newAttemptFixture(t, ctx)
@@ -322,6 +350,63 @@ func TestSigningAttemptExecutor_ReconcileProviderPartialEnvelopeResumesWithoutUn
 	require.Len(t, recipients, 1)
 	require.NotNil(t, recipients[0].ProviderRecipientID)
 	require.NotNil(t, recipients[0].SigningURL)
+}
+
+func TestSigningAttemptExecutor_RefreshProviderStatusPropagatesSignedRecipients(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	provider := signingmock.New()
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+	fx.drainProviderSubmission(t, ctx, executor, attempt.ID)
+
+	ready := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, ready.Status)
+	require.NotNil(t, ready.ProviderDocumentID)
+
+	attemptRecipients, err := fx.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	require.NoError(t, err)
+	require.Len(t, attemptRecipients, 1)
+	require.NotNil(t, attemptRecipients[0].ProviderRecipientID)
+
+	documentRecipientID := fx.createDocumentRecipient(t, ctx)
+	_, err = fx.pool.Exec(ctx, `
+		UPDATE execution.signing_attempt_recipients
+		SET document_recipient_id=$1
+		WHERE id=$2`, documentRecipientID, attemptRecipients[0].ID)
+	require.NoError(t, err)
+
+	provider.SimulateComplete(*ready.ProviderDocumentID)
+	require.NoError(t, executor.RefreshAttemptProviderStatus(ctx, attempt.ID))
+
+	refreshed := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusCompleted, refreshed.Status)
+
+	attemptRecipients, err = fx.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	require.NoError(t, err)
+	require.Len(t, attemptRecipients, 1)
+	require.Equal(t, entity.RecipientStatusSigned, attemptRecipients[0].Status)
+	require.NotNil(t, attemptRecipients[0].SignedAt)
+
+	var documentStatus entity.DocumentStatus
+	var documentRecipientStatus entity.RecipientStatus
+	var documentRecipientSignedAt *time.Time
+	require.NoError(t, fx.pool.QueryRow(ctx, `
+		SELECT d.status, dr.status, dr.signed_at
+		FROM execution.documents d
+		JOIN execution.document_recipients dr ON dr.document_id=d.id
+		WHERE d.id=$1 AND dr.id=$2`, fx.documentID, documentRecipientID).
+		Scan(&documentStatus, &documentRecipientStatus, &documentRecipientSignedAt))
+	require.Equal(t, entity.DocumentStatusCompleted, documentStatus)
+	require.Equal(t, entity.RecipientStatusSigned, documentRecipientStatus)
+	require.NotNil(t, documentRecipientSignedAt)
+
+	var dispatchJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `
+		SELECT count(*)
+		FROM river_job
+		WHERE kind='dispatch_attempt_completion' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&dispatchJobs))
+	require.Equal(t, 1, dispatchJobs)
 }
 
 func TestSigningAttemptExecutor_TransientProviderErrorReturnsForRiverRetryAndResumes(t *testing.T) {
@@ -377,11 +462,49 @@ func TestSigningAttemptExecutor_ProviderTransitionNoopsWhenAttemptSupersededAfte
 	oldAttempt := fx.mustAttempt(t, ctx, attempt.ID)
 	require.Equal(t, entity.SigningAttemptStatusSuperseded, oldAttempt.Status)
 	require.Nil(t, oldAttempt.ProviderDocumentID)
-	require.Nil(t, oldAttempt.ProviderSubmitPhase)
+	require.NotNil(t, oldAttempt.ProviderSubmitPhase)
+	require.Equal(t, entity.ProviderSubmitPhaseCreateProviderDocument, *oldAttempt.ProviderSubmitPhase)
 
 	var activeAttemptID string
 	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id=$1`, fx.documentID).Scan(&activeAttemptID))
 	require.NotEqual(t, attempt.ID, activeAttemptID)
+
+	var staleAdvanceJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='advance_provider_submission' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&staleAdvanceJobs))
+	require.Equal(t, 0, staleAdvanceJobs)
+}
+
+func TestSigningAttemptExecutor_ProviderPhaseTransitionNoopsWhenPhaseAdvancedAfterProviderCall(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	baseProvider := signingmock.New()
+	var attemptID string
+	provider := &afterDocumentProvider{SigningProvider: baseProvider}
+	provider.after = func() error {
+		phase := entity.ProviderSubmitPhaseCreateFields
+		_, err := fx.pool.Exec(ctx, `
+			UPDATE execution.signing_attempts
+			SET status=$2, provider_document_id=$3, provider_submit_phase=$4
+			WHERE id=$1`,
+			attemptID,
+			entity.SigningAttemptStatusSubmittingProvider,
+			"provider-doc-current",
+			phase,
+		)
+		return err
+	}
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+	attemptID = attempt.ID
+
+	require.NoError(t, executor.AdvanceProviderSubmissionForPhase(ctx, attempt.ID, entity.ProviderSubmitPhaseCreateProviderDocument))
+
+	current := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSubmittingProvider, current.Status)
+	require.NotNil(t, current.ProviderSubmitPhase)
+	require.Equal(t, entity.ProviderSubmitPhaseCreateFields, *current.ProviderSubmitPhase)
+	require.NotNil(t, current.ProviderDocumentID)
+	require.Equal(t, "provider-doc-current", *current.ProviderDocumentID)
 
 	var staleAdvanceJobs int
 	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='advance_provider_submission' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&staleAdvanceJobs))
@@ -532,6 +655,23 @@ func (f *attemptFixture) recipients() []*entity.DocumentRecipient {
 	}}
 }
 
+func (f *attemptFixture) createDocumentRecipient(t *testing.T, ctx context.Context) string {
+	t.Helper()
+	var id string
+	require.NoError(t, f.pool.QueryRow(ctx, `
+		INSERT INTO execution.document_recipients (
+			document_id, template_version_role_id, name, email, status, created_at
+		) VALUES ($1, $2, $3, $4, $5, now())
+		RETURNING id`,
+		f.documentID,
+		f.roleID,
+		"Signer",
+		"signer@example.com",
+		entity.RecipientStatusPending,
+	).Scan(&id))
+	return id
+}
+
 func (f *attemptFixture) signerOrders() map[string]int {
 	return map[string]int{f.roleID: 1}
 }
@@ -628,8 +768,10 @@ func (f *attemptFixture) createProviderReadyAttempt(t *testing.T, ctx context.Co
 	attempt.PDFChecksumAlgorithm = &algo
 	attempt.SignatureFieldSnapshot = fields
 	attempt.ProviderUploadPayload = payload
+	providerSubmitPhase := entity.ProviderSubmitPhaseCreateProviderDocument
 	attempt.ProviderName = &providerName
 	attempt.ProviderCorrelationKey = &corr
+	attempt.ProviderSubmitPhase = &providerSubmitPhase
 	require.NoError(t, f.attemptRepo.Update(ctx, attempt))
 	return attempt
 }

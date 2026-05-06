@@ -214,6 +214,13 @@ func (u *SigningExecutionUnitOfWork) transition(ctx context.Context, attempt *en
 	if err != nil {
 		return err
 	}
+	active, err := u.transitionStillOwnsAttemptTx(ctx, tx, current)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return nil
+	}
 	oldStatus := current.Status
 	if err := u.attemptRepo.UpdateTx(ctx, tx, attempt); err != nil {
 		return err
@@ -285,7 +292,7 @@ func (u *SigningExecutionUnitOfWork) enqueueTx(ctx context.Context, tx pgx.Tx, p
 	case port.SigningJobPhaseReconcileProvider:
 		_, err = u.client.InsertTx(ctx, tx, ReconcileProviderSubmissionArgs{AttemptID: attempt.ID}, nil)
 	case port.SigningJobPhaseRefreshProviderStatus:
-		_, err = u.client.InsertTx(ctx, tx, RefreshAttemptProviderStatusArgs{AttemptID: attempt.ID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, refreshAttemptProviderStatusArgs(attempt.ID, time.Now()), nil)
 	case port.SigningJobPhaseCleanupProviderAttempt:
 		_, err = u.client.InsertTx(ctx, tx, CleanupProviderAttemptArgs{AttemptID: attempt.ID}, nil)
 	case port.SigningJobPhaseDispatchCompletion:
@@ -310,6 +317,17 @@ func (u *SigningExecutionUnitOfWork) lockAttemptTx(ctx context.Context, tx pgx.T
 		       created_at, updated_at, terminal_at
 		FROM execution.signing_attempts WHERE id = $1 FOR UPDATE`, attemptID)
 	return scanAttemptRow(row)
+}
+
+func (u *SigningExecutionUnitOfWork) transitionStillOwnsAttemptTx(ctx context.Context, tx pgx.Tx, current *entity.SigningAttempt) (bool, error) {
+	if current.Status.IsTerminal() {
+		return false, nil
+	}
+	var activeAttemptID *string
+	if err := tx.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id = $1`, current.DocumentID).Scan(&activeAttemptID); err != nil {
+		return false, fmt.Errorf("checking active attempt projection: %w", err)
+	}
+	return activeAttemptID != nil && *activeAttemptID == current.ID, nil
 }
 
 func (u *SigningExecutionUnitOfWork) setActiveProjectionTx(ctx context.Context, tx pgx.Tx, documentID, attemptID string, status entity.DocumentStatus) error {

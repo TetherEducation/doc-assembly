@@ -83,6 +83,11 @@ func TestFindProviderDocumentByCorrelationKeyFindsUsableEnvelopeByExternalID(t *
 		t.Fatalf("FindProviderDocumentByCorrelationKey() error = %v", err)
 	}
 
+	assertUsableProviderDocument(t, got, server.URL)
+}
+
+func assertUsableProviderDocument(t *testing.T, got *port.ProviderDocumentResult, signingBaseURL string) {
+	t.Helper()
 	if !got.Found || !got.Usable {
 		t.Fatalf("Found/Usable = %v/%v, want true/true (reason: %s)", got.Found, got.Usable, got.Reason)
 	}
@@ -96,7 +101,7 @@ func TestFindProviderDocumentByCorrelationKeyFindsUsableEnvelopeByExternalID(t *
 		t.Fatalf("Recipients len = %d, want 1", len(got.Recipients))
 	}
 	recipient := got.Recipients[0]
-	if recipient.RoleID != "guardian" || recipient.ProviderRecipientID != "123" || recipient.SigningURL != server.URL+"/sign/sign-token" || recipient.Status != entity.RecipientStatusSent {
+	if recipient.RoleID != "guardian" || recipient.ProviderRecipientID != "123" || recipient.SigningURL != signingBaseURL+"/sign/sign-token" || recipient.Status != entity.RecipientStatusSent {
 		t.Fatalf("recipient = %+v", recipient)
 	}
 }
@@ -531,6 +536,57 @@ func TestEnsureProviderRecipientsAddsRecipientsWhenEnvelopeIsEmpty(t *testing.T)
 		t.Fatalf("Recipients len = %d, want 1", len(got.Recipients))
 	}
 	if got.Recipients[0].RoleID != "guardian" || got.Recipients[0].ProviderRecipientID != "123" {
+		t.Fatalf("recipient = %+v", got.Recipients[0])
+	}
+}
+
+func TestEnsureProviderRecipientsAcceptsExistingRecipientMatchedByEmail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_email_match":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_email_match",
+				"externalId": "doc-id:attempt-id",
+				"status":     "PENDING",
+				"recipients": []map[string]any{{
+					"id":     456,
+					"email":  "guardian@example.test",
+					"token":  "guardian-token",
+					"status": "SENT",
+				}},
+				"fields": []map[string]any{},
+			})
+		case "/api/v2/envelope/recipient/create-many":
+			t.Fatal("EnsureProviderRecipients posted duplicate recipients despite email match")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderRecipients(context.Background(), &port.EnsureProviderRecipientsRequest{
+		ProviderDocumentID: "env_email_match",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.SigningRecipient{{
+			Email:  "guardian@example.test",
+			Name:   "Guardian",
+			RoleID: "guardian",
+		}},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderRecipients() error = %v", err)
+	}
+
+	if len(got.Recipients) != 1 {
+		t.Fatalf("Recipients len = %d, want 1", len(got.Recipients))
+	}
+	if got.Recipients[0].RoleID != "guardian" || got.Recipients[0].ProviderRecipientID != "456" || got.Recipients[0].ProviderSigningToken != "guardian-token" {
 		t.Fatalf("recipient = %+v", got.Recipients[0])
 	}
 }

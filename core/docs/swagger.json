@@ -12992,16 +12992,28 @@
                     "description": "PdfURL is the URL to download the rendered PDF for preview (step=preview, Path A).",
                     "type": "string"
                 },
+                "processingReason": {
+                    "description": "ProcessingReason explains public processing copy without exposing internal errors.",
+                    "type": "string"
+                },
                 "recipientName": {
                     "description": "RecipientName is the signer's display name.",
                     "type": "string"
+                },
+                "retryAfterSeconds": {
+                    "description": "RetryAfterSeconds hints how soon the public page should poll again.",
+                    "type": "integer"
                 },
                 "signingPosition": {
                     "description": "SigningPosition is the signer's position in signing order (step=waiting).",
                     "type": "integer"
                 },
                 "step": {
-                    "description": "Step indicates the current signing flow step.\n\"preview\" = show form (Path B) or PDF preview (Path A)\n\"signing\" = show embedded signing iframe\n\"waiting\" = waiting for previous signers\n\"completed\" = signing completed\n\"declined\" = document was declined",
+                    "description": "Step indicates the current signing flow step.\n\"preview\" = show form (Path B) or PDF preview (Path A)\n\"processing\" = River is preparing/retrying/reconciling the active attempt\n\"signing\" = show embedded signing iframe\n\"waiting\" = waiting for previous signers\n\"completed\" = signing completed\n\"declined\" = document was declined\n\"document_updated\" = token points at a superseded/invalidated attempt\n\"unavailable\" = active attempt failed or requires review",
+                    "type": "string"
+                },
+                "supportCode": {
+                    "description": "SupportCode is a safe identifier support can use for long-running processing.",
                     "type": "string"
                 },
                 "totalSigners": {

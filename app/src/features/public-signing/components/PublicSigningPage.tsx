@@ -666,16 +666,6 @@ function CompletedScreen({
           )}
         </div>
 
-        {canDownload && downloadUrl && (
-          <div className="rounded-lg border border-border bg-card p-2">
-            <iframe
-              src={downloadUrl}
-              title="Completed Document PDF"
-              className="w-full border-0 rounded-md"
-              style={{ height: '70vh' }}
-            />
-          </div>
-        )}
       </div>
     </PageShell>
   )

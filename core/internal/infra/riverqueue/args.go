@@ -27,7 +27,10 @@ type SubmitAttemptToProviderArgs AttemptJobArgs
 
 type ReconcileProviderSubmissionArgs AttemptJobArgs
 
-type RefreshAttemptProviderStatusArgs AttemptJobArgs
+type RefreshAttemptProviderStatusArgs struct {
+	AttemptID string `json:"attempt_id"`
+	Bucket    string `json:"refresh_bucket,omitempty"`
+}
 
 type CleanupProviderAttemptArgs AttemptJobArgs
 
@@ -52,6 +55,15 @@ func (a RefreshAttemptProviderStatusArgs) InsertOpts() river.InsertOpts {
 }
 func (a CleanupProviderAttemptArgs) InsertOpts() river.InsertOpts    { return uniqueAttemptPhaseOpts() }
 func (a DispatchAttemptCompletionArgs) InsertOpts() river.InsertOpts { return uniqueAttemptPhaseOpts() }
+
+const publicSigningRefreshBucket = 10 * time.Second
+
+func refreshAttemptProviderStatusArgs(attemptID string, at time.Time) RefreshAttemptProviderStatusArgs {
+	return RefreshAttemptProviderStatusArgs{
+		AttemptID: attemptID,
+		Bucket:    at.UTC().Truncate(publicSigningRefreshBucket).Format(time.RFC3339),
+	}
+}
 
 func uniqueAttemptPhaseOpts() river.InsertOpts {
 	return river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByPeriod: 24 * time.Hour}}

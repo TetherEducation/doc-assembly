@@ -17,7 +17,10 @@ import (
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
-const publicProcessingSoftLimit = 10 * time.Minute
+const (
+	publicProcessingSoftLimit          = 10 * time.Minute
+	publicSigningStatusRefreshInterval = 10 * time.Second
+)
 
 // PreSigningService implements the public signing use case.
 type PreSigningService struct {
@@ -644,6 +647,8 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 		return resp, nil
 	}
 
+	s.enqueueProviderStatusRefreshIfDue(ctx, attempt)
+
 	attemptRecipient, err := s.attemptRepo.FindRecipientByAttemptAndDocumentRecipient(ctx, attempt.ID, recipient.ID)
 	if err != nil {
 		return nil, err
@@ -672,6 +677,34 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 	resp := &documentuc.PublicSigningResponse{Step: documentuc.StepSigning, DocumentTitle: title, RecipientName: recipient.Name, EmbeddedSigningURL: embeddedResult.EmbeddedURL}
 	s.applyAccessFlags(resp, doc, recipient, accessToken.Token)
 	return resp, nil
+}
+
+func (s *PreSigningService) enqueueProviderStatusRefreshIfDue(ctx context.Context, attempt *entity.SigningAttempt) {
+	if !shouldRequestProviderStatusRefresh(attempt, time.Now()) {
+		return
+	}
+	if err := s.signingUOW.TransitionAndEnqueue(ctx, attempt, port.SigningJobPhaseRefreshProviderStatus, "ATTEMPT_PUBLIC_SIGNING_REFRESH_REQUESTED"); err != nil {
+		slog.WarnContext(ctx, "failed to enqueue public signing provider status refresh",
+			slog.String("attempt_id", attempt.ID),
+			slog.String("error", err.Error()),
+		)
+	}
+}
+
+func shouldRequestProviderStatusRefresh(attempt *entity.SigningAttempt, now time.Time) bool {
+	if attempt == nil || attempt.ProviderDocumentID == nil || *attempt.ProviderDocumentID == "" {
+		return false
+	}
+	switch attempt.Status {
+	case entity.SigningAttemptStatusSigningReady, entity.SigningAttemptStatusSigning:
+	default:
+		return false
+	}
+	lastRefreshAt := attempt.CreatedAt
+	if attempt.UpdatedAt != nil {
+		lastRefreshAt = *attempt.UpdatedAt
+	}
+	return now.Sub(lastRefreshAt) >= publicSigningStatusRefreshInterval
 }
 
 func (s *PreSigningService) buildDocumentUpdatedResponse(doc *entity.Document, recipient *entity.DocumentRecipient, token string) *documentuc.PublicSigningResponse {

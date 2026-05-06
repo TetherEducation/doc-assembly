@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
+
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
 )
 
 type RenderAttemptPDFWorker struct {
@@ -37,7 +39,7 @@ type AdvanceProviderSubmissionWorker struct {
 }
 
 func (w *AdvanceProviderSubmissionWorker) Work(ctx context.Context, job *river.Job[AdvanceProviderSubmissionArgs]) error {
-	return w.executor.AdvanceProviderSubmission(ctx, job.Args.AttemptID)
+	return w.executor.AdvanceProviderSubmissionForPhase(ctx, job.Args.AttemptID, entity.ProviderSubmitPhase(job.Args.ProviderSubmitPhase))
 }
 func (w *AdvanceProviderSubmissionWorker) Timeout(_ *river.Job[AdvanceProviderSubmissionArgs]) time.Duration {
 	return 2 * time.Minute

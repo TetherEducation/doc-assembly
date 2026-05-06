@@ -860,6 +860,19 @@ func (a *Adapter) buildProviderSubmissionSnapshotFromEnvelope(env *envelopeDetai
 }
 
 func (a *Adapter) buildRecipientResultsFromEnvelope(env *envelopeDetailResponse, expected []port.SigningRecipient, requireSigningToken bool) []port.RecipientResult {
+	roleByEmail := recipientRoleByEmail(expected)
+	results := make([]port.RecipientResult, 0, len(env.Recipients))
+	for _, recipient := range env.Recipients {
+		result, ok := a.recipientResultFromEnvelope(recipient, roleByEmail, requireSigningToken)
+		if ok {
+			results = append(results, result)
+		}
+	}
+
+	return results
+}
+
+func recipientRoleByEmail(expected []port.SigningRecipient) map[string]string {
 	roleByEmail := make(map[string]string, len(expected))
 	for _, recipient := range expected {
 		if strings.TrimSpace(recipient.Email) == "" || strings.TrimSpace(recipient.RoleID) == "" {
@@ -867,50 +880,51 @@ func (a *Adapter) buildRecipientResultsFromEnvelope(env *envelopeDetailResponse,
 		}
 		roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))] = recipient.RoleID
 	}
+	return roleByEmail
+}
 
-	results := make([]port.RecipientResult, 0, len(env.Recipients))
+func (a *Adapter) recipientResultFromEnvelope(recipient recipientResponse, roleByEmail map[string]string, requireSigningToken bool) (port.RecipientResult, bool) {
+	providerRecipientID := strconv.Itoa(recipient.ID)
+	if recipient.ID == 0 {
+		providerRecipientID = ""
+	}
+	if strings.TrimSpace(providerRecipientID) == "" {
+		return port.RecipientResult{}, false
+	}
+
+	roleID := strings.TrimSpace(recipient.ExternalID)
+	if roleID == "" {
+		roleID = roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))]
+	}
+	if roleID == "" {
+		return port.RecipientResult{}, false
+	}
+
+	token := strings.TrimSpace(recipient.Token)
+	if requireSigningToken && token == "" {
+		return port.RecipientResult{}, false
+	}
+
+	result := port.RecipientResult{
+		RoleID:               roleID,
+		ProviderRecipientID:  providerRecipientID,
+		ProviderSigningToken: token,
+		Status:               MapRecipientStatus(recipient.Status),
+	}
+	if token != "" {
+		result.SigningURL = fmt.Sprintf("%s/sign/%s", a.config.SigningBaseURL, token)
+	}
+	return result, true
+}
+
+func missingSigningRecipientRoles(env *envelopeDetailResponse, expected []port.SigningRecipient) []string {
+	roleByEmail := recipientRoleByEmail(expected)
+	present := make(map[string]struct{}, len(env.Recipients))
 	for _, recipient := range env.Recipients {
-		providerRecipientID := strconv.Itoa(recipient.ID)
-		if recipient.ID == 0 {
-			providerRecipientID = ""
-		}
-		if strings.TrimSpace(providerRecipientID) == "" {
-			continue
-		}
-
 		roleID := strings.TrimSpace(recipient.ExternalID)
 		if roleID == "" {
 			roleID = roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))]
 		}
-		if roleID == "" {
-			continue
-		}
-
-		token := strings.TrimSpace(recipient.Token)
-		if requireSigningToken && token == "" {
-			continue
-		}
-
-		result := port.RecipientResult{
-			RoleID:               roleID,
-			ProviderRecipientID:  providerRecipientID,
-			ProviderSigningToken: token,
-			Status:               MapRecipientStatus(recipient.Status),
-		}
-		if token != "" {
-			result.SigningURL = fmt.Sprintf("%s/sign/%s", a.config.SigningBaseURL, token)
-		}
-
-		results = append(results, result)
-	}
-
-	return results
-}
-
-func missingSigningRecipientRoles(env *envelopeDetailResponse, expected []port.SigningRecipient) []string {
-	present := make(map[string]struct{}, len(env.Recipients))
-	for _, recipient := range env.Recipients {
-		roleID := strings.TrimSpace(recipient.ExternalID)
 		if roleID != "" {
 			present[roleID] = struct{}{}
 		}
@@ -1024,19 +1038,24 @@ func countExistingSignatureFieldsByRecipient(env *envelopeDetailResponse) map[in
 	}
 	for _, recipient := range env.Recipients {
 		for _, field := range recipient.Fields {
-			if isSignatureField(field) {
-				recipientID := field.RecipientID
-				if recipientID == 0 {
-					recipientID = recipient.ID
-				}
-				if recipientID != 0 {
-					counts[recipientID]++
-				}
-			}
+			incrementSignatureFieldCount(counts, field, recipient.ID)
 		}
 	}
 
 	return counts
+}
+
+func incrementSignatureFieldCount(counts map[int]int, field fieldResponse, fallbackRecipientID int) {
+	if !isSignatureField(field) {
+		return
+	}
+	recipientID := field.RecipientID
+	if recipientID == 0 {
+		recipientID = fallbackRecipientID
+	}
+	if recipientID != 0 {
+		counts[recipientID]++
+	}
 }
 
 func isSignatureField(field fieldResponse) bool {

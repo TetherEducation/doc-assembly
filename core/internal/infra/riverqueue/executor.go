@@ -94,7 +94,7 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 	now := time.Now().UTC()
 	attempt.Status = entity.SigningAttemptStatusRendering
 	attempt.RenderStartedAt = &now
-	if err := e.transition(ctx, attempt, "ATTEMPT_RENDER_STARTED", nil, nil); err != nil {
+	if err := e.transition(ctx, attempt, "ATTEMPT_RENDER_STARTED", nil, nil, nil); err != nil {
 		return err
 	}
 
@@ -149,15 +149,19 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		slog.String("document_id", doc.ID), slog.String("attempt_id", attempt.ID), slog.String("pdf_storage_path", storagePath))
 	phase := entity.ProviderSubmitPhaseCreateProviderDocument
 	attempt.ProviderSubmitPhase = &phase
-	return e.transition(ctx, attempt, "ATTEMPT_PDF_READY", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+	return e.transition(ctx, attempt, "ATTEMPT_PDF_READY", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil, nil)
 }
 
 func (e *SigningAttemptExecutor) SubmitAttemptToProvider(ctx context.Context, attemptID string) error {
 	return e.AdvanceProviderSubmission(ctx, attemptID)
 }
 
-//nolint:gocognit,gocyclo
 func (e *SigningAttemptExecutor) AdvanceProviderSubmission(ctx context.Context, attemptID string) error {
+	return e.AdvanceProviderSubmissionForPhase(ctx, attemptID, "")
+}
+
+//nolint:gocognit,gocyclo
+func (e *SigningAttemptExecutor) AdvanceProviderSubmissionForPhase(ctx context.Context, attemptID string, expectedPhase entity.ProviderSubmitPhase) error {
 	attempt, doc, stale, err := e.loadActiveAttempt(
 		ctx,
 		attemptID,
@@ -178,6 +182,9 @@ func (e *SigningAttemptExecutor) AdvanceProviderSubmission(ctx context.Context, 
 	}
 
 	phase := providerSubmitPhase(attempt)
+	if expectedPhase != "" && phase != expectedPhase {
+		return nil
+	}
 	if phase == "" {
 		phase = entity.ProviderSubmitPhaseCreateProviderDocument
 		attempt.ProviderSubmitPhase = &phase
@@ -233,7 +240,7 @@ func (e *SigningAttemptExecutor) advanceCreateProviderDocument(ctx context.Conte
 	attempt.Status = entity.SigningAttemptStatusSubmittingProvider
 	next := entity.ProviderSubmitPhaseAddRecipients
 	attempt.ProviderSubmitPhase = &next
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_DOCUMENT_ENSURED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_DOCUMENT_ENSURED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil, ptrProviderSubmitPhase(entity.ProviderSubmitPhaseCreateProviderDocument))
 }
 
 func (e *SigningAttemptExecutor) advanceProviderRecipients(ctx context.Context, attempt *entity.SigningAttempt) error {
@@ -267,6 +274,7 @@ func (e *SigningAttemptExecutor) advanceProviderRecipients(ctx context.Context, 
 		"ATTEMPT_PROVIDER_RECIPIENTS_ENSURED",
 		ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission),
 		nil,
+		ptrProviderSubmitPhase(entity.ProviderSubmitPhaseAddRecipients),
 	)
 }
 
@@ -315,7 +323,7 @@ func (e *SigningAttemptExecutor) advanceProviderFields(ctx context.Context, atte
 	attempt.Status = entity.SigningAttemptStatusSubmittingProvider
 	next := entity.ProviderSubmitPhaseDistributeDocument
 	attempt.ProviderSubmitPhase = &next
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_FIELDS_ENSURED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_FIELDS_ENSURED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil, ptrProviderSubmitPhase(entity.ProviderSubmitPhaseCreateFields))
 }
 
 func (e *SigningAttemptExecutor) advanceProviderDistribution(ctx context.Context, attempt *entity.SigningAttempt) error {
@@ -337,7 +345,7 @@ func (e *SigningAttemptExecutor) advanceProviderDistribution(ctx context.Context
 	attempt.Status = entity.SigningAttemptStatusSubmittingProvider
 	next := entity.ProviderSubmitPhaseFetchSigningReferences
 	attempt.ProviderSubmitPhase = &next
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_DISTRIBUTED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_DISTRIBUTED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil, ptrProviderSubmitPhase(entity.ProviderSubmitPhaseDistributeDocument))
 }
 
 func (e *SigningAttemptExecutor) advanceProviderSigningReferences(ctx context.Context, attempt *entity.SigningAttempt) error {
@@ -366,7 +374,7 @@ func (e *SigningAttemptExecutor) advanceProviderSigningReferences(ctx context.Co
 	attempt.RetryCount = 0
 	attempt.LastErrorClass = nil
 	attempt.LastErrorMessage = nil
-	return e.persistProviderSuccess(ctx, attempt, result.Recipients)
+	return e.persistProviderSuccess(ctx, attempt, result.Recipients, ptrProviderSubmitPhase(entity.ProviderSubmitPhaseFetchSigningReferences))
 }
 
 func (e *SigningAttemptExecutor) loadAttemptPDF(ctx context.Context, attempt *entity.SigningAttempt) ([]byte, error) {
@@ -418,15 +426,15 @@ func (e *SigningAttemptExecutor) ReconcileProviderSubmission(ctx context.Context
 			attempt.Status = entity.SigningAttemptStatusRequiresReview
 			msg := "provider cannot reconcile by correlation key"
 			attempt.LastErrorMessage = &msg
-			return e.transition(ctx, attempt, "ATTEMPT_REQUIRES_REVIEW", nil, nil)
+			return e.transition(ctx, attempt, "ATTEMPT_REQUIRES_REVIEW", nil, nil, nil)
 		}
 		attempt.Status = entity.SigningAttemptStatusSubmissionUnknown
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILIATION_UNSUPPORTED", ptrPhase(port.SigningJobPhaseReconcileProvider), nil)
+		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILIATION_UNSUPPORTED", ptrPhase(port.SigningJobPhaseReconcileProvider), nil, nil)
 	}
 
 	old := attempt.Status
 	attempt.Status = entity.SigningAttemptStatusReconcilingProvider
-	if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILIATION_STARTED", nil, nil); err != nil {
+	if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILIATION_STARTED", nil, nil, nil); err != nil {
 		return err
 	}
 	snapshot, err := e.signingProvider.InspectProviderSubmission(ctx, &port.FindProviderDocumentRequest{
@@ -459,7 +467,7 @@ func (e *SigningAttemptExecutor) ReconcileProviderSubmission(ctx context.Context
 	if !snapshot.HasDocument {
 		attempt.Status = entity.SigningAttemptStatusReadyToSubmit
 	}
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), &old)
+	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_RECONCILED", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), &old, nil)
 }
 
 func (e *SigningAttemptExecutor) RefreshAttemptProviderStatus(ctx context.Context, attemptID string) error {
@@ -479,7 +487,43 @@ func (e *SigningAttemptExecutor) RefreshAttemptProviderStatus(ctx context.Contex
 	if attempt.Status == entity.SigningAttemptStatusCompleted {
 		phase = ptrPhase(port.SigningJobPhaseDispatchCompletion)
 	}
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_STATUS_REFRESHED", phase, nil)
+	return e.persistProviderStatusRefresh(ctx, attempt, status, phase)
+}
+
+func (e *SigningAttemptExecutor) persistProviderStatusRefresh(ctx context.Context, attempt *entity.SigningAttempt, status *port.ProviderDocumentStatusResult, phase *port.SigningJobPhase) error {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	current, ok, err := e.lockTransitionAttemptForPersistenceTx(ctx, tx, attempt.ID, nil)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
+	old := current.Status
+	if err := e.updateAttemptRecipientStatusesTx(ctx, tx, attempt.ID, status); err != nil {
+		return err
+	}
+	if err := e.attemptRepo.UpdateTx(ctx, tx, attempt); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE execution.documents SET status=$3, updated_at=now() WHERE id=$1 AND active_attempt_id=$2`, attempt.DocumentID, attempt.ID, entity.ProjectDocumentStatusFromAttempt(attempt.Status)); err != nil {
+		return err
+	}
+	if err := e.insertTransitionEventTx(ctx, tx, attempt, "ATTEMPT_PROVIDER_STATUS_REFRESHED", old); err != nil {
+		return err
+	}
+	if phase != nil {
+		if err := insertPhaseTx(ctx, e.client, tx, *phase, attempt); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 func (e *SigningAttemptExecutor) CleanupProviderAttempt(ctx context.Context, attemptID string) error {
@@ -621,16 +665,16 @@ func (e *SigningAttemptExecutor) handleProviderError(ctx context.Context, attemp
 	attempt.RetryCount++
 	switch providerErr.Class {
 	case entity.ProviderErrorClassTransient:
-		if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMIT_RETRY_WAITING", nil, nil); err != nil {
+		if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMIT_RETRY_WAITING", nil, nil, nil); err != nil {
 			return err
 		}
 		return providerErr
 	case entity.ProviderErrorClassAmbiguous:
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMISSION_UNKNOWN", ptrPhase(port.SigningJobPhaseReconcileProvider), nil)
+		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMISSION_UNKNOWN", ptrPhase(port.SigningJobPhaseReconcileProvider), nil, nil)
 	case entity.ProviderErrorClassConflictStale:
-		return e.transition(ctx, attempt, "ATTEMPT_REQUIRES_REVIEW", nil, nil)
+		return e.transition(ctx, attempt, "ATTEMPT_REQUIRES_REVIEW", nil, nil, nil)
 	default:
-		return e.transition(ctx, attempt, "ATTEMPT_FAILED_PERMANENT", nil, nil)
+		return e.transition(ctx, attempt, "ATTEMPT_FAILED_PERMANENT", nil, nil, nil)
 	}
 }
 
@@ -643,32 +687,20 @@ func (e *SigningAttemptExecutor) failPermanent(ctx context.Context, attempt *ent
 	attempt.LastErrorMessage = &msg
 	now := time.Now().UTC()
 	attempt.TerminalAt = &now
-	return e.transition(ctx, attempt, "ATTEMPT_FAILED_PERMANENT", nil, &old)
+	return e.transition(ctx, attempt, "ATTEMPT_FAILED_PERMANENT", nil, &old, nil)
 }
 
-func (e *SigningAttemptExecutor) transition(ctx context.Context, attempt *entity.SigningAttempt, eventType string, phase *port.SigningJobPhase, forcedOld *entity.SigningAttemptStatus) error {
+func (e *SigningAttemptExecutor) transition(ctx context.Context, attempt *entity.SigningAttempt, eventType string, phase *port.SigningJobPhase, forcedOld *entity.SigningAttemptStatus, expectedProviderPhase *entity.ProviderSubmitPhase) error {
 	tx, err := e.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	current, err := scanAttemptRow(tx.QueryRow(ctx, `
-		SELECT id, document_id, sequence, status, render_started_at, pdf_storage_path, pdf_checksum,
-		       pdf_checksum_algorithm, render_metadata, signature_field_snapshot, provider_upload_payload,
-		       provider_name, provider_correlation_key, provider_document_id, provider_submit_phase,
-		       retry_count, next_retry_at, last_error_class, last_error_message,
-		       reconciliation_count, next_reconciliation_at, cleanup_status, cleanup_action, cleanup_error,
-		       processing_lease_owner, processing_lease_expires_at, invalidation_reason,
-		       created_at, updated_at, terminal_at
-		FROM execution.signing_attempts WHERE id = $1 FOR UPDATE`, attempt.ID))
+	current, ok, err := e.lockTransitionAttemptForPersistenceTx(ctx, tx, attempt.ID, expectedProviderPhase)
 	if err != nil {
 		return err
 	}
-	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
-	if err != nil {
-		return err
-	}
-	if !active {
+	if !ok {
 		return nil
 	}
 
@@ -695,22 +727,18 @@ func (e *SigningAttemptExecutor) transition(ctx context.Context, attempt *entity
 }
 
 //nolint:gocognit
-func (e *SigningAttemptExecutor) persistProviderSuccess(ctx context.Context, attempt *entity.SigningAttempt, results []port.RecipientResult) error {
+func (e *SigningAttemptExecutor) persistProviderSuccess(ctx context.Context, attempt *entity.SigningAttempt, results []port.RecipientResult, expectedProviderPhase *entity.ProviderSubmitPhase) error {
 	tx, err := e.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	current, err := e.lockTransitionAttemptTx(ctx, tx, attempt.ID)
+	current, ok, err := e.lockTransitionAttemptForPersistenceTx(ctx, tx, attempt.ID, expectedProviderPhase)
 	if err != nil {
 		return err
 	}
-	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
-	if err != nil {
-		return err
-	}
-	if !active {
+	if !ok {
 		return nil
 	}
 
@@ -758,11 +786,11 @@ func (e *SigningAttemptExecutor) reconcileProviderPhase(ctx context.Context, att
 		attempt.ProviderName = &snapshot.ProviderName
 	}
 	attempt.Status = entity.SigningAttemptStatusSubmissionUnknown
-	return e.transition(ctx, attempt, eventType, ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+	return e.transition(ctx, attempt, eventType, ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil, nil)
 }
 
 func (e *SigningAttemptExecutor) persistProviderRecipients(ctx context.Context, attempt *entity.SigningAttempt, results []port.RecipientResult) error {
-	return e.transitionWithRecipientResults(ctx, attempt, results, "ATTEMPT_PROVIDER_RECIPIENTS_REFERENCES_SAVED", nil, nil)
+	return e.transitionWithRecipientResults(ctx, attempt, results, "ATTEMPT_PROVIDER_RECIPIENTS_REFERENCES_SAVED", nil, nil, ptrProviderSubmitPhase(entity.ProviderSubmitPhaseCreateFields))
 }
 
 //nolint:gocognit
@@ -773,6 +801,7 @@ func (e *SigningAttemptExecutor) transitionWithRecipientResults(
 	eventType string,
 	phase *port.SigningJobPhase,
 	forcedOld *entity.SigningAttemptStatus,
+	expectedProviderPhase *entity.ProviderSubmitPhase,
 ) error {
 	tx, err := e.pool.Begin(ctx)
 	if err != nil {
@@ -780,15 +809,11 @@ func (e *SigningAttemptExecutor) transitionWithRecipientResults(
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	current, err := e.lockTransitionAttemptTx(ctx, tx, attempt.ID)
+	current, ok, err := e.lockTransitionAttemptForPersistenceTx(ctx, tx, attempt.ID, expectedProviderPhase)
 	if err != nil {
 		return err
 	}
-	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
-	if err != nil {
-		return err
-	}
-	if !active {
+	if !ok {
 		return nil
 	}
 
@@ -834,6 +859,26 @@ func (e *SigningAttemptExecutor) lockTransitionAttemptTx(ctx context.Context, tx
 		FROM execution.signing_attempts WHERE id = $1 FOR UPDATE`, attemptID))
 }
 
+func (e *SigningAttemptExecutor) lockTransitionAttemptForPersistenceTx(ctx context.Context, tx pgx.Tx, attemptID string, expectedProviderPhase *entity.ProviderSubmitPhase) (*entity.SigningAttempt, bool, error) {
+	current, err := e.lockTransitionAttemptTx(ctx, tx, attemptID)
+	if err != nil {
+		return nil, false, err
+	}
+	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
+	if err != nil {
+		return nil, false, err
+	}
+	if !active {
+		return current, false, nil
+	}
+	if expectedProviderPhase != nil {
+		if current.ProviderSubmitPhase == nil || *current.ProviderSubmitPhase != *expectedProviderPhase {
+			return current, false, nil
+		}
+	}
+	return current, true, nil
+}
+
 func (e *SigningAttemptExecutor) transitionStillOwnsAttemptTx(ctx context.Context, tx pgx.Tx, current *entity.SigningAttempt) (bool, error) {
 	if current.Status.IsTerminal() {
 		return false, nil
@@ -868,6 +913,93 @@ func (e *SigningAttemptExecutor) updateAttemptRecipientsTx(
 		}
 	}
 	return nil
+}
+
+func (e *SigningAttemptExecutor) updateAttemptRecipientStatusesTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	attemptID string,
+	status *port.ProviderDocumentStatusResult,
+) error {
+	if status == nil {
+		return nil
+	}
+	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
+	if err != nil {
+		return err
+	}
+	byProviderID := make(map[string]port.RecipientStatusResult, len(status.Recipients))
+	for _, result := range status.Recipients {
+		if result.ProviderRecipientID != "" {
+			byProviderID[result.ProviderRecipientID] = result
+		}
+	}
+	now := time.Now().UTC()
+	for _, rec := range attemptRecipients {
+		if err := applyProviderRecipientStatusTx(ctx, tx, e.attemptRepo, rec, status, byProviderID, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func applyProviderRecipientStatusTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	attemptRepo port.SigningAttemptRepository,
+	rec *entity.SigningAttemptRecipient,
+	status *port.ProviderDocumentStatusResult,
+	byProviderID map[string]port.RecipientStatusResult,
+	now time.Time,
+) error {
+	result, hasProviderStatus := providerStatusForAttemptRecipient(rec, byProviderID)
+	newStatus := refreshedRecipientStatus(result, hasProviderStatus, status.Status)
+	if newStatus == "" {
+		return nil
+	}
+	rec.Status = newStatus
+	if rec.Status == entity.RecipientStatusSigned {
+		rec.SignedAt = result.SignedAt
+		if rec.SignedAt == nil {
+			rec.SignedAt = &now
+		}
+	}
+	if err := attemptRepo.UpdateRecipientTx(ctx, tx, rec); err != nil {
+		return err
+	}
+	if err := markLinkedDocumentRecipientSignedTx(ctx, tx, rec); err != nil {
+		return err
+	}
+	return nil
+}
+
+func refreshedRecipientStatus(result port.RecipientStatusResult, hasProviderStatus bool, attemptStatus entity.SigningAttemptStatus) entity.RecipientStatus {
+	if hasProviderStatus {
+		return result.Status.Normalize()
+	}
+	if attemptStatus == entity.SigningAttemptStatusCompleted {
+		return entity.RecipientStatusSigned
+	}
+	return ""
+}
+
+func providerStatusForAttemptRecipient(rec *entity.SigningAttemptRecipient, byProviderID map[string]port.RecipientStatusResult) (port.RecipientStatusResult, bool) {
+	if rec.ProviderRecipientID == nil || *rec.ProviderRecipientID == "" {
+		return port.RecipientStatusResult{}, false
+	}
+	result, ok := byProviderID[*rec.ProviderRecipientID]
+	return result, ok
+}
+
+func markLinkedDocumentRecipientSignedTx(ctx context.Context, tx pgx.Tx, rec *entity.SigningAttemptRecipient) error {
+	if rec.DocumentRecipientID == nil || rec.Status != entity.RecipientStatusSigned {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE execution.document_recipients
+		SET status = $2, signed_at = COALESCE(signed_at, $3), updated_at = now()
+		WHERE id = $1`, *rec.DocumentRecipientID, entity.RecipientStatusSigned, rec.SignedAt)
+	return err
 }
 
 func (e *SigningAttemptExecutor) insertTransitionEventTx(
@@ -982,7 +1114,7 @@ func insertPhaseTx(ctx context.Context, client *river.Client[pgx.Tx], tx pgx.Tx,
 		_, err := client.InsertTx(ctx, tx, ReconcileProviderSubmissionArgs{AttemptID: attempt.ID}, nil)
 		return err
 	case port.SigningJobPhaseRefreshProviderStatus:
-		_, err := client.InsertTx(ctx, tx, RefreshAttemptProviderStatusArgs{AttemptID: attempt.ID}, nil)
+		_, err := client.InsertTx(ctx, tx, refreshAttemptProviderStatusArgs(attempt.ID, time.Now()), nil)
 		return err
 	case port.SigningJobPhaseCleanupProviderAttempt:
 		_, err := client.InsertTx(ctx, tx, CleanupProviderAttemptArgs{AttemptID: attempt.ID}, nil)
@@ -1012,7 +1144,8 @@ func stringPtr(v string) *string {
 	}
 	return &v
 }
-func ptrPhase(p port.SigningJobPhase) *port.SigningJobPhase { return &p }
+func ptrPhase(p port.SigningJobPhase) *port.SigningJobPhase                           { return &p }
+func ptrProviderSubmitPhase(p entity.ProviderSubmitPhase) *entity.ProviderSubmitPhase { return &p }
 
 func decodeSignatureFields(raw json.RawMessage) ([]port.SignatureFieldPosition, error) {
 	if len(raw) == 0 {
