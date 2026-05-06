@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -397,100 +398,6 @@ func (e *SigningAttemptExecutor) handleProviderStepError(
 	return err
 }
 
-//nolint:funlen,gocognit,gocyclo
-func (e *SigningAttemptExecutor) legacySubmitAttemptToProvider(ctx context.Context, attemptID string) error {
-	attempt, doc, stale, err := e.loadActiveAttempt(ctx, attemptID, entity.SigningAttemptStatusReadyToSubmit, entity.SigningAttemptStatusProviderRetryWaiting, entity.SigningAttemptStatusSubmittingProvider)
-	if err != nil || stale {
-		return err
-	}
-	if attempt.IsTerminal() {
-		return nil
-	}
-	if attempt.Status == entity.SigningAttemptStatusSubmittingProvider {
-		attempt.Status = entity.SigningAttemptStatusSubmissionUnknown
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMISSION_UNKNOWN", ptrPhase(port.SigningJobPhaseReconcileProvider), nil)
-	}
-	if attempt.PDFStoragePath == nil || attempt.PDFChecksum == nil {
-		return e.failPermanent(ctx, attempt, attempt.Status, entity.ProviderSubmitPhaseBeforeRequest, fmt.Errorf("attempt PDF artifact is missing"))
-	}
-
-	pdf, err := e.storageAdapter.Download(ctx, &port.StorageRequest{Key: *attempt.PDFStoragePath, Environment: entity.EnvironmentProd})
-	if err != nil {
-		return e.failPermanent(ctx, attempt, attempt.Status, entity.ProviderSubmitPhaseBeforeRequest, fmt.Errorf("download attempt PDF: %w", err))
-	}
-	if e.failpoints.Enabled(failpointSubmitCorruptPDFChecksum) {
-		pdf = append(append([]byte(nil), pdf...), byte('x'))
-	}
-	if !checksumMatches(pdf, *attempt.PDFChecksum) {
-		return e.failPermanent(ctx, attempt, attempt.Status, entity.ProviderSubmitPhaseBeforeRequest, fmt.Errorf("attempt PDF checksum mismatch"))
-	}
-	if e.failpoints.Enabled(failpointSubmitBeforeProvider) {
-		return failpointErr(failpointSubmitBeforeProvider)
-	}
-
-	old := attempt.Status
-	phase := entity.ProviderSubmitPhaseCreateProviderDocument
-	attempt.Status = entity.SigningAttemptStatusSubmittingProvider
-	attempt.ProviderSubmitPhase = &phase
-	if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMIT_STARTED", nil, nil); err != nil {
-		return err
-	}
-
-	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
-	if err != nil {
-		return err
-	}
-	sigFields, err := decodeSignatureFields(attempt.SignatureFieldSnapshot)
-	if err != nil {
-		return e.failPermanent(ctx, attempt, old, entity.ProviderSubmitPhaseBeforeRequest, err)
-	}
-	result, err := e.signingProvider.SubmitAttemptDocument(ctx, &port.SubmitAttemptDocumentRequest{
-		AttemptID:       attempt.ID,
-		DocumentID:      doc.ID,
-		CorrelationKey:  deref(attempt.ProviderCorrelationKey),
-		PDF:             pdf,
-		PDFChecksum:     *attempt.PDFChecksum,
-		Title:           documentTitle(doc),
-		Recipients:      signingRecipientsFromAttempts(attemptRecipients),
-		SignatureFields: sigFields,
-		Environment:     entity.EnvironmentProd,
-	})
-	if err != nil {
-		var providerErr *port.ProviderError
-		if errors.As(err, &providerErr) {
-			return e.handleProviderError(ctx, attempt, providerErr)
-		}
-		return err
-	}
-	if e.failpoints.Enabled(failpointSubmitAfterProviderBeforeCommit) {
-		return failpointErr(failpointSubmitAfterProviderBeforeCommit)
-	}
-
-	attempt.ProviderDocumentID = &result.ProviderDocumentID
-	attempt.ProviderName = &result.ProviderName
-	corr := result.CorrelationKey
-	if corr == "" {
-		corr = correlationKey(doc.ID, attempt.ID)
-	}
-	attempt.ProviderCorrelationKey = &corr
-	if result.InitialStatus == "" {
-		attempt.Status = entity.SigningAttemptStatusSigningReady
-	} else {
-		attempt.Status = result.InitialStatus
-	}
-	attempt.ProviderSubmitPhase = nil
-	attempt.RetryCount = 0
-	attempt.LastErrorClass = nil
-	attempt.LastErrorMessage = nil
-
-	if err := e.persistProviderSuccess(ctx, attempt, result.Recipients); err != nil {
-		return err
-	}
-	slog.InfoContext(ctx, "signing attempt submitted to provider",
-		slog.String("document_id", doc.ID), slog.String("attempt_id", attempt.ID), slog.String("provider_document_id", result.ProviderDocumentID))
-	return nil
-}
-
 func (e *SigningAttemptExecutor) ReconcileProviderSubmission(ctx context.Context, attemptID string) error {
 	attempt, _, stale, err := e.loadActiveAttempt(ctx, attemptID, entity.SigningAttemptStatusSubmissionUnknown, entity.SigningAttemptStatusReconcilingProvider)
 	if err != nil || stale {
@@ -685,7 +592,10 @@ func (e *SigningAttemptExecutor) handleProviderError(ctx context.Context, attemp
 	attempt.RetryCount++
 	switch providerErr.Class {
 	case entity.ProviderErrorClassTransient:
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMIT_RETRY_WAITING", ptrPhase(port.SigningJobPhaseAdvanceProviderSubmission), nil)
+		if err := e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMIT_RETRY_WAITING", nil, nil); err != nil {
+			return err
+		}
+		return providerErr
 	case entity.ProviderErrorClassAmbiguous:
 		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_SUBMISSION_UNKNOWN", ptrPhase(port.SigningJobPhaseReconcileProvider), nil)
 	case entity.ProviderErrorClassConflictStale:
@@ -725,6 +635,14 @@ func (e *SigningAttemptExecutor) transition(ctx context.Context, attempt *entity
 	if err != nil {
 		return err
 	}
+	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return nil
+	}
+
 	old := current.Status
 	if forcedOld != nil {
 		old = *forcedOld
@@ -754,30 +672,23 @@ func (e *SigningAttemptExecutor) persistProviderSuccess(ctx context.Context, att
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+
+	current, err := e.lockTransitionAttemptTx(ctx, tx, attempt.ID)
 	if err != nil {
 		return err
 	}
-	byRole := make(map[string]port.RecipientResult, len(results))
-	for _, r := range results {
-		byRole[r.RoleID] = r
+	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
+	if err != nil {
+		return err
 	}
-	for _, rec := range attemptRecipients {
-		if r, ok := byRole[rec.TemplateVersionRoleID]; ok {
-			rec.ProviderRecipientID = stringPtr(r.ProviderRecipientID)
-			rec.ProviderSigningToken = stringPtr(r.ProviderSigningToken)
-			rec.SigningURL = stringPtr(r.SigningURL)
-			if r.Status != "" {
-				rec.Status = r.Status.Normalize()
-			} else {
-				rec.Status = entity.RecipientStatusSent
-			}
-			if err := e.attemptRepo.UpdateRecipientTx(ctx, tx, rec); err != nil {
-				return err
-			}
-		}
+	if !active {
+		return nil
 	}
-	old := entity.SigningAttemptStatusSubmittingProvider
+
+	if err := e.updateAttemptRecipientsTx(ctx, tx, attempt.ID, results, true); err != nil {
+		return err
+	}
+	old := current.Status
 	if err := e.attemptRepo.UpdateTx(ctx, tx, attempt); err != nil {
 		return err
 	}
@@ -840,45 +751,24 @@ func (e *SigningAttemptExecutor) transitionWithRecipientResults(
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	current, err := scanAttemptRow(tx.QueryRow(ctx, `
-		SELECT id, document_id, sequence, status, render_started_at, pdf_storage_path, pdf_checksum,
-		       pdf_checksum_algorithm, render_metadata, signature_field_snapshot, provider_upload_payload,
-		       provider_name, provider_correlation_key, provider_document_id, provider_submit_phase,
-		       retry_count, next_retry_at, last_error_class, last_error_message,
-		       reconciliation_count, next_reconciliation_at, cleanup_status, cleanup_action, cleanup_error,
-		       processing_lease_owner, processing_lease_expires_at, invalidation_reason,
-		       created_at, updated_at, terminal_at
-		FROM execution.signing_attempts WHERE id = $1 FOR UPDATE`, attempt.ID))
+	current, err := e.lockTransitionAttemptTx(ctx, tx, attempt.ID)
 	if err != nil {
 		return err
 	}
+	active, err := e.transitionStillOwnsAttemptTx(ctx, tx, current)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return nil
+	}
+
 	old := current.Status
 	if forcedOld != nil {
 		old = *forcedOld
 	}
-
-	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
-	if err != nil {
+	if err := e.updateAttemptRecipientsTx(ctx, tx, attempt.ID, results, false); err != nil {
 		return err
-	}
-	byRole := make(map[string]port.RecipientResult, len(results))
-	for _, r := range results {
-		byRole[r.RoleID] = r
-	}
-	for _, rec := range attemptRecipients {
-		r, ok := byRole[rec.TemplateVersionRoleID]
-		if !ok {
-			continue
-		}
-		rec.ProviderRecipientID = stringPtr(r.ProviderRecipientID)
-		rec.ProviderSigningToken = stringPtr(r.ProviderSigningToken)
-		rec.SigningURL = stringPtr(r.SigningURL)
-		if r.Status != "" {
-			rec.Status = r.Status.Normalize()
-		}
-		if err := e.attemptRepo.UpdateRecipientTx(ctx, tx, rec); err != nil {
-			return err
-		}
 	}
 	if err := e.attemptRepo.UpdateTx(ctx, tx, attempt); err != nil {
 		return err
@@ -892,21 +782,8 @@ func (e *SigningAttemptExecutor) transitionWithRecipientResults(
 	); err != nil {
 		return err
 	}
-	newStatus := attempt.Status
-	if eventType != "" {
-		if err := e.attemptRepo.InsertEventTx(ctx, tx, &entity.SigningAttemptEvent{
-			AttemptID:          attempt.ID,
-			DocumentID:         attempt.DocumentID,
-			EventType:          eventType,
-			OldStatus:          &old,
-			NewStatus:          &newStatus,
-			ProviderName:       attempt.ProviderName,
-			ProviderDocumentID: attempt.ProviderDocumentID,
-			CorrelationKey:     attempt.ProviderCorrelationKey,
-			ErrorClass:         attempt.LastErrorClass,
-		}); err != nil {
-			return err
-		}
+	if err := e.insertTransitionEventTx(ctx, tx, attempt, eventType, old); err != nil {
+		return err
 	}
 	if phase != nil {
 		if err := insertPhaseTx(ctx, e.client, tx, *phase, attempt); err != nil {
@@ -914,6 +791,99 @@ func (e *SigningAttemptExecutor) transitionWithRecipientResults(
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+func (e *SigningAttemptExecutor) lockTransitionAttemptTx(ctx context.Context, tx pgx.Tx, attemptID string) (*entity.SigningAttempt, error) {
+	return scanAttemptRow(tx.QueryRow(ctx, `
+		SELECT id, document_id, sequence, status, render_started_at, pdf_storage_path, pdf_checksum,
+		       pdf_checksum_algorithm, render_metadata, signature_field_snapshot, provider_upload_payload,
+		       provider_name, provider_correlation_key, provider_document_id, provider_submit_phase,
+		       retry_count, next_retry_at, last_error_class, last_error_message,
+		       reconciliation_count, next_reconciliation_at, cleanup_status, cleanup_action, cleanup_error,
+		       processing_lease_owner, processing_lease_expires_at, invalidation_reason,
+		       created_at, updated_at, terminal_at
+		FROM execution.signing_attempts WHERE id = $1 FOR UPDATE`, attemptID))
+}
+
+func (e *SigningAttemptExecutor) transitionStillOwnsAttemptTx(ctx context.Context, tx pgx.Tx, current *entity.SigningAttempt) (bool, error) {
+	if current.Status.IsTerminal() {
+		return false, nil
+	}
+	var activeAttemptID sql.NullString
+	if err := tx.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id=$1`, current.DocumentID).Scan(&activeAttemptID); err != nil {
+		return false, err
+	}
+	return activeAttemptID.Valid && activeAttemptID.String == current.ID, nil
+}
+
+func (e *SigningAttemptExecutor) updateAttemptRecipientsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	attemptID string,
+	results []port.RecipientResult,
+	defaultSent bool,
+) error {
+	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
+	if err != nil {
+		return err
+	}
+	byRole := recipientResultsByRole(results)
+	for _, rec := range attemptRecipients {
+		result, ok := byRole[rec.TemplateVersionRoleID]
+		if !ok {
+			continue
+		}
+		applyProviderRecipientResult(rec, result, defaultSent)
+		if err := e.attemptRepo.UpdateRecipientTx(ctx, tx, rec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *SigningAttemptExecutor) insertTransitionEventTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	attempt *entity.SigningAttempt,
+	eventType string,
+	old entity.SigningAttemptStatus,
+) error {
+	if eventType == "" {
+		return nil
+	}
+	newStatus := attempt.Status
+	return e.attemptRepo.InsertEventTx(ctx, tx, &entity.SigningAttemptEvent{
+		AttemptID:          attempt.ID,
+		DocumentID:         attempt.DocumentID,
+		EventType:          eventType,
+		OldStatus:          &old,
+		NewStatus:          &newStatus,
+		ProviderName:       attempt.ProviderName,
+		ProviderDocumentID: attempt.ProviderDocumentID,
+		CorrelationKey:     attempt.ProviderCorrelationKey,
+		ErrorClass:         attempt.LastErrorClass,
+	})
+}
+
+func recipientResultsByRole(results []port.RecipientResult) map[string]port.RecipientResult {
+	byRole := make(map[string]port.RecipientResult, len(results))
+	for _, result := range results {
+		byRole[result.RoleID] = result
+	}
+	return byRole
+}
+
+func applyProviderRecipientResult(rec *entity.SigningAttemptRecipient, result port.RecipientResult, defaultSent bool) {
+	rec.ProviderRecipientID = stringPtr(result.ProviderRecipientID)
+	rec.ProviderSigningToken = stringPtr(result.ProviderSigningToken)
+	rec.SigningURL = stringPtr(result.SigningURL)
+	if result.Status != "" {
+		rec.Status = result.Status.Normalize()
+		return
+	}
+	if defaultSent {
+		rec.Status = entity.RecipientStatusSent
+	}
 }
 
 func providerSubmitPhase(attempt *entity.SigningAttempt) entity.ProviderSubmitPhase {

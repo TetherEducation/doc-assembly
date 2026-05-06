@@ -261,6 +261,70 @@ func TestSigningAttemptExecutor_ReconcileProviderPartialEnvelopeResumesWithoutUn
 	require.NotNil(t, recipients[0].SigningURL)
 }
 
+func TestSigningAttemptExecutor_TransientProviderErrorReturnsForRiverRetryAndResumes(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	baseProvider := signingmock.New()
+	provider := &transientRecipientsProvider{SigningProvider: baseProvider}
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+
+	require.NoError(t, executor.AdvanceProviderSubmission(ctx, attempt.ID))
+	err := executor.AdvanceProviderSubmission(ctx, attempt.ID)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "temporary recipient failure")
+
+	retrying := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusProviderRetryWaiting, retrying.Status)
+	require.NotNil(t, retrying.ProviderSubmitPhase)
+	require.Equal(t, entity.ProviderSubmitPhaseAddRecipients, *retrying.ProviderSubmitPhase)
+
+	fx.drainProviderSubmission(t, ctx, executor, attempt.ID)
+	finalAttempt := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, finalAttempt.Status)
+	require.Nil(t, finalAttempt.ProviderSubmitPhase)
+}
+
+func TestSigningAttemptExecutor_ProviderTransitionNoopsWhenAttemptSupersededAfterProviderCall(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	baseProvider := signingmock.New()
+	var oldAttemptID string
+	provider := &afterDocumentProvider{SigningProvider: baseProvider}
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+	provider.after = func() error {
+		old := fx.mustAttempt(t, ctx, oldAttemptID)
+		_, supersedeErr := riverSvc.SigningExecutionUOW().SupersedeActiveAndCreateAttempt(
+			ctx,
+			fx.documentID,
+			old.ID,
+			"provider race regression",
+			fx.recipients(),
+			fx.signerOrders(),
+		)
+		return supersedeErr
+	}
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+	oldAttemptID = attempt.ID
+
+	require.NoError(t, executor.AdvanceProviderSubmission(ctx, attempt.ID))
+
+	oldAttempt := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSuperseded, oldAttempt.Status)
+	require.Nil(t, oldAttempt.ProviderDocumentID)
+	require.Nil(t, oldAttempt.ProviderSubmitPhase)
+
+	var activeAttemptID string
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id=$1`, fx.documentID).Scan(&activeAttemptID))
+	require.NotEqual(t, attempt.ID, activeAttemptID)
+
+	var staleAdvanceJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='advance_provider_submission' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&staleAdvanceJobs))
+	require.Equal(t, 0, staleAdvanceJobs)
+}
+
 func TestSigningAttemptExecutor_AdvanceProviderSubmissionResumesAfterProviderStepFailpoints(t *testing.T) {
 	ctx := context.Background()
 	failpoints := []string{
@@ -286,13 +350,56 @@ func TestSigningAttemptExecutor_AdvanceProviderSubmissionResumesAfterProviderSte
 			require.Error(t, failErr)
 			require.True(t, strings.Contains(failErr.Error(), failpoint), "error %q did not include failpoint %q", failErr.Error(), failpoint)
 
-			resumeExecutor, _, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+			resumeExecutor := newProviderSubmissionExecutorWithStorage(t, fx, provider, storage, nil)
 			fx.drainProviderSubmission(t, ctx, resumeExecutor, attempt.ID)
 			finalAttempt := fx.mustAttempt(t, ctx, attempt.ID)
 			require.Equal(t, entity.SigningAttemptStatusSigningReady, finalAttempt.Status)
 			require.Nil(t, finalAttempt.ProviderSubmitPhase)
 		})
 	}
+}
+
+type transientRecipientsProvider struct {
+	port.SigningProvider
+	calls atomic.Int32
+}
+
+func (p *transientRecipientsProvider) EnsureProviderRecipients(
+	ctx context.Context,
+	req *port.EnsureProviderRecipientsRequest,
+) (*port.EnsureProviderRecipientsResult, error) {
+	if p.calls.Add(1) == 1 {
+		return nil, &port.ProviderError{
+			Class:        entity.ProviderErrorClassTransient,
+			Phase:        entity.ProviderSubmitPhaseAddRecipients,
+			ProviderName: p.ProviderName(),
+			Retryable:    true,
+			Message:      "temporary recipient failure",
+		}
+	}
+	return p.SigningProvider.EnsureProviderRecipients(ctx, req)
+}
+
+type afterDocumentProvider struct {
+	port.SigningProvider
+	after func() error
+	calls atomic.Int32
+}
+
+func (p *afterDocumentProvider) EnsureProviderDocument(
+	ctx context.Context,
+	req *port.EnsureProviderDocumentRequest,
+) (*port.EnsureProviderDocumentResult, error) {
+	result, err := p.SigningProvider.EnsureProviderDocument(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if p.after != nil && p.calls.Add(1) == 1 {
+		if hookErr := p.after(); hookErr != nil {
+			return nil, hookErr
+		}
+	}
+	return result, nil
 }
 
 type attemptFixture struct {
@@ -380,16 +487,41 @@ func newProviderSubmissionExecutor(
 	require.NoError(t, err)
 	client, err := river.NewClient(riverpgxv5.New(fx.pool), &river.Config{})
 	require.NoError(t, err)
+	return newProviderSubmissionExecutorWithClient(t, fx, provider, storage, client, failpoints), storage, client
+}
+
+func newProviderSubmissionExecutorWithStorage(
+	t *testing.T,
+	fx *attemptFixture,
+	provider port.SigningProvider,
+	storage port.StorageAdapter,
+	failpoints riverqueue.AttemptFailpoints,
+) *riverqueue.SigningAttemptExecutor {
+	t.Helper()
+	client, err := river.NewClient(riverpgxv5.New(fx.pool), &river.Config{})
+	require.NoError(t, err)
+	return newProviderSubmissionExecutorWithClient(t, fx, provider, storage, client, failpoints)
+}
+
+func newProviderSubmissionExecutorWithClient(
+	t *testing.T,
+	fx *attemptFixture,
+	provider port.SigningProvider,
+	storage port.StorageAdapter,
+	client *river.Client[pgx.Tx],
+	failpoints riverqueue.AttemptFailpoints,
+) *riverqueue.SigningAttemptExecutor {
+	t.Helper()
 	return riverqueue.NewSigningAttemptExecutor(riverqueue.SigningAttemptExecutorConfig{
-		Pool:           fx.pool,
-		Client:         client,
-		DocumentRepo:   fx.docRepo,
-		AttemptRepo:    fx.attemptRepo,
+		Pool:            fx.pool,
+		Client:          client,
+		DocumentRepo:    fx.docRepo,
+		AttemptRepo:     fx.attemptRepo,
 		SigningProvider: provider,
 		StorageAdapter:  storage,
 		StorageEnabled:  true,
 		Failpoints:      failpoints,
-	}), storage, client
+	})
 }
 
 func (f *attemptFixture) createProviderReadyAttempt(t *testing.T, ctx context.Context, provider port.SigningProvider, storage port.StorageAdapter) *entity.SigningAttempt {
