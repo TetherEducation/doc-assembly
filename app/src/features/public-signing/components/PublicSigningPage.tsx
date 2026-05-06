@@ -104,28 +104,16 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     }
   }, [token, t])
 
-  // Poll while River prepares the attempt.
-  useEffect(() => {
-    if (pageState.status !== 'loaded' || pageState.data.step !== 'processing') {
-      return
-    }
-    let cancelled = false
-    const retryAfterMs = Math.max(1, pageState.data.retryAfterSeconds ?? 3) * 1_000
-    const timer = window.setTimeout(async () => {
-      try {
-        const data = await getPublicSigningPage(token)
-        if (!cancelled) {
-          setPageState({ status: 'loaded', data })
-        }
-      } catch (err) {
-        if (!cancelled) handleLoadError(err, setPageState, t)
-      }
-    }, retryAfterMs)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [pageState, token, t])
+  const handleProcessingUpdate = useCallback((data: PublicSigningResponse) => {
+    setPageState({ status: 'loaded', data })
+  }, [])
+
+  const handleProcessingError = useCallback(
+    (err: unknown) => {
+      handleLoadError(err, setPageState, t)
+    },
+    [t],
+  )
 
   // Handle response changes.
   const handleResponseChange = useCallback(
@@ -313,7 +301,15 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
   )
 
   if (data.step === 'processing') {
-    return <ProcessingScreen documentTitle={displayDocumentTitle} response={data} />
+    return (
+      <ProcessingScreen
+        documentTitle={displayDocumentTitle}
+        response={data}
+        token={token}
+        onUpdate={handleProcessingUpdate}
+        onError={handleProcessingError}
+      />
+    )
   }
 
   if (data.step === 'document_updated') {
@@ -567,12 +563,49 @@ function ErrorScreen({ code, message }: { code: string; message: string }) {
 function ProcessingScreen({
   documentTitle,
   response,
+  token,
+  onUpdate,
+  onError,
 }: {
   documentTitle: string
   response: PublicSigningResponse
+  token: string
+  onUpdate: (data: PublicSigningResponse) => void
+  onError: (err: unknown) => void
 }) {
   const { t } = useTranslation()
   const isRecovering = response.processingReason === 'recovering_provider_submission'
+  const retryAfterMs = Math.max(1, response.retryAfterSeconds ?? 3) * 1_000
+
+  useEffect(() => {
+    let cancelled = false
+    let inFlight = false
+
+    const poll = async () => {
+      if (cancelled || inFlight) return
+      inFlight = true
+      try {
+        const data = await getPublicSigningPage(token)
+        if (!cancelled) {
+          onUpdate(data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          onError(err)
+        }
+      } finally {
+        inFlight = false
+      }
+    }
+
+    const interval = window.setInterval(poll, retryAfterMs)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [onError, onUpdate, retryAfterMs, token])
+
   return (
     <PageShell documentTitle={documentTitle}>
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-6 text-center">
