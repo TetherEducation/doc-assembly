@@ -5,8 +5,8 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
-// SystemWorkspaceCode is the canonical code for the tenant/system workspace.
-// Consumers should use this constant instead of hardcoding the workspace code.
+// SystemWorkspaceCode is the canonical code for the tenant/system administration workspace.
+// It is not eligible for template resolution or template-created documents.
 const SystemWorkspaceCode = "SYS_WRKSP"
 
 // --- Core Extensibility Interfaces ---

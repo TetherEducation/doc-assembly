@@ -9,11 +9,6 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
-const (
-	systemTenantCode    = "SYS"
-	systemWorkspaceCode = "SYS_WRKSP"
-)
-
 // DefaultTemplateResolver resolves template context by deterministic fallback.
 type DefaultTemplateResolver struct{}
 
@@ -22,8 +17,9 @@ func NewDefaultTemplateResolver() port.TemplateResolver {
 	return &DefaultTemplateResolver{}
 }
 
-// Resolve applies tenant/workspace/documentType fallback and returns a published template context.
-// When Environment==dev and SandboxWorkspaceCode is set, sandbox workspace is tried first.
+// Resolve applies tenant/workspace/documentType resolution and returns a published template context.
+// When Environment==dev, only the sandbox workspace is eligible. When Environment==prod,
+// only the requested non-sandbox workspace is eligible.
 func (r *DefaultTemplateResolver) Resolve(
 	ctx context.Context,
 	req *port.TemplateResolverRequest,
@@ -36,7 +32,7 @@ func (r *DefaultTemplateResolver) Resolve(
 	return r.resolveWithFallback(ctx, req, adapter)
 }
 
-// resolveWithFallback builds the fallback chain depending on environment.
+// resolveWithFallback builds the candidate workspace chain depending on environment.
 func (r *DefaultTemplateResolver) resolveWithFallback(
 	ctx context.Context,
 	req *port.TemplateResolverRequest,
@@ -90,18 +86,18 @@ type fallbackStep struct {
 }
 
 func fallbackSteps(req *port.TemplateResolverRequest) []fallbackStep {
-	fallbacks := make([]fallbackStep, 0, 4)
 	if req.Environment == entity.EnvironmentDev && req.SandboxWorkspaceCode != "" {
-		fallbacks = append(fallbacks, fallbackStep{
+		return []fallbackStep{{
 			tenantCode:     req.TenantCode,
 			workspaceCodes: []string{req.SandboxWorkspaceCode},
 			stage:          "tenant_sandbox_workspace",
-		})
+		}}
+	}
+	if req.Environment == entity.EnvironmentDev {
+		return nil
 	}
 
-	return append(fallbacks,
-		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
-		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "tenant_system_workspace"},
-		fallbackStep{tenantCode: systemTenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "system_system_workspace"},
-	)
+	return []fallbackStep{
+		{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
+	}
 }

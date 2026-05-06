@@ -251,7 +251,8 @@ func (s *InternalDocumentService) resolveTemplateContext(
 		return nil, err
 	}
 
-	resolved, err := s.resolveTemplateContextWithResolvers(ctx, resolverReq)
+	resolutionCtx := withTemplateResolutionEnvironment(ctx, resolverReq.Environment)
+	resolved, err := s.resolveTemplateContextWithResolvers(resolutionCtx, resolverReq)
 	if err != nil {
 		return nil, err
 	}

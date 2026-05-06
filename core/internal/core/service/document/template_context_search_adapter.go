@@ -6,8 +6,26 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
+
+type templateResolutionEnvironmentKey struct{}
+
+func withTemplateResolutionEnvironment(ctx context.Context, env entity.Environment) context.Context {
+	if env == "" {
+		env = entity.EnvironmentProd
+	}
+	return context.WithValue(ctx, templateResolutionEnvironmentKey{}, env)
+}
+
+func templateResolutionEnvironmentFromContext(ctx context.Context) entity.Environment {
+	env, ok := ctx.Value(templateResolutionEnvironmentKey{}).(entity.Environment)
+	if !ok || env == "" {
+		return entity.EnvironmentProd
+	}
+	return env
+}
 
 // TemplateContextSearchAdapter provides read-only template context search for custom resolvers.
 type TemplateContextSearchAdapter struct {
@@ -51,7 +69,17 @@ func (a *TemplateContextSearchAdapter) ResolveInternalTemplateContext(
 		return nil, fmt.Errorf("documentType is required")
 	}
 
-	result, err := a.templateRepo.FindInternalTemplateContext(ctx, port.InternalTemplateContextQuery(params))
+	query := port.InternalTemplateContextQuery{
+		TenantCode:             params.TenantCode,
+		RequestedWorkspaceCode: params.RequestedWorkspaceCode,
+		WorkspaceCodes:         params.WorkspaceCodes,
+		DocumentType:           params.DocumentType,
+		Process:                params.Process,
+		Tags:                   params.Tags,
+		Published:              params.Published,
+		Environment:            templateResolutionEnvironmentFromContext(ctx),
+	}
+	result, err := a.templateRepo.FindInternalTemplateContext(ctx, query)
 	slog.InfoContext(ctx, "template context aggregator timing",
 		slog.Int("workspace_count", len(params.WorkspaceCodes)),
 		slog.Int("tag_filter_count", len(params.Tags)),

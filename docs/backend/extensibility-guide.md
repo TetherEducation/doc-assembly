@@ -286,10 +286,12 @@ The resolver receives a read-only adapter:
 ```go
 items, err := adapter.SearchTemplateVersions(ctx, sdk.TemplateVersionSearchParams{
     TenantCode:     req.TenantCode,
-    WorkspaceCodes: []string{req.WorkspaceCode, "SYS_WRKSP"},
+    WorkspaceCodes: []string{req.WorkspaceCode},
     DocumentType:   req.DocumentType,
 })
 ```
+
+The adapter enforces the request environment internally: dev searches sandbox workspaces only, and prod searches non-sandbox workspaces only. System workspaces such as `SYS_WRKSP` are not eligible for templates.
 
 ### Registration
 

@@ -315,8 +315,8 @@ func TestInternalDocumentController_ConcurrentSameTransactionalID(t *testing.T) 
 	assert.Equal(t, 1, countDocumentsByTransactionalID(t, env.pool, env.workspaceID, "tx-same"))
 }
 
-func TestInternalDocumentController_DefaultResolverFallbackLevels(t *testing.T) {
-	t.Run("level 1 tenant+workspace", func(t *testing.T) {
+func TestInternalDocumentController_DefaultResolverWorkspaceOnly(t *testing.T) {
+	t.Run("prod resolves tenant workspace", func(t *testing.T) {
 		env := setupInternalCreateEnv(t, nil, true)
 		_, versionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
 
@@ -325,17 +325,16 @@ func TestInternalDocumentController_DefaultResolverFallbackLevels(t *testing.T) 
 		assert.Equal(t, versionID, out.TemplateVersionID)
 	})
 
-	t.Run("level 2 tenant+SYS_WRKSP", func(t *testing.T) {
+	t.Run("prod does not fall back to tenant SYS_WRKSP", func(t *testing.T) {
 		env := setupInternalCreateEnv(t, nil, true)
 		tenantSystemWorkspaceID := getTenantSystemWorkspaceID(t, env.pool, env.tenantID)
-		_, versionID := env.createPublishedTemplate(t, tenantSystemWorkspaceID, env.documentTypeID)
+		env.createPublishedTemplate(t, tenantSystemWorkspaceID, env.documentTypeID)
 
-		resp, body, out := env.postCreate(t, env.documentTypeCode, "ext-l2", "tx-l2", nil, nil, map[string]any{"level": 2})
-		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
-		assert.Equal(t, versionID, out.TemplateVersionID)
+		resp, body, _ := env.postCreate(t, env.documentTypeCode, "ext-l2", "tx-l2", nil, nil, map[string]any{"level": 2})
+		require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 	})
 
-	t.Run("level 3 SYS+SYS_WRKSP", func(t *testing.T) {
+	t.Run("prod does not fall back to SYS tenant SYS_WRKSP", func(t *testing.T) {
 		env := setupInternalCreateEnv(t, nil, false)
 		sysTenantID, sysWorkspaceID := getSystemTenantAndWorkspace(t, env.pool)
 
@@ -343,17 +342,37 @@ func TestInternalDocumentController_DefaultResolverFallbackLevels(t *testing.T) 
 		sysDocTypeID := testhelper.CreateTestDocumentType(t, env.pool, sysTenantID, docTypeCode, "Global Contract")
 		t.Cleanup(func() { testhelper.CleanupDocumentType(t, env.pool, sysDocTypeID) })
 
-		_, versionID := env.createPublishedTemplate(t, sysWorkspaceID, sysDocTypeID)
+		env.createPublishedTemplate(t, sysWorkspaceID, sysDocTypeID)
 
-		resp, body, out := env.postCreate(t, docTypeCode, "ext-l3", "tx-l3", nil, nil, map[string]any{"level": 3})
-		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
-		assert.Equal(t, versionID, out.TemplateVersionID)
+		resp, body, _ := env.postCreate(t, docTypeCode, "ext-l3", "tx-l3", nil, nil, map[string]any{"level": 3})
+		require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 	})
 }
 
 func TestInternalDocumentController_CustomResolver(t *testing.T) {
 	t.Run("custom hit uses returned version", func(t *testing.T) {
 		var forcedVersionID string
+		resolver := resolverFunc(func(ctx context.Context, req *port.TemplateResolverRequest, adapter port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
+			published := true
+			return adapter.ResolveInternalTemplateContext(ctx, port.InternalTemplateContextSearchParams{
+				TenantCode:             req.TenantCode,
+				RequestedWorkspaceCode: req.WorkspaceCode,
+				WorkspaceCodes:         []string{req.WorkspaceCode},
+				DocumentType:           req.DocumentType,
+				Process:                req.Process,
+				Published:              &published,
+			})
+		})
+
+		env := setupInternalCreateEnv(t, resolver, true)
+		_, forcedVersionID = env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+		resp, body, out := env.postCreate(t, env.documentTypeCode, "ext-custom-hit", "tx-custom-hit", nil, nil, map[string]any{"custom": true})
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+		assert.Equal(t, forcedVersionID, out.TemplateVersionID)
+	})
+
+	t.Run("custom resolver cannot resolve SYS_WRKSP templates", func(t *testing.T) {
 		resolver := resolverFunc(func(ctx context.Context, req *port.TemplateResolverRequest, adapter port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 			published := true
 			return adapter.ResolveInternalTemplateContext(ctx, port.InternalTemplateContextSearchParams{
@@ -368,12 +387,10 @@ func TestInternalDocumentController_CustomResolver(t *testing.T) {
 
 		env := setupInternalCreateEnv(t, resolver, true)
 		tenantSystemWorkspaceID := getTenantSystemWorkspaceID(t, env.pool, env.tenantID)
-		_, forcedVersionID = env.createPublishedTemplate(t, tenantSystemWorkspaceID, env.documentTypeID)
-		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+		env.createPublishedTemplate(t, tenantSystemWorkspaceID, env.documentTypeID)
 
-		resp, body, out := env.postCreate(t, env.documentTypeCode, "ext-custom-hit", "tx-custom-hit", nil, nil, map[string]any{"custom": true})
-		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
-		assert.Equal(t, forcedVersionID, out.TemplateVersionID)
+		resp, body, _ := env.postCreate(t, env.documentTypeCode, "ext-custom-system", "tx-custom-system", nil, nil, map[string]any{"custom": "system"})
+		require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 	})
 
 	t.Run("custom nil falls back to default", func(t *testing.T) {
@@ -478,7 +495,7 @@ func TestInternalDocumentController_EnvironmentDevSandboxFirst(t *testing.T) {
 		assert.Equal(t, sandboxVersionID, out.TemplateVersionID)
 	})
 
-	t.Run("dev falls back to prod when sandbox has no template", func(t *testing.T) {
+	t.Run("dev does not fall back to prod when sandbox has no template", func(t *testing.T) {
 		env := setupInternalCreateEnv(t, nil, true)
 
 		// Create sandbox workspace (empty, no template)
@@ -486,22 +503,20 @@ func TestInternalDocumentController_EnvironmentDevSandboxFirst(t *testing.T) {
 		t.Cleanup(func() { testhelper.CleanupWorkspace(t, env.pool, sandboxID) })
 
 		// Publish template ONLY in prod workspace
-		_, prodVersionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
 
-		resp, body, out := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-sbx-miss", "tx-sbx-miss", nil, nil, map[string]any{"sandbox": false})
-		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
-		assert.Equal(t, prodVersionID, out.TemplateVersionID)
+		resp, body, _ := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-sbx-miss", "tx-sbx-miss", nil, nil, map[string]any{"sandbox": false})
+		require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 	})
 
-	t.Run("dev without sandbox workspace behaves like prod", func(t *testing.T) {
+	t.Run("dev without sandbox workspace returns not found", func(t *testing.T) {
 		env := setupInternalCreateEnv(t, nil, true)
 
 		// No sandbox workspace created — just prod template
-		_, prodVersionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
 
-		resp, body, out := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-no-sbx", "tx-no-sbx", nil, nil, map[string]any{"no_sandbox": true})
-		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
-		assert.Equal(t, prodVersionID, out.TemplateVersionID)
+		resp, body, _ := env.postCreateWithEnv(t, "dev", env.documentTypeCode, "ext-no-sbx", "tx-no-sbx", nil, nil, map[string]any{"no_sandbox": true})
+		require.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
 	})
 }
 
@@ -518,7 +533,7 @@ func TestInternalDocumentController_EnvironmentPropagatedToResolver(t *testing.T
 		env := setupInternalCreateEnv(t, resolver, true)
 		sandboxID := testhelper.CreateTestSandboxWorkspace(t, env.pool, env.workspaceID)
 		t.Cleanup(func() { testhelper.CleanupWorkspace(t, env.pool, sandboxID) })
-		env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+		env.createPublishedTemplate(t, sandboxID, env.documentTypeID)
 
 		sandboxCode := getWorkspaceCode(t, env.pool, sandboxID)
 

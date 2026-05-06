@@ -290,6 +290,8 @@ const (
 			SELECT UPPER(TRIM(tag)) AS name
 			FROM unnest($6::text[]) AS tags(tag)
 			WHERE TRIM(tag) <> ''
+		), resolution_env AS (
+			SELECT COALESCE(NULLIF(LOWER(TRIM($8)), ''), 'prod') AS value
 		), tenant AS (
 			SELECT id, code, name, description, is_system, status, COALESCE(settings, '{}') AS settings, created_at, updated_at
 			FROM tenancy.tenants
@@ -323,7 +325,14 @@ const (
 			SELECT w.id, w.code, iw.priority
 			FROM input_workspaces iw
 			JOIN tenant t ON TRUE
+			JOIN resolution_env re ON TRUE
 			JOIN tenancy.workspaces w ON w.tenant_id = t.id AND w.code = iw.code
+			WHERE w.type <> 'SYSTEM'
+			  AND w.code <> 'SYS_WRKSP'
+			  AND (
+				(re.value = 'dev' AND w.is_sandbox = TRUE)
+				OR (re.value = 'prod' AND w.is_sandbox = FALSE)
+			  )
 		), template_candidates AS (
 			SELECT
 				wc.id AS workspace_id,

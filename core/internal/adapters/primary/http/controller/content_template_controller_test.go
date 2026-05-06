@@ -414,6 +414,32 @@ func TestContentTemplateController_CreateTemplate(t *testing.T) {
 		defer testhelper.CleanupTemplate(t, pool, createResp.Template.ID)
 	})
 
+	t.Run("bad request for system workspace", func(t *testing.T) {
+		tenantID := testhelper.CreateTestTenant(t, pool, "Create Template System Tenant", "CTSYS")
+		defer testhelper.CleanupTenant(t, pool, tenantID)
+
+		var systemWorkspaceID string
+		err := pool.QueryRow(
+			context.Background(),
+			`SELECT id FROM tenancy.workspaces WHERE tenant_id = $1 AND type = 'SYSTEM' AND is_sandbox = FALSE LIMIT 1`,
+			tenantID,
+		).Scan(&systemWorkspaceID)
+		require.NoError(t, err)
+
+		owner := testhelper.CreateTestUser(t, pool, "owner-system-template@test.com", "Owner User", nil)
+		defer testhelper.CleanupUser(t, pool, owner.ID)
+		testhelper.CreateTestWorkspaceMember(t, pool, systemWorkspaceID, owner.ID, entity.WorkspaceRoleOwner, nil)
+
+		resp, _ := client.
+			WithAuth(owner.BearerHeader).
+			WithWorkspaceID(systemWorkspaceID).
+			POST("/api/v1/content/templates", map[string]interface{}{
+				"title": "System Template",
+			})
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
 	t.Run("success with folder ID", func(t *testing.T) {
 		tenantID := testhelper.CreateTestTenant(t, pool, "Create Template Tenant 4", "CTST04")
 		defer testhelper.CleanupTenant(t, pool, tenantID)
@@ -1179,6 +1205,37 @@ func TestContentTemplateController_CloneTemplate(t *testing.T) {
 		err := json.Unmarshal(body, &createResp)
 		require.NoError(t, err)
 		defer testhelper.CleanupTemplate(t, pool, createResp.Template.ID)
+	})
+
+	t.Run("bad request for system workspace source", func(t *testing.T) {
+		tenantID := testhelper.CreateTestTenant(t, pool, "Clone Template System Tenant", "CLSYS")
+		defer testhelper.CleanupTenant(t, pool, tenantID)
+
+		var systemWorkspaceID string
+		err := pool.QueryRow(
+			context.Background(),
+			`SELECT id FROM tenancy.workspaces WHERE tenant_id = $1 AND type = 'SYSTEM' AND is_sandbox = FALSE LIMIT 1`,
+			tenantID,
+		).Scan(&systemWorkspaceID)
+		require.NoError(t, err)
+
+		editor := testhelper.CreateTestUser(t, pool, "editor-cl-system@test.com", "Editor User", nil)
+		defer testhelper.CleanupUser(t, pool, editor.ID)
+		testhelper.CreateTestWorkspaceMember(t, pool, systemWorkspaceID, editor.ID, entity.WorkspaceRoleEditor, nil)
+
+		sourceTemplateID := testhelper.CreateTestTemplate(t, pool, systemWorkspaceID, "System Source Template", nil)
+		defer testhelper.CleanupTemplate(t, pool, sourceTemplateID)
+		versionID := testhelper.CreateTestTemplateVersion(t, pool, sourceTemplateID, 1, "v1.0", entity.VersionStatusPublished)
+
+		resp, _ := client.
+			WithAuth(editor.BearerHeader).
+			WithWorkspaceID(systemWorkspaceID).
+			POST(fmt.Sprintf("/api/v1/content/templates/%s/clone", sourceTemplateID), map[string]interface{}{
+				"newTitle":  "System Clone",
+				"versionId": versionID,
+			})
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("success clones to different folder", func(t *testing.T) {

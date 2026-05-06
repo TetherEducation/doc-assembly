@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, AlertCircle, Save, RefreshCw, Lock } from 'lucide-react'
+import { redirectSystemWorkspaceProductSurface } from '@/lib/system-workspace-guard'
 import { DocumentEditor } from '@/features/editor/components/DocumentEditor'
 import { ImportDocumentModal } from '@/features/editor/components/ImportDocumentModal'
 import { DocumentPreparationOverlay } from '@/features/editor/components/DocumentPreparationOverlay'
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next'
 export const Route = createFileRoute(
   '/workspace/$workspaceId/editor/$templateId/version/$versionId'
 )({
+  beforeLoad: ({ params }) => redirectSystemWorkspaceProductSurface(params),
   component: EditorPage,
 })
 

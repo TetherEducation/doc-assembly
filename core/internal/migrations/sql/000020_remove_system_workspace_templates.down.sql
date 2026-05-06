@@ -1,0 +1,2 @@
+-- Irreversible data cleanup.
+-- Templates/documents removed from system workspaces cannot be reconstructed.
