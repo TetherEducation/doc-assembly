@@ -3,6 +3,7 @@ package documenso
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -430,6 +431,7 @@ func TestEnsureProviderRecipientsAddsRecipientsWhenEnvelopeIsEmpty(t *testing.T)
 			}
 			writeJSON(t, w, map[string]any{
 				"id":         "env_empty",
+				"externalId": "doc-id:attempt-id",
 				"status":     "DRAFT",
 				"recipients": recipients,
 				"fields":     []map[string]any{},
@@ -484,6 +486,7 @@ func TestEnsureProviderFieldsReturnsExistingFieldCountWithoutPost(t *testing.T) 
 		case "/api/v2/envelope/env_fields":
 			writeJSON(t, w, map[string]any{
 				"id":         "env_fields",
+				"externalId": "doc-id:attempt-id",
 				"status":     "DRAFT",
 				"recipients": []map[string]any{},
 				"fields": []map[string]any{
@@ -531,6 +534,7 @@ func TestEnsureProviderDistributedSkipsAlreadyDistributedEnvelope(t *testing.T) 
 		case "/api/v2/envelope/env_sent":
 			writeJSON(t, w, map[string]any{
 				"id":         "env_sent",
+				"externalId": "doc-id:attempt-id",
 				"status":     "PENDING",
 				"recipients": []map[string]any{},
 				"fields":     []map[string]any{},
@@ -559,5 +563,250 @@ func TestEnsureProviderDistributedSkipsAlreadyDistributedEnvelope(t *testing.T) 
 
 	if got.RawStatus != "PENDING" {
 		t.Fatalf("RawStatus = %q, want PENDING", got.RawStatus)
+	}
+}
+
+func TestEnsureProviderDistributedRejectsCorrelationMismatchBeforeMutation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_stale":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_stale",
+				"externalId": "other-attempt",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields":     []map[string]any{},
+			})
+		case "/api/v2/envelope/distribute":
+			t.Fatal("EnsureProviderDistributed mutated a correlation-mismatched envelope")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_, err = adapter.EnsureProviderDistributed(context.Background(), &port.EnsureProviderDistributedRequest{
+		ProviderDocumentID: "env_stale",
+		CorrelationKey:     "expected-attempt",
+		Environment:        entity.EnvironmentProd,
+	})
+	if err == nil {
+		t.Fatal("EnsureProviderDistributed() error = nil, want correlation mismatch error")
+	}
+
+	assertProviderError(t, err, entity.ProviderSubmitPhaseDistributeDocument, entity.ProviderErrorClassConflictStale)
+}
+
+func TestFetchProviderSigningReferencesRejectsCorrelationMismatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_stale":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_stale",
+				"externalId": "other-attempt",
+				"status":     "PENDING",
+				"recipients": []map[string]any{
+					{"id": 123, "externalId": "guardian", "token": "guardian-token", "status": "SENT"},
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_, err = adapter.FetchProviderSigningReferences(context.Background(), &port.FetchProviderSigningReferencesRequest{
+		ProviderDocumentID: "env_stale",
+		CorrelationKey:     "expected-attempt",
+		Environment:        entity.EnvironmentProd,
+	})
+	if err == nil {
+		t.Fatal("FetchProviderSigningReferences() error = nil, want correlation mismatch error")
+	}
+
+	assertProviderError(t, err, entity.ProviderSubmitPhaseFetchSigningReferences, entity.ProviderErrorClassConflictStale)
+}
+
+func TestEnsureProviderRecipientsRejectsPartialExistingRecipients(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_partial":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_partial",
+				"externalId": "doc-id:attempt-id",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{
+					{"id": 123, "externalId": "guardian", "token": "guardian-token", "status": "PENDING"},
+				},
+				"fields": []map[string]any{},
+			})
+		case "/api/v2/envelope/recipient/create-many":
+			t.Fatal("EnsureProviderRecipients attempted unsafe partial recipient repair")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	_, err = adapter.EnsureProviderRecipients(context.Background(), &port.EnsureProviderRecipientsRequest{
+		ProviderDocumentID: "env_partial",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.SigningRecipient{
+			{Email: "guardian@example.test", Name: "Guardian", RoleID: "guardian"},
+			{Email: "student@example.test", Name: "Student", RoleID: "student"},
+		},
+		Environment: entity.EnvironmentProd,
+	})
+	if err == nil {
+		t.Fatal("EnsureProviderRecipients() error = nil, want partial recipient error")
+	}
+
+	assertProviderError(t, err, entity.ProviderSubmitPhaseAddRecipients, entity.ProviderErrorClassPermanent)
+}
+
+func TestEnsureProviderFieldsIgnoresNonSignatureFieldsWhenCheckingCompleteness(t *testing.T) {
+	createManyCalled := false
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_text_field":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_text_field",
+				"externalId": "doc-id:attempt-id",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields": []map[string]any{
+					{"id": 1, "recipientId": 123, "type": "TEXT"},
+				},
+			})
+		case "/api/v2/envelope/field/create-many":
+			createManyCalled = true
+			if r.Method != http.MethodPost {
+				t.Fatalf("method = %s, want POST", r.Method)
+			}
+			writeJSON(t, w, map[string]any{"data": []map[string]any{{"id": 2}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderFields(context.Background(), &port.EnsureProviderFieldsRequest{
+		ProviderDocumentID: "env_text_field",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.RecipientResult{{
+			RoleID:              "guardian",
+			ProviderRecipientID: "123",
+		}},
+		SignatureFields: []port.SignatureFieldPosition{{
+			RoleID: "guardian",
+			Page:   1,
+		}},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderFields() error = %v", err)
+	}
+	if !createManyCalled {
+		t.Fatal("EnsureProviderFields did not create required signature field")
+	}
+	if got.FieldCount != 1 {
+		t.Fatalf("FieldCount = %d, want 1 required signature field", got.FieldCount)
+	}
+}
+
+func TestEnsureProviderFieldsCreatesOnlyMissingRequiredSignatureFields(t *testing.T) {
+	var createdFields []fieldPayload
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_partial_fields":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_partial_fields",
+				"externalId": "doc-id:attempt-id",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields": []map[string]any{
+					{"id": 1, "recipientId": 123, "type": "SIGNATURE"},
+				},
+			})
+		case "/api/v2/envelope/field/create-many":
+			var req fieldsRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decoding create-many request: %v", err)
+			}
+			createdFields = req.Data
+			writeJSON(t, w, map[string]any{"data": []map[string]any{{"id": 2}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderFields(context.Background(), &port.EnsureProviderFieldsRequest{
+		ProviderDocumentID: "env_partial_fields",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.RecipientResult{
+			{RoleID: "guardian", ProviderRecipientID: "123"},
+			{RoleID: "student", ProviderRecipientID: "456"},
+		},
+		SignatureFields: []port.SignatureFieldPosition{
+			{RoleID: "guardian", Page: 1},
+			{RoleID: "student", Page: 1},
+		},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderFields() error = %v", err)
+	}
+
+	if got.FieldCount != 2 {
+		t.Fatalf("FieldCount = %d, want 2 required signature fields", got.FieldCount)
+	}
+	if len(createdFields) != 1 {
+		t.Fatalf("created fields len = %d, want 1", len(createdFields))
+	}
+	if createdFields[0].RecipientID != 456 || createdFields[0].Type != "SIGNATURE" {
+		t.Fatalf("created field = %+v", createdFields[0])
+	}
+}
+
+func assertProviderError(t *testing.T, err error, phase entity.ProviderSubmitPhase, class entity.ProviderErrorClass) {
+	t.Helper()
+
+	var providerErr *port.ProviderError
+	if !errors.As(err, &providerErr) {
+		t.Fatalf("error type = %T, want *port.ProviderError", err)
+	}
+	if providerErr.Phase != phase {
+		t.Fatalf("ProviderError.Phase = %q, want %q", providerErr.Phase, phase)
+	}
+	if providerErr.Class != class {
+		t.Fatalf("ProviderError.Class = %q, want %q", providerErr.Class, class)
 	}
 }
