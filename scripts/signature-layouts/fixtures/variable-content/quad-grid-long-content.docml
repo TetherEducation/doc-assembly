@@ -1,0 +1,55 @@
+---meta---
+title: SIG-16 quad contenido largo
+description: Fixture variable para reproducir ubicación de firma con contenido cambiante.
+language: es
+page: LETTER
+margins: 72
+
+---roles---
+r1: Firmante 1 [order:1]
+r2: Firmante 2 [order:2]
+r3: Firmante 3 [order:3]
+r4: Firmante 4 [order:4]
+
+---workflow---
+mode: sequential
+
+---content---
+@center **SIG-16 quad contenido largo**
+
+Marque su decisión:
+
+☒ AUTORIZO el uso de imágenes y datos exclusivamente para este contrato de prueba.
+☐ NO AUTORIZO el uso descrito en este contrato de prueba.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 01.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 02.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 03.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 04.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 05.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 06.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 07.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 08.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 09.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 10.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 11.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 12.
+
+@signature(quad-grid, md)
+  | r1: Firma institucional extendida número 1 | Subtítulo largo del firmante número 1
+  | r2: Firma institucional extendida número 2 | Subtítulo largo del firmante número 2
+  | r3: Firma institucional extendida número 3 | Subtítulo largo del firmante número 3
+  | r4: Firma institucional extendida número 4 | Subtítulo largo del firmante número 4
+
+**Fecha:** [today|Fecha]

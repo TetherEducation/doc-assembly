@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -82,6 +84,15 @@ func (r *TypstRenderer) buildArgs(rootDir string) []string {
 	args := make([]string, 0, 3+2*len(r.opts.FontDirs)+4)
 	args = append(args, "compile", "--format", "pdf")
 
+	if rootDir == "" {
+		if cwd, err := os.Getwd(); err == nil {
+			if abs, absErr := filepath.Abs(cwd); absErr == nil {
+				rootDir = abs
+			} else {
+				rootDir = cwd
+			}
+		}
+	}
 	if rootDir != "" {
 		args = append(args, "--root", rootDir)
 	}

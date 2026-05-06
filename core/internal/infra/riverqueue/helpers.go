@@ -3,6 +3,7 @@ package riverqueue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
@@ -49,9 +50,9 @@ func buildAnchorToRoleIDMap(signerRoles []*entity.TemplateVersionSignerRole) map
 	return m
 }
 
-func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*entity.TemplateVersionSignerRole, portableDocRoles []portabledoc.SignerRole) []port.SignatureFieldPosition {
+func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*entity.TemplateVersionSignerRole, portableDocRoles []portabledoc.SignerRole) ([]port.SignatureFieldPosition, error) {
 	if len(fields) == 0 {
-		return nil
+		return nil, nil
 	}
 	anchorToDBRoleID := buildAnchorToRoleIDMap(dbSignerRoles)
 	portableIDToAnchor := make(map[string]string, len(portableDocRoles))
@@ -60,6 +61,9 @@ func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*e
 	}
 	positions := make([]port.SignatureFieldPosition, 0, len(fields))
 	for _, f := range fields {
+		if f.PDFPageW <= 0 || f.PDFPageH <= 0 || f.PDFPointY <= 0 || f.Page <= 0 {
+			return nil, fmt.Errorf("signature field %s missing extracted PDF coordinates", f.RoleID)
+		}
 		anchor := f.AnchorString
 		if a := portableIDToAnchor[f.RoleID]; a != "" {
 			anchor = a
@@ -71,7 +75,7 @@ func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*e
 		posX, posY := port.ConvertFieldToDocumensoPosition(f)
 		positions = append(positions, port.SignatureFieldPosition{RoleID: dbRoleID, Page: f.Page, PositionX: posX, PositionY: posY, Width: f.Width, Height: f.Height})
 	}
-	return positions
+	return positions, nil
 }
 
 func buildDefaultSignatureFieldPositions(recipients []*entity.DocumentRecipient) []port.SignatureFieldPosition {

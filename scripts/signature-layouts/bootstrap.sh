@@ -76,7 +76,7 @@ export WORKSPACE_ID
 # ---- Document Type ---------------------------------------------------------
 
 log "Checking/creating document type (code=${DOC_TYPE_CODE})..."
-DT_LIST=$(api GET "/api/v1/tenant/document-types")
+DT_LIST=$(api GET "/api/v1/tenant/document-types?q=${DOC_TYPE_CODE}")
 EXISTING_DT_ID=$(echo "$DT_LIST" | jq -r '.data[]? | select(.code == "'"${DOC_TYPE_CODE}"'") | .id' 2>/dev/null | head -1)
 
 if [[ -n "$EXISTING_DT_ID" ]]; then

@@ -1,0 +1,37 @@
+---meta---
+title: SIG-03 firma en página dos single
+description: Fixture variable para reproducir ubicación de firma con contenido cambiante.
+language: es
+page: LETTER
+margins: 72
+
+---roles---
+apoderado: Apoderado/a [order:1]
+
+---workflow---
+mode: sequential
+
+---content---
+@center **SIG-03 firma en página dos single**
+
+Marque su decisión:
+
+☒ AUTORIZO el uso de imágenes y datos exclusivamente para este contrato de prueba.
+☐ NO AUTORIZO el uso descrito en este contrato de prueba.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 01.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 02.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 03.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 04.
+
+===
+
+La firma debe ubicarse en esta nueva página, inmediatamente sobre su línea visible.
+
+@signature(single-center, md)
+  | apoderado: Firma Apoderado/a | Apoderado/a
+
+**Fecha:** [today|Fecha]
