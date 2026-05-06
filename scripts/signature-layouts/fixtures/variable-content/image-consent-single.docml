@@ -1,0 +1,32 @@
+---meta---
+title: Autorizacion Publicacion de Imagenes variable
+description: Fixture cercano al reporte visual con checkboxes, fecha y firma al pie.
+language: es
+page: LETTER
+margins: 72
+
+---roles---
+apoderado: Apoderado/a [order:1]
+
+---workflow---
+mode: sequential
+
+---content---
+Marque su decision:
+
+**Autorizacion Publicacion de Imagenes**
+
+☒ AUTORIZO al colegio el uso pedagogico de las imagenes de mi pupilo en actividades lectivas, complementarias y extraescolares organizadas y planificadas por las areas del colegio, y que sean publicadas en los diferentes medios oficiales del establecimiento.
+☐ NO AUTORIZO al colegio el uso pedagogico de las imagenes de mi pupilo en actividades lectivas, complementarias y extraescolares organizadas y planificadas por las areas del colegio.
+
+**Fecha:** [today|Fecha]
+
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 01.
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 02.
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 03.
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 04.
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 05.
+La autorización descrita en este documento aplica únicamente para actividades lectivas, complementarias y extraescolares organizadas y planificadas por el colegio. Este párrafo de relleno permite variar la composición vertical antes del bloque final de firma. Párrafo 06.
+
+@signature(single-center, md)
+  | apoderado: Firma | Apoderado/a

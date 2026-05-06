@@ -116,7 +116,10 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		return failpointErr(failpointRenderAfterStoreBeforeCommit)
 	}
 
-	sigFields := mapSignatureFieldPositions(renderResult.SignatureFields, signerRoles, portableDoc.SignerRoles)
+	sigFields, err := mapSignatureFieldPositions(renderResult.SignatureFields, signerRoles, portableDoc.SignerRoles)
+	if err != nil {
+		return e.failPermanent(ctx, attempt, old, entity.ProviderSubmitPhaseBeforeRequest, err)
+	}
 	if len(sigFields) == 0 {
 		recipients, recErr := e.recipientRepo.FindByDocumentID(ctx, doc.ID)
 		if recErr != nil {

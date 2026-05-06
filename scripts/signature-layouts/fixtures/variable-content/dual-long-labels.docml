@@ -1,0 +1,51 @@
+---meta---
+title: SIG-08 dual labels largos
+description: Fixture variable para reproducir ubicación de firma con contenido cambiante.
+language: es
+page: LETTER
+margins: 72
+
+---roles---
+apoderado: Apoderado/a [order:1]
+estudiante: Estudiante [order:2]
+
+---workflow---
+mode: sequential
+
+---content---
+@center **SIG-08 dual labels largos**
+
+Marque su decisión:
+
+☒ AUTORIZO el uso de imágenes y datos exclusivamente para este contrato de prueba.
+☐ NO AUTORIZO el uso descrito en este contrato de prueba.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 01.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 02.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 03.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 04.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 05.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 06.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 07.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 08.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 09.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 10.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 11.
+
+Cláusula de prueba: El presente documento contiene texto contractual de relleno para modificar el flujo vertical antes del bloque de firma. La posición del campo de firma del proveedor debe depender exclusivamente de la línea renderizada y no de porcentajes estáticos ni del largo del contenido. Párrafo 12.
+
+@signature(dual-sides, md)
+  | apoderado: Firma del Apoderado Responsable de Autorización y Representación Legal | Nombre completo, cargo institucional y relación con el estudiante
+  | estudiante: Firma del Estudiante Beneficiario con Nombre Extendido | Nombre completo del estudiante firmante
+
+**Fecha:** [today|Fecha]

@@ -1,0 +1,8 @@
+layout	recipient_email	signing_url
+short-single	signer-1@example.test	http://localhost:3000/sign/Mi_yrlNSzIymTxdVdUj59
+medium-single	signer-1@example.test	http://localhost:3000/sign/P2NXAH6NViniaO80gWbCf
+near-page-bottom-single	signer-1@example.test	http://localhost:3000/sign/uLCGCI4gC5BzkuUIUDw2m
+page-two-single	signer-1@example.test	http://localhost:3000/sign/NrR5Xy_OMmogAYIQoOtg9
+dual-long-labels	signer-1@example.test	http://localhost:3000/sign/xz6fqYanPbdKM8v4vUr3N
+quad-grid-long-content	signer-1@example.test	http://localhost:3000/sign/OrXRuyfUZb0rdpleuH0-2
+image-consent-single	signer-1@example.test	http://localhost:3000/sign/dvZ6BSBCIQtGiIefBFPQ0

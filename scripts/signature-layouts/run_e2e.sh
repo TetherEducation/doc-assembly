@@ -26,12 +26,12 @@ API_BASE="${API_BASE:-http://localhost:8081/api/v1}"
 AUTH_TOKEN="${AUTH_TOKEN:-dummy}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-60}"
 DELTA_THRESHOLD="0.5"
-FIXTURES_DIR="${SCRIPT_DIR}/fixtures"
+FIXTURES_DIR="${FIXTURES_DIR:-${SCRIPT_DIR}/fixtures}"
 DOCML2JSON="${REPO_ROOT}/scripts/docml2json/docml2json.py"
 PATCH_CONTENT="${SCRIPT_DIR}/patch_content.py"
 CSV_DIR="${REPO_ROOT}/docs/superpowers/evidence/2026-05-03-signature-layouts"
 CSV_OUT="${CSV_OUT:-${CSV_DIR}/numeric_results.csv}"
-URLS_TSV="${CSV_DIR}/signing_urls.tsv"
+URLS_TSV="${URLS_TSV:-${CSV_DIR}/signing_urls.tsv}"
 
 # All 13 layouts
 ALL_LAYOUTS=(

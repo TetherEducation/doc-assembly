@@ -125,9 +125,14 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
 
-	// Extract actual anchor positions from generated PDF
+	// Extract actual anchor positions from generated PDF. Signature fields must never
+	// fall back to approximate/static coordinates because provider fields are
+	// absolute and stale/wrong positions are hard to repair once submitted.
 	if len(signatureFields) > 0 {
-		signatureFields = s.extractAndUpdatePositions(ctx, pdfBytes, signatureFields)
+		signatureFields, err = s.extractAndUpdatePositions(ctx, pdfBytes, signatureFields)
+		if err != nil {
+			return nil, fmt.Errorf("extracting signature positions: %w", err)
+		}
 	}
 
 	// Generate filename from document title
@@ -272,19 +277,23 @@ func (s *Service) extractAndUpdatePositions(
 	ctx context.Context,
 	pdfBytes []byte,
 	fields []port.SignatureField,
-) []port.SignatureField {
+) ([]port.SignatureField, error) {
 	tmpPath, cleanup, err := s.writeTempPDF(ctx, pdfBytes)
 	if err != nil {
-		return fields
+		return nil, err
 	}
 	defer cleanup()
 
 	positions, err := s.extractPositions(ctx, tmpPath, fields)
 	if err != nil {
-		return fields
+		return nil, err
 	}
 
-	return s.updateFieldPositions(ctx, fields, positions)
+	updated := s.updateFieldPositions(ctx, fields, positions)
+	if err := requireExtractedSignaturePositions(updated); err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
 // writeTempPDF writes PDF bytes to a temp file and returns path + cleanup function.
@@ -363,6 +372,25 @@ func (s *Service) updateFieldPositions(
 }
 
 // setRawPosition stores raw PDF coordinates on the field for later provider-specific conversion.
+
+func requireExtractedSignaturePositions(fields []port.SignatureField) error {
+	missing := make([]string, 0)
+	for _, field := range fields {
+		if field.PDFPageW > 0 && field.PDFPageH > 0 && field.PDFPointY > 0 && field.Page > 0 {
+			continue
+		}
+		identifier := field.AnchorString
+		if identifier == "" {
+			identifier = field.RoleID
+		}
+		missing = append(missing, identifier)
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing extracted PDF coordinates for signature anchors: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func (s *Service) setRawPosition(ctx context.Context, field *port.SignatureField, pos AnchorPosition) {
 	field.Page = pos.Page
 	field.PDFPointX = pos.X
