@@ -179,6 +179,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		templateVersionRepo,
 		templateVersionInjectableRepo,
 		templateVersionSignerRoleRepo,
+		systemInjectableRepo,
 		templateRepo,
 		templateTagRepo,
 		contentValidator,

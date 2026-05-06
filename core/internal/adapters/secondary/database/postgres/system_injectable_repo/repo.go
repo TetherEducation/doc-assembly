@@ -97,6 +97,15 @@ func (r *Repository) UpsertDefinition(ctx context.Context, key string, isActive 
 	return nil
 }
 
+// EnsureDefinition creates an active system injectable definition only when it is missing.
+func (r *Repository) EnsureDefinition(ctx context.Context, key string) error {
+	_, err := r.pool.Exec(ctx, queryEnsureDefinition, key)
+	if err != nil {
+		return fmt.Errorf("ensuring definition %s: %w", key, err)
+	}
+	return nil
+}
+
 // FindAssignmentsByKey returns all assignments for a given injectable key with tenant/workspace names.
 func (r *Repository) FindAssignmentsByKey(ctx context.Context, key string) ([]*entity.SystemInjectableAssignment, error) {
 	rows, err := r.pool.Query(ctx, queryFindAssignmentsByKey, key)
