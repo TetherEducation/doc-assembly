@@ -22,6 +22,17 @@ func TestProviderCapabilitiesCanFindByCorrelationKey(t *testing.T) {
 	}
 }
 
+func TestNewUsesLongDocumensoHTTPTimeout(t *testing.T) {
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: "https://sign.example.test"})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if adapter.httpClient.Timeout != documensoHTTPTimeout {
+		t.Fatalf("http timeout = %s, want %s", adapter.httpClient.Timeout, documensoHTTPTimeout)
+	}
+}
+
 func TestFindProviderDocumentByCorrelationKeyFindsUsableEnvelopeByExternalID(t *testing.T) {
 	const correlationKey = "doc-id:attempt-id"
 

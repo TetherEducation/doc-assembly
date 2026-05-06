@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	providerName = "documenso"
+	providerName         = "documenso"
+	documensoHTTPTimeout = 120 * time.Second
 )
 
 // Adapter implements port.SigningProvider for Documenso.
@@ -40,7 +41,7 @@ func New(config *Config) (*Adapter, error) {
 	return &Adapter{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: documensoHTTPTimeout,
 		},
 	}, nil
 }
