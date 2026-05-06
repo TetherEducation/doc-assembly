@@ -551,6 +551,14 @@ func (a *Adapter) FetchProviderSigningReferences(ctx context.Context, req *port.
 	}
 
 	providerResult := a.buildProviderDocumentResultFromEnvelope(detail, req.CorrelationKey)
+	if !providerResult.Usable && len(req.Recipients) > 0 {
+		fallbackRecipients := a.buildRecipientResultsFromEnvelope(detail, req.Recipients, true)
+		if len(fallbackRecipients) > 0 {
+			providerResult.Usable = true
+			providerResult.Reason = ""
+			providerResult.Recipients = fallbackRecipients
+		}
+	}
 	if !providerResult.Usable {
 		return nil, newDocumensoProviderError(
 			entity.ProviderErrorClassPermanent,

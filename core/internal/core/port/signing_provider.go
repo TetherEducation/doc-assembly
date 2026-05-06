@@ -160,6 +160,7 @@ type EnsureProviderDistributedResult struct {
 type FetchProviderSigningReferencesRequest struct {
 	ProviderDocumentID string
 	CorrelationKey     string
+	Recipients         []SigningRecipient
 	Environment        entity.Environment
 }
 

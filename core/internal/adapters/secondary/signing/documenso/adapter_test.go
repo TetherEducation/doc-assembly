@@ -357,6 +357,61 @@ func TestEnsureProviderDocumentReusesExistingEnvelopeByExternalID(t *testing.T) 
 	}
 }
 
+func TestFetchProviderSigningReferencesMapsRecipientsByEmailWhenExternalIDMissing(t *testing.T) {
+	const correlationKey = "doc-id:attempt-id"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_ready":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_ready",
+				"externalId": correlationKey,
+				"status":     "PENDING",
+				"recipients": []map[string]any{
+					{"id": 219, "email": "signer-1@example.test", "token": "recipient-token", "status": "SENT"},
+				},
+				"fields": []map[string]any{
+					{"id": 1, "recipientId": 219, "type": "SIGNATURE"},
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.FetchProviderSigningReferences(context.Background(), &port.FetchProviderSigningReferencesRequest{
+		ProviderDocumentID: "env_ready",
+		CorrelationKey:     correlationKey,
+		Recipients: []port.SigningRecipient{
+			{RoleID: "guardian", Email: "signer-1@example.test", Name: "Guardian", SignerOrder: 1},
+		},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("FetchProviderSigningReferences() error = %v", err)
+	}
+
+	if got.Status != entity.SigningAttemptStatusSigningReady {
+		t.Fatalf("Status = %q, want %q", got.Status, entity.SigningAttemptStatusSigningReady)
+	}
+	if len(got.Recipients) != 1 {
+		t.Fatalf("Recipients len = %d, want 1", len(got.Recipients))
+	}
+	recipient := got.Recipients[0]
+	if recipient.RoleID != "guardian" ||
+		recipient.ProviderRecipientID != "219" ||
+		recipient.ProviderSigningToken != "recipient-token" ||
+		recipient.SigningURL != server.URL+"/sign/recipient-token" {
+		t.Fatalf("recipient = %+v", recipient)
+	}
+}
+
 func TestFetchProviderSigningReferencesReturnsUsableRecipientRefs(t *testing.T) {
 	const correlationKey = "doc-id:attempt-id"
 

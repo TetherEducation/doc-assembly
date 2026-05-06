@@ -344,9 +344,14 @@ func (e *SigningAttemptExecutor) advanceProviderSigningReferences(ctx context.Co
 	if attempt.ProviderDocumentID == nil {
 		return e.reconcileProviderPhase(ctx, attempt, "ATTEMPT_PROVIDER_DOCUMENT_MISSING_FOR_REFERENCES")
 	}
+	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	if err != nil {
+		return err
+	}
 	result, err := e.signingProvider.FetchProviderSigningReferences(ctx, &port.FetchProviderSigningReferencesRequest{
 		ProviderDocumentID: *attempt.ProviderDocumentID,
 		CorrelationKey:     deref(attempt.ProviderCorrelationKey),
+		Recipients:         signingRecipientsFromAttempts(attemptRecipients),
 		Environment:        entity.EnvironmentProd,
 	})
 	if err != nil {
