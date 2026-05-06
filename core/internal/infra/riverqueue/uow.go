@@ -59,7 +59,7 @@ func (u *SigningExecutionUnitOfWork) CreateAttemptAndEnqueueRender(
 	if err := u.setActiveProjectionTx(ctx, tx, attempt.DocumentID, attempt.ID, entity.ProjectDocumentStatusFromAttempt(attempt.Status)); err != nil {
 		return nil, err
 	}
-	if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseRenderAttemptPDF, attempt.ID); err != nil {
+	if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseRenderAttemptPDF, attempt); err != nil {
 		return nil, err
 	}
 	if err := u.insertEventTx(ctx, tx, attempt, nil, attempt.Status, "ATTEMPT_CREATED"); err != nil {
@@ -118,7 +118,7 @@ func (u *SigningExecutionUnitOfWork) SupersedeActiveAndCreateAttempt(
 			return nil, err
 		}
 		if oldAttempt.ProviderDocumentID != nil {
-			if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseCleanupProviderAttempt, oldAttempt.ID); err != nil {
+			if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseCleanupProviderAttempt, oldAttempt); err != nil {
 				return nil, err
 			}
 		}
@@ -131,7 +131,7 @@ func (u *SigningExecutionUnitOfWork) SupersedeActiveAndCreateAttempt(
 	if err := u.setActiveProjectionTx(ctx, tx, attempt.DocumentID, attempt.ID, entity.ProjectDocumentStatusFromAttempt(attempt.Status)); err != nil {
 		return nil, err
 	}
-	if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseRenderAttemptPDF, attempt.ID); err != nil {
+	if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseRenderAttemptPDF, attempt); err != nil {
 		return nil, err
 	}
 	if err := u.insertEventTx(ctx, tx, attempt, nil, attempt.Status, "ATTEMPT_CREATED"); err != nil {
@@ -145,6 +145,10 @@ func (u *SigningExecutionUnitOfWork) SupersedeActiveAndCreateAttempt(
 }
 
 func (u *SigningExecutionUnitOfWork) TransitionAndEnqueue(ctx context.Context, attempt *entity.SigningAttempt, nextPhase port.SigningJobPhase, eventType string) error {
+	if nextPhase == port.SigningJobPhaseSubmitAttemptToProvider && attempt.ProviderSubmitPhase == nil {
+		phase := entity.ProviderSubmitPhaseCreateProviderDocument
+		attempt.ProviderSubmitPhase = &phase
+	}
 	return u.transition(ctx, attempt, eventType, &nextPhase)
 }
 
@@ -189,7 +193,7 @@ func (u *SigningExecutionUnitOfWork) TerminateActiveAttempt(
 		}
 	}
 	if attempt.ProviderDocumentID != nil {
-		if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseCleanupProviderAttempt, attempt.ID); err != nil {
+		if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseCleanupProviderAttempt, attempt); err != nil {
 			return err
 		}
 	}
@@ -223,7 +227,7 @@ func (u *SigningExecutionUnitOfWork) transition(ctx context.Context, attempt *en
 		}
 	}
 	if phase != nil {
-		if err := u.enqueueTx(ctx, tx, *phase, attempt.ID); err != nil {
+		if err := u.enqueueTx(ctx, tx, *phase, attempt); err != nil {
 			return err
 		}
 	}
@@ -268,26 +272,29 @@ func (u *SigningExecutionUnitOfWork) createAttemptInTx(ctx context.Context, tx p
 	return attempt, nil
 }
 
-func (u *SigningExecutionUnitOfWork) enqueueTx(ctx context.Context, tx pgx.Tx, phase port.SigningJobPhase, attemptID string) error {
+func (u *SigningExecutionUnitOfWork) enqueueTx(ctx context.Context, tx pgx.Tx, phase port.SigningJobPhase, attempt *entity.SigningAttempt) error {
 	var err error
 	switch phase {
 	case port.SigningJobPhaseRenderAttemptPDF:
-		_, err = u.client.InsertTx(ctx, tx, RenderAttemptPDFArgs{AttemptID: attemptID}, nil)
-	case port.SigningJobPhaseSubmitAttemptToProvider:
-		_, err = u.client.InsertTx(ctx, tx, SubmitAttemptToProviderArgs{AttemptID: attemptID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, RenderAttemptPDFArgs{AttemptID: attempt.ID}, nil)
+	case port.SigningJobPhaseSubmitAttemptToProvider, port.SigningJobPhaseAdvanceProviderSubmission:
+		_, err = u.client.InsertTx(ctx, tx, AdvanceProviderSubmissionArgs{
+			AttemptID:           attempt.ID,
+			ProviderSubmitPhase: providerSubmitPhaseArg(attempt.ProviderSubmitPhase),
+		}, nil)
 	case port.SigningJobPhaseReconcileProvider:
-		_, err = u.client.InsertTx(ctx, tx, ReconcileProviderSubmissionArgs{AttemptID: attemptID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, ReconcileProviderSubmissionArgs{AttemptID: attempt.ID}, nil)
 	case port.SigningJobPhaseRefreshProviderStatus:
-		_, err = u.client.InsertTx(ctx, tx, RefreshAttemptProviderStatusArgs{AttemptID: attemptID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, RefreshAttemptProviderStatusArgs{AttemptID: attempt.ID}, nil)
 	case port.SigningJobPhaseCleanupProviderAttempt:
-		_, err = u.client.InsertTx(ctx, tx, CleanupProviderAttemptArgs{AttemptID: attemptID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, CleanupProviderAttemptArgs{AttemptID: attempt.ID}, nil)
 	case port.SigningJobPhaseDispatchCompletion:
-		_, err = u.client.InsertTx(ctx, tx, DispatchAttemptCompletionArgs{AttemptID: attemptID}, nil)
+		_, err = u.client.InsertTx(ctx, tx, DispatchAttemptCompletionArgs{AttemptID: attempt.ID}, nil)
 	default:
 		return fmt.Errorf("unknown signing job phase %q", phase)
 	}
 	if err != nil {
-		return fmt.Errorf("enqueue %s for attempt %s: %w", phase, attemptID, err)
+		return fmt.Errorf("enqueue %s for attempt %s: %w", phase, attempt.ID, err)
 	}
 	return nil
 }

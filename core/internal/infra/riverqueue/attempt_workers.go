@@ -31,6 +31,18 @@ func (w *SubmitAttemptToProviderWorker) Timeout(_ *river.Job[SubmitAttemptToProv
 	return 2 * time.Minute
 }
 
+type AdvanceProviderSubmissionWorker struct {
+	river.WorkerDefaults[AdvanceProviderSubmissionArgs]
+	executor *SigningAttemptExecutor
+}
+
+func (w *AdvanceProviderSubmissionWorker) Work(ctx context.Context, job *river.Job[AdvanceProviderSubmissionArgs]) error {
+	return w.executor.AdvanceProviderSubmission(ctx, job.Args.AttemptID)
+}
+func (w *AdvanceProviderSubmissionWorker) Timeout(_ *river.Job[AdvanceProviderSubmissionArgs]) time.Duration {
+	return 2 * time.Minute
+}
+
 type ReconcileProviderSubmissionWorker struct {
 	river.WorkerDefaults[ReconcileProviderSubmissionArgs]
 	executor *SigningAttemptExecutor
@@ -81,6 +93,7 @@ func (w *DispatchAttemptCompletionWorker) Timeout(_ *river.Job[DispatchAttemptCo
 
 var _ river.Worker[RenderAttemptPDFArgs] = (*RenderAttemptPDFWorker)(nil)
 var _ river.Worker[SubmitAttemptToProviderArgs] = (*SubmitAttemptToProviderWorker)(nil)
+var _ river.Worker[AdvanceProviderSubmissionArgs] = (*AdvanceProviderSubmissionWorker)(nil)
 var _ river.Worker[ReconcileProviderSubmissionArgs] = (*ReconcileProviderSubmissionWorker)(nil)
 var _ river.Worker[RefreshAttemptProviderStatusArgs] = (*RefreshAttemptProviderStatusWorker)(nil)
 var _ river.Worker[CleanupProviderAttemptArgs] = (*CleanupProviderAttemptWorker)(nil)

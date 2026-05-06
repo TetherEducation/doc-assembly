@@ -3,12 +3,16 @@ package riverqueue
 import "fmt"
 
 const (
-	failpointRenderBefore                    = "render.before"
-	failpointRenderAfterStoreBeforeCommit    = "render.after_store_before_commit"
-	failpointSubmitBeforeProvider            = "submit.before_provider"
-	failpointSubmitCorruptPDFChecksum        = "submit.corrupt_pdf_checksum"
-	failpointSubmitAfterProviderBeforeCommit = "submit.after_provider_accepted_before_commit"
-	failpointCleanupFail                     = "cleanup.fail"
+	failpointRenderBefore                        = "render.before"
+	failpointRenderAfterStoreBeforeCommit        = "render.after_store_before_commit"
+	failpointSubmitBeforeProvider                = "submit.before_provider"
+	failpointSubmitCorruptPDFChecksum            = "submit.corrupt_pdf_checksum"
+	failpointSubmitAfterProviderBeforeCommit     = "submit.after_provider_accepted_before_commit"
+	failpointSubmitAfterEnvelopeBeforeRecipients = "submit_after_envelope_before_recipients"
+	failpointSubmitAfterRecipientsBeforeFields   = "submit_after_recipients_before_fields"
+	failpointSubmitAfterFieldsBeforeDistribute   = "submit_after_fields_before_distribute"
+	failpointSubmitAfterDistributeBeforeRefs     = "submit_after_distribute_before_refs"
+	failpointCleanupFail                         = "cleanup.fail"
 )
 
 // AttemptFailpoints contains non-production failure injection toggles for live

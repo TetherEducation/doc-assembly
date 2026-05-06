@@ -4,17 +4,26 @@ package riverqueue_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
 	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
+	signingmock "github.com/rendis/doc-assembly/core/internal/adapters/secondary/signing/mock"
+	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/storage/local"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 	"github.com/rendis/doc-assembly/core/internal/infra/config"
@@ -41,6 +50,24 @@ func TestSigningAttemptUOW_CreateAttemptEnqueuesRenderAtomically(t *testing.T) {
 	var jobs int
 	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind = 'render_attempt_pdf' AND args->>'attempt_id' = $1`, attempt.ID).Scan(&jobs))
 	require.Equal(t, 1, jobs)
+}
+
+func TestSigningAttemptUOW_TransitionSubmitPhaseEnqueuesAdvanceProviderSubmission(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+
+	attempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, fx.documentID, fx.recipients(), fx.signerOrders())
+	require.NoError(t, err)
+	attempt.Status = entity.SigningAttemptStatusReadyToSubmit
+	require.NoError(t, riverSvc.SigningExecutionUOW().TransitionAndEnqueue(ctx, attempt, port.SigningJobPhaseSubmitAttemptToProvider, "ATTEMPT_PDF_READY"))
+
+	var advanceJobs, legacyJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='advance_provider_submission' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&advanceJobs))
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='submit_attempt_to_provider' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&legacyJobs))
+	require.Equal(t, 1, advanceJobs)
+	require.Equal(t, 0, legacyJobs)
 }
 
 func TestSigningAttemptUOW_CreateAttemptIsIdempotentUnderConcurrency(t *testing.T) {
@@ -188,6 +215,86 @@ func TestSigningAttemptExecutor_StaleCompletionDispatchIsNoop(t *testing.T) {
 	require.Equal(t, int32(0), calls.Load())
 }
 
+func TestSigningAttemptExecutor_ReconcileProviderPartialEnvelopeResumesWithoutUnknownLoop(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	provider := signingmock.New()
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+	corr := *attempt.ProviderCorrelationKey
+
+	envelope, err := provider.EnsureProviderDocument(ctx, &port.EnsureProviderDocumentRequest{
+		AttemptID:      attempt.ID,
+		DocumentID:     fx.documentID,
+		CorrelationKey: corr,
+		PDF:            []byte("%PDF-1.4 partial envelope\n"),
+		PDFChecksum:    "partial",
+		Title:          "Partial envelope",
+		Environment:    entity.EnvironmentProd,
+	})
+	require.NoError(t, err)
+	_, err = fx.pool.Exec(ctx, `
+		UPDATE execution.signing_attempts
+		SET status=$2, provider_document_id=$3, provider_submit_phase=NULL
+		WHERE id=$1`,
+		attempt.ID,
+		entity.SigningAttemptStatusSubmissionUnknown,
+		envelope.ProviderDocumentID,
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, executor.ReconcileProviderSubmission(ctx, attempt.ID))
+	reconciled := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSubmissionUnknown, reconciled.Status)
+	require.NotNil(t, reconciled.ProviderSubmitPhase)
+	require.Equal(t, entity.ProviderSubmitPhaseAddRecipients, *reconciled.ProviderSubmitPhase)
+
+	fx.drainProviderSubmission(t, ctx, executor, attempt.ID)
+	finalAttempt := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, finalAttempt.Status)
+	require.Nil(t, finalAttempt.ProviderSubmitPhase)
+	require.NotNil(t, finalAttempt.ProviderDocumentID)
+	recipients, err := fx.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	require.NoError(t, err)
+	require.Len(t, recipients, 1)
+	require.NotNil(t, recipients[0].ProviderRecipientID)
+	require.NotNil(t, recipients[0].SigningURL)
+}
+
+func TestSigningAttemptExecutor_AdvanceProviderSubmissionResumesAfterProviderStepFailpoints(t *testing.T) {
+	ctx := context.Background()
+	failpoints := []string{
+		"submit_after_envelope_before_recipients",
+		"submit_after_recipients_before_fields",
+		"submit_after_fields_before_distribute",
+		"submit_after_distribute_before_refs",
+	}
+	for _, failpoint := range failpoints {
+		t.Run(failpoint, func(t *testing.T) {
+			fx := newAttemptFixture(t, ctx)
+			provider := signingmock.New()
+			failingExecutor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, riverqueue.AttemptFailpoints{failpoint: true})
+			attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+
+			var failErr error
+			for range 5 {
+				failErr = failingExecutor.AdvanceProviderSubmission(ctx, attempt.ID)
+				if failErr != nil {
+					break
+				}
+			}
+			require.Error(t, failErr)
+			require.True(t, strings.Contains(failErr.Error(), failpoint), "error %q did not include failpoint %q", failErr.Error(), failpoint)
+
+			resumeExecutor, _, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+			fx.drainProviderSubmission(t, ctx, resumeExecutor, attempt.ID)
+			finalAttempt := fx.mustAttempt(t, ctx, attempt.ID)
+			require.Equal(t, entity.SigningAttemptStatusSigningReady, finalAttempt.Status)
+			require.Nil(t, finalAttempt.ProviderSubmitPhase)
+		})
+	}
+}
+
 type attemptFixture struct {
 	pool             *pgxpool.Pool
 	docRepo          port.DocumentRepository
@@ -257,4 +364,98 @@ func (f *attemptFixture) recipients() []*entity.DocumentRecipient {
 
 func (f *attemptFixture) signerOrders() map[string]int {
 	return map[string]int{f.roleID: 1}
+}
+
+func newProviderSubmissionExecutor(
+	t *testing.T,
+	ctx context.Context,
+	fx *attemptFixture,
+	provider port.SigningProvider,
+	failpoints riverqueue.AttemptFailpoints,
+) (*riverqueue.SigningAttemptExecutor, port.StorageAdapter, *river.Client[pgx.Tx]) {
+	t.Helper()
+	_, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+	storage, err := local.New(t.TempDir())
+	require.NoError(t, err)
+	client, err := river.NewClient(riverpgxv5.New(fx.pool), &river.Config{})
+	require.NoError(t, err)
+	return riverqueue.NewSigningAttemptExecutor(riverqueue.SigningAttemptExecutorConfig{
+		Pool:           fx.pool,
+		Client:         client,
+		DocumentRepo:   fx.docRepo,
+		AttemptRepo:    fx.attemptRepo,
+		SigningProvider: provider,
+		StorageAdapter:  storage,
+		StorageEnabled:  true,
+		Failpoints:      failpoints,
+	}), storage, client
+}
+
+func (f *attemptFixture) createProviderReadyAttempt(t *testing.T, ctx context.Context, provider port.SigningProvider, storage port.StorageAdapter) *entity.SigningAttempt {
+	t.Helper()
+	riverSvc, err := riverqueue.New(ctx, f.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: f.docRepo, AttemptRepo: f.attemptRepo})
+	require.NoError(t, err)
+	attempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, f.documentID, f.recipients(), f.signerOrders())
+	require.NoError(t, err)
+	pdf := []byte("%PDF-1.4 durable provider submission test\n")
+	checksumBytes := sha256.Sum256(pdf)
+	checksum := hex.EncodeToString(checksumBytes[:])
+	storagePath := fmt.Sprintf("tests/%s/pre-signed.pdf", attempt.ID)
+	algo := "sha256"
+	require.NoError(t, storage.Upload(ctx, &port.StorageUploadRequest{
+		Key:         storagePath,
+		Data:        pdf,
+		ContentType: "application/pdf",
+		Environment: entity.EnvironmentProd,
+	}))
+	fields, err := json.Marshal([]port.SignatureFieldPosition{{
+		RoleID:    f.roleID,
+		Page:      1,
+		PositionX: 10,
+		PositionY: 70,
+		Width:     30,
+		Height:    5,
+	}})
+	require.NoError(t, err)
+	payload, err := json.Marshal(map[string]any{
+		"title":          "Attempt UOW",
+		"correlationKey": fmt.Sprintf("%s:%s", f.documentID, attempt.ID),
+		"pdfStoragePath": storagePath,
+		"pdfChecksum":    checksum,
+	})
+	require.NoError(t, err)
+	providerName := provider.ProviderName()
+	corr := fmt.Sprintf("%s:%s", f.documentID, attempt.ID)
+	attempt.Status = entity.SigningAttemptStatusReadyToSubmit
+	attempt.PDFStoragePath = &storagePath
+	attempt.PDFChecksum = &checksum
+	attempt.PDFChecksumAlgorithm = &algo
+	attempt.SignatureFieldSnapshot = fields
+	attempt.ProviderUploadPayload = payload
+	attempt.ProviderName = &providerName
+	attempt.ProviderCorrelationKey = &corr
+	require.NoError(t, f.attemptRepo.Update(ctx, attempt))
+	return attempt
+}
+
+func (f *attemptFixture) drainProviderSubmission(t *testing.T, ctx context.Context, executor *riverqueue.SigningAttemptExecutor, attemptID string) {
+	t.Helper()
+	for range 8 {
+		attempt := f.mustAttempt(t, ctx, attemptID)
+		if attempt.Status == entity.SigningAttemptStatusSigningReady {
+			return
+		}
+		require.False(t, attempt.Status.IsTerminal(), "attempt reached terminal status %s before signing ready", attempt.Status)
+		require.NoError(t, executor.AdvanceProviderSubmission(ctx, attemptID))
+	}
+	attempt := f.mustAttempt(t, ctx, attemptID)
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, attempt.Status)
+}
+
+func (f *attemptFixture) mustAttempt(t *testing.T, ctx context.Context, attemptID string) *entity.SigningAttempt {
+	t.Helper()
+	attempt, err := f.attemptRepo.FindByID(ctx, attemptID)
+	require.NoError(t, err)
+	return attempt
 }
