@@ -234,3 +234,330 @@ func TestFindProviderDocumentByCorrelationKeyClassifiesDraftWithoutRecipientsAsP
 		t.Fatalf("Reason = %q", got.Reason)
 	}
 }
+
+func TestInspectProviderSubmissionDetectsPartialDraftWithoutRecipients(t *testing.T) {
+	const correlationKey = "doc-id:attempt-id"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope":
+			writeJSON(t, w, map[string]any{
+				"data": []map[string]any{{
+					"id":         "env_partial",
+					"externalId": correlationKey,
+					"status":     "DRAFT",
+				}},
+				"pagination": map[string]any{"page": 1, "perPage": 100, "totalPages": 1, "totalItems": 1},
+			})
+		case "/api/v2/envelope/env_partial":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_partial",
+				"externalId": correlationKey,
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields":     []map[string]any{},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.InspectProviderSubmission(context.Background(), &port.FindProviderDocumentRequest{
+		ProviderName:   providerName,
+		CorrelationKey: correlationKey,
+		Environment:    entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("InspectProviderSubmission() error = %v", err)
+	}
+
+	if !got.HasDocument {
+		t.Fatal("HasDocument = false, want true")
+	}
+	if got.ProviderDocumentID != "env_partial" {
+		t.Fatalf("ProviderDocumentID = %q, want env_partial", got.ProviderDocumentID)
+	}
+	if got.HasRecipients {
+		t.Fatal("HasRecipients = true, want false")
+	}
+	if got.HasFields {
+		t.Fatal("HasFields = true, want false")
+	}
+	if got.IsDistributed {
+		t.Fatal("IsDistributed = true, want false")
+	}
+	if got.Reason == "" {
+		t.Fatal("Reason is empty")
+	}
+}
+
+func TestEnsureProviderDocumentReusesExistingEnvelopeByExternalID(t *testing.T) {
+	const correlationKey = "doc-id:attempt-id"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope":
+			writeJSON(t, w, map[string]any{
+				"data": []map[string]any{{
+					"id":         "env_existing",
+					"externalId": correlationKey,
+					"status":     "DRAFT",
+				}},
+				"pagination": map[string]any{"page": 1, "perPage": 100, "totalPages": 1, "totalItems": 1},
+			})
+		case "/api/v2/envelope/env_existing":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_existing",
+				"externalId": correlationKey,
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields":     []map[string]any{},
+			})
+		case "/api/v2/envelope/create":
+			t.Fatal("EnsureProviderDocument posted to create despite existing matching externalId")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderDocument(context.Background(), &port.EnsureProviderDocumentRequest{
+		CorrelationKey: correlationKey,
+		Title:          "Consent",
+		PDF:            []byte("%PDF-1.7"),
+		Environment:    entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderDocument() error = %v", err)
+	}
+
+	if got.ProviderDocumentID != "env_existing" {
+		t.Fatalf("ProviderDocumentID = %q, want env_existing", got.ProviderDocumentID)
+	}
+	if got.ProviderName != providerName {
+		t.Fatalf("ProviderName = %q, want %q", got.ProviderName, providerName)
+	}
+	if got.CorrelationKey != correlationKey {
+		t.Fatalf("CorrelationKey = %q, want %q", got.CorrelationKey, correlationKey)
+	}
+	if got.RawStatus != "DRAFT" {
+		t.Fatalf("RawStatus = %q, want DRAFT", got.RawStatus)
+	}
+}
+
+func TestFetchProviderSigningReferencesReturnsUsableRecipientRefs(t *testing.T) {
+	const correlationKey = "doc-id:attempt-id"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_ready":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_ready",
+				"externalId": correlationKey,
+				"status":     "PENDING",
+				"recipients": []map[string]any{
+					{"id": 123, "externalId": "guardian", "token": "guardian-token", "status": "SENT"},
+					{"id": 456, "externalId": "student", "token": "student-token", "status": "SENT"},
+				},
+				"fields": []map[string]any{
+					{"id": 1, "recipientId": 123, "type": "SIGNATURE"},
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.FetchProviderSigningReferences(context.Background(), &port.FetchProviderSigningReferencesRequest{
+		ProviderDocumentID: "env_ready",
+		CorrelationKey:     correlationKey,
+		Environment:        entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("FetchProviderSigningReferences() error = %v", err)
+	}
+
+	if got.Status != entity.SigningAttemptStatusSigningReady {
+		t.Fatalf("Status = %q, want %q", got.Status, entity.SigningAttemptStatusSigningReady)
+	}
+	if got.RawStatus != "PENDING" {
+		t.Fatalf("RawStatus = %q, want PENDING", got.RawStatus)
+	}
+	if len(got.Recipients) != 2 {
+		t.Fatalf("Recipients len = %d, want 2", len(got.Recipients))
+	}
+	if got.Recipients[0].RoleID != "guardian" ||
+		got.Recipients[0].ProviderRecipientID != "123" ||
+		got.Recipients[0].ProviderSigningToken != "guardian-token" ||
+		got.Recipients[0].SigningURL != server.URL+"/sign/guardian-token" {
+		t.Fatalf("first recipient = %+v", got.Recipients[0])
+	}
+}
+
+func TestEnsureProviderRecipientsAddsRecipientsWhenEnvelopeIsEmpty(t *testing.T) {
+	fetchCount := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_empty":
+			fetchCount++
+			recipients := []map[string]any{}
+			if fetchCount > 1 {
+				recipients = []map[string]any{{
+					"id":         123,
+					"email":      "guardian@example.test",
+					"externalId": "guardian",
+					"token":      "guardian-token",
+					"status":     "PENDING",
+				}}
+			}
+			writeJSON(t, w, map[string]any{
+				"id":         "env_empty",
+				"status":     "DRAFT",
+				"recipients": recipients,
+				"fields":     []map[string]any{},
+			})
+		case "/api/v2/envelope/recipient/create-many":
+			if r.Method != http.MethodPost {
+				t.Fatalf("method = %s, want POST", r.Method)
+			}
+			writeJSON(t, w, map[string]any{
+				"data": []map[string]any{{
+					"id":    123,
+					"email": "guardian@example.test",
+					"token": "guardian-token",
+				}},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderRecipients(context.Background(), &port.EnsureProviderRecipientsRequest{
+		ProviderDocumentID: "env_empty",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.SigningRecipient{{
+			Email:  "guardian@example.test",
+			Name:   "Guardian",
+			RoleID: "guardian",
+		}},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderRecipients() error = %v", err)
+	}
+
+	if len(got.Recipients) != 1 {
+		t.Fatalf("Recipients len = %d, want 1", len(got.Recipients))
+	}
+	if got.Recipients[0].RoleID != "guardian" || got.Recipients[0].ProviderRecipientID != "123" {
+		t.Fatalf("recipient = %+v", got.Recipients[0])
+	}
+}
+
+func TestEnsureProviderFieldsReturnsExistingFieldCountWithoutPost(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_fields":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_fields",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields": []map[string]any{
+					{"id": 1, "recipientId": 123, "type": "SIGNATURE"},
+				},
+			})
+		case "/api/v2/envelope/field/create-many":
+			t.Fatal("EnsureProviderFields posted to create-many despite existing fields")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderFields(context.Background(), &port.EnsureProviderFieldsRequest{
+		ProviderDocumentID: "env_fields",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients: []port.RecipientResult{{
+			RoleID:              "guardian",
+			ProviderRecipientID: "123",
+		}},
+		SignatureFields: []port.SignatureFieldPosition{{
+			RoleID: "guardian",
+			Page:   1,
+		}},
+		Environment: entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderFields() error = %v", err)
+	}
+
+	if got.FieldCount != 1 {
+		t.Fatalf("FieldCount = %d, want 1", got.FieldCount)
+	}
+}
+
+func TestEnsureProviderDistributedSkipsAlreadyDistributedEnvelope(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_sent":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_sent",
+				"status":     "PENDING",
+				"recipients": []map[string]any{},
+				"fields":     []map[string]any{},
+			})
+		case "/api/v2/envelope/distribute":
+			t.Fatal("EnsureProviderDistributed posted to distribute despite non-draft status")
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.EnsureProviderDistributed(context.Background(), &port.EnsureProviderDistributedRequest{
+		ProviderDocumentID: "env_sent",
+		CorrelationKey:     "doc-id:attempt-id",
+		Environment:        entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("EnsureProviderDistributed() error = %v", err)
+	}
+
+	if got.RawStatus != "PENDING" {
+		t.Fatalf("RawStatus = %q, want PENDING", got.RawStatus)
+	}
+}
