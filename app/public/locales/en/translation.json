@@ -1867,7 +1867,10 @@
     },
     "processing": {
       "title": "Preparing document",
-      "message": "Your signing session is being prepared. This page will update automatically."
+      "message": "Your signing session is being prepared. This page will update automatically.",
+      "recoveringTitle": "Still preparing your document",
+      "recoveringMessage": "This is taking longer than usual. We are safely recovering your signing session and this page will update automatically.",
+      "supportCode": "Support code: {{code}}"
     },
     "documentUpdated": {
       "title": "Document updated",

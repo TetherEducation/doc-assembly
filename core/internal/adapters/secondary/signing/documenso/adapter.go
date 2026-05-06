@@ -340,6 +340,7 @@ func (a *Adapter) buildUploadResult(envelopeID string, envDetails *envelopeDetai
 	result := &port.SubmitAttemptDocumentResult{
 		ProviderDocumentID: envelopeID,
 		ProviderName:       providerName,
+		CorrelationKey:     correlationKey,
 		InitialStatus:      entity.SigningAttemptStatusSigningReady,
 		Recipients:         make([]port.RecipientResult, 0, len(originalRecipients)),
 	}
@@ -354,10 +355,11 @@ func (a *Adapter) buildUploadResult(envelopeID string, envDetails *envelopeDetai
 		signingURL := fmt.Sprintf("%s/sign/%s", a.config.SigningBaseURL, providerRecipient.Token)
 
 		result.Recipients = append(result.Recipients, port.RecipientResult{
-			RoleID:              orig.RoleID,
-			ProviderRecipientID: strconv.Itoa(providerRecipient.ID),
-			SigningURL:          signingURL,
-			Status:              entity.RecipientStatusSent,
+			RoleID:               orig.RoleID,
+			ProviderRecipientID:  strconv.Itoa(providerRecipient.ID),
+			ProviderSigningToken: providerRecipient.Token,
+			SigningURL:           signingURL,
+			Status:               entity.RecipientStatusSent,
 		})
 	}
 
@@ -367,8 +369,6 @@ func (a *Adapter) buildUploadResult(envelopeID string, envDetails *envelopeDetai
 // FindProviderDocumentByCorrelationKey reconciles ambiguous submissions by
 // scanning recent Documenso envelopes for the externalId written during create.
 func (a *Adapter) FindProviderDocumentByCorrelationKey(ctx context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderDocumentResult, error) {
-	const perPage = 100
-
 	base := &port.ProviderDocumentResult{
 		Found:          false,
 		Usable:         false,
@@ -376,29 +376,203 @@ func (a *Adapter) FindProviderDocumentByCorrelationKey(ctx context.Context, req 
 		CorrelationKey: req.CorrelationKey,
 	}
 
-	for page := 1; ; page++ {
-		listResp, err := a.listEnvelopePage(ctx, page, perPage)
+	detail, found, err := a.findEnvelopeByCorrelationKey(ctx, req.CorrelationKey)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		base.Reason = "documenso envelope with matching externalId was not found"
+		return base, nil
+	}
+
+	return a.buildProviderDocumentResultFromEnvelope(detail, req.CorrelationKey), nil
+}
+
+// InspectProviderSubmission returns the durable provider-side submission stages
+// that already exist for an attempt correlation key.
+func (a *Adapter) InspectProviderSubmission(ctx context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderSubmissionSnapshot, error) {
+	base := &port.ProviderSubmissionSnapshot{
+		ProviderName:   providerName,
+		CorrelationKey: req.CorrelationKey,
+		HasDocument:    false,
+	}
+
+	detail, found, err := a.findEnvelopeByCorrelationKey(ctx, req.CorrelationKey)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		base.Reason = "documenso envelope with matching externalId was not found"
+		return base, nil
+	}
+
+	return a.buildProviderSubmissionSnapshotFromEnvelope(detail, req.CorrelationKey), nil
+}
+
+// EnsureProviderDocument creates the provider document once, reusing an
+// existing Documenso envelope when its externalId matches the attempt
+// correlation key.
+func (a *Adapter) EnsureProviderDocument(ctx context.Context, req *port.EnsureProviderDocumentRequest) (*port.EnsureProviderDocumentResult, error) {
+	detail, found, err := a.findEnvelopeByCorrelationKey(ctx, req.CorrelationKey)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		return &port.EnsureProviderDocumentResult{
+			ProviderDocumentID: detail.ID,
+			ProviderName:       providerName,
+			CorrelationKey:     req.CorrelationKey,
+			RawStatus:          detail.Status,
+		}, nil
+	}
+
+	envelopeID, err := a.createEnvelope(ctx, req.Title, req.CorrelationKey, req.PDF)
+	if err != nil {
+		return nil, err
+	}
+
+	detail, err = a.fetchEnvelope(ctx, envelopeID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &port.EnsureProviderDocumentResult{
+		ProviderDocumentID: envelopeID,
+		ProviderName:       providerName,
+		CorrelationKey:     req.CorrelationKey,
+		RawStatus:          detail.Status,
+	}, nil
+}
+
+// EnsureProviderRecipients creates recipients only when the envelope has none.
+// If a partial recipient set already exists, it fails rather than risking a
+// duplicate/partial create-many repair against an unknown provider state.
+func (a *Adapter) EnsureProviderRecipients(ctx context.Context, req *port.EnsureProviderRecipientsRequest) (*port.EnsureProviderRecipientsResult, error) {
+	detail, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseAddRecipients); err != nil {
+		return nil, err
+	}
+
+	if len(detail.Recipients) == 0 {
+		if _, err := a.addRecipients(ctx, req.ProviderDocumentID, req.Recipients); err != nil {
+			return nil, err
+		}
+	} else if missing := missingSigningRecipientRoles(detail, req.Recipients); len(missing) > 0 {
+		return nil, newDocumensoProviderError(
+			entity.ProviderErrorClassPermanent,
+			entity.ProviderSubmitPhaseAddRecipients,
+			req.ProviderDocumentID,
+			fmt.Sprintf("documenso envelope is missing expected recipients: %s", strings.Join(missing, ", ")),
+		)
+	}
+
+	detail, err = a.fetchEnvelope(ctx, req.ProviderDocumentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseAddRecipients); err != nil {
+		return nil, err
+	}
+
+	return &port.EnsureProviderRecipientsResult{
+		Recipients: a.buildRecipientResultsFromEnvelope(detail, req.Recipients, false),
+	}, nil
+}
+
+// EnsureProviderFields creates signature fields only when the envelope does
+// not already expose fields in its detail response.
+func (a *Adapter) EnsureProviderFields(ctx context.Context, req *port.EnsureProviderFieldsRequest) (*port.EnsureProviderFieldsResult, error) {
+	detail, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseCreateFields); err != nil {
+		return nil, err
+	}
+
+	if len(req.SignatureFields) == 0 {
+		return &port.EnsureProviderFieldsResult{FieldCount: 0}, nil
+	}
+
+	fieldPayloads := buildMissingSignatureFieldPayloads(detail, req.SignatureFields, req.Recipients)
+	if len(fieldPayloads) == 0 {
+		requiredCount := countRequiredSignatureFields(req.SignatureFields, req.Recipients)
+		if requiredCount == 0 {
+			slog.WarnContext(ctx, "no field payloads built from provider recipient references")
+		}
+		return &port.EnsureProviderFieldsResult{FieldCount: requiredCount}, nil
+	}
+
+	if err := a.sendFieldsToAPI(ctx, req.ProviderDocumentID, fieldPayloads); err != nil {
+		return nil, err
+	}
+
+	return &port.EnsureProviderFieldsResult{FieldCount: countRequiredSignatureFields(req.SignatureFields, req.Recipients)}, nil
+}
+
+// EnsureProviderDistributed sends the envelope only when it is still a draft.
+func (a *Adapter) EnsureProviderDistributed(ctx context.Context, req *port.EnsureProviderDistributedRequest) (*port.EnsureProviderDistributedResult, error) {
+	detail, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseDistributeDocument); err != nil {
+		return nil, err
+	}
+
+	if !isDistributedStatus(detail.Status) {
+		if err := a.distributeEnvelope(ctx, req.ProviderDocumentID); err != nil {
+			return nil, err
+		}
+		detail, err = a.fetchEnvelope(ctx, req.ProviderDocumentID)
 		if err != nil {
 			return nil, err
 		}
-
-		for _, envelope := range listResp.Data {
-			if envelope.ExternalID != req.CorrelationKey {
-				continue
-			}
-
-			detail, err := a.fetchEnvelope(ctx, envelope.ID)
-			if err != nil {
-				return nil, err
-			}
-			return a.buildProviderDocumentResultFromEnvelope(detail, req.CorrelationKey), nil
-		}
-
-		if page >= listResp.Pagination.TotalPages || len(listResp.Data) == 0 {
-			base.Reason = "documenso envelope with matching externalId was not found"
-			return base, nil
+		if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseDistributeDocument); err != nil {
+			return nil, err
 		}
 	}
+
+	return &port.EnsureProviderDistributedResult{RawStatus: detail.Status}, nil
+}
+
+// FetchProviderSigningReferences returns usable signing URLs and statuses from
+// the provider envelope after distribution.
+func (a *Adapter) FetchProviderSigningReferences(ctx context.Context, req *port.FetchProviderSigningReferencesRequest) (*port.FetchProviderSigningReferencesResult, error) {
+	detail, err := a.fetchEnvelope(ctx, req.ProviderDocumentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateEnvelopeCorrelation(detail, req.CorrelationKey, entity.ProviderSubmitPhaseFetchSigningReferences); err != nil {
+		return nil, err
+	}
+
+	providerResult := a.buildProviderDocumentResultFromEnvelope(detail, req.CorrelationKey)
+	if !providerResult.Usable && len(req.Recipients) > 0 {
+		fallbackRecipients := a.buildRecipientResultsFromEnvelope(detail, req.Recipients, true)
+		if len(fallbackRecipients) > 0 {
+			providerResult.Usable = true
+			providerResult.Reason = ""
+			providerResult.Recipients = fallbackRecipients
+		}
+	}
+	if !providerResult.Usable {
+		return nil, newDocumensoProviderError(
+			entity.ProviderErrorClassPermanent,
+			entity.ProviderSubmitPhaseFetchSigningReferences,
+			req.ProviderDocumentID,
+			providerResult.Reason,
+		)
+	}
+
+	return &port.FetchProviderSigningReferencesResult{
+		Recipients: providerResult.Recipients,
+		Status:     providerResult.Status,
+		RawStatus:  providerResult.RawStatus,
+	}, nil
 }
 
 // GetSigningURL returns the URL where a specific recipient can sign the document.
@@ -590,6 +764,33 @@ func (a *Adapter) listEnvelopePage(ctx context.Context, page, perPage int) (*env
 	return &listResp, nil
 }
 
+func (a *Adapter) findEnvelopeByCorrelationKey(ctx context.Context, correlationKey string) (*envelopeDetailResponse, bool, error) {
+	const perPage = 100
+
+	for page := 1; ; page++ {
+		listResp, err := a.listEnvelopePage(ctx, page, perPage)
+		if err != nil {
+			return nil, false, err
+		}
+
+		for _, envelope := range listResp.Data {
+			if envelope.ExternalID != correlationKey {
+				continue
+			}
+
+			detail, err := a.fetchEnvelope(ctx, envelope.ID)
+			if err != nil {
+				return nil, false, err
+			}
+			return detail, true, nil
+		}
+
+		if page >= listResp.Pagination.TotalPages || len(listResp.Data) == 0 {
+			return nil, false, nil
+		}
+	}
+}
+
 func (a *Adapter) buildProviderDocumentResultFromEnvelope(env *envelopeDetailResponse, correlationKey string) *port.ProviderDocumentResult {
 	result := &port.ProviderDocumentResult{
 		Found:              true,
@@ -629,6 +830,269 @@ func (a *Adapter) buildProviderDocumentResultFromEnvelope(env *envelopeDetailRes
 	}
 
 	return result
+}
+
+func (a *Adapter) buildProviderSubmissionSnapshotFromEnvelope(env *envelopeDetailResponse, correlationKey string) *port.ProviderSubmissionSnapshot {
+	snapshot := &port.ProviderSubmissionSnapshot{
+		ProviderDocumentID: env.ID,
+		ProviderName:       providerName,
+		CorrelationKey:     correlationKey,
+		RawStatus:          env.Status,
+		HasDocument:        true,
+		HasRecipients:      len(env.Recipients) > 0,
+		HasFields:          countEnvelopeSignatureFields(env) > 0,
+		IsDistributed:      isDistributedStatus(env.Status),
+		Recipients:         a.buildRecipientResultsFromEnvelope(env, nil, true),
+	}
+
+	switch {
+	case !snapshot.HasRecipients:
+		snapshot.Reason = "documenso envelope has no recipients"
+	case !snapshot.HasFields:
+		snapshot.Reason = "documenso envelope has no fields"
+	case !snapshot.IsDistributed:
+		snapshot.Reason = "documenso envelope is still draft"
+	case len(snapshot.Recipients) == 0:
+		snapshot.Reason = "documenso envelope has no usable recipients"
+	}
+
+	return snapshot
+}
+
+func (a *Adapter) buildRecipientResultsFromEnvelope(env *envelopeDetailResponse, expected []port.SigningRecipient, requireSigningToken bool) []port.RecipientResult {
+	roleByEmail := recipientRoleByEmail(expected)
+	results := make([]port.RecipientResult, 0, len(env.Recipients))
+	for _, recipient := range env.Recipients {
+		result, ok := a.recipientResultFromEnvelope(recipient, roleByEmail, requireSigningToken)
+		if ok {
+			results = append(results, result)
+		}
+	}
+
+	return results
+}
+
+func recipientRoleByEmail(expected []port.SigningRecipient) map[string]string {
+	roleByEmail := make(map[string]string, len(expected))
+	for _, recipient := range expected {
+		if strings.TrimSpace(recipient.Email) == "" || strings.TrimSpace(recipient.RoleID) == "" {
+			continue
+		}
+		roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))] = recipient.RoleID
+	}
+	return roleByEmail
+}
+
+func (a *Adapter) recipientResultFromEnvelope(recipient recipientResponse, roleByEmail map[string]string, requireSigningToken bool) (port.RecipientResult, bool) {
+	providerRecipientID := strconv.Itoa(recipient.ID)
+	if recipient.ID == 0 {
+		providerRecipientID = ""
+	}
+	if strings.TrimSpace(providerRecipientID) == "" {
+		return port.RecipientResult{}, false
+	}
+
+	roleID := strings.TrimSpace(recipient.ExternalID)
+	if roleID == "" {
+		roleID = roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))]
+	}
+	if roleID == "" {
+		return port.RecipientResult{}, false
+	}
+
+	token := strings.TrimSpace(recipient.Token)
+	if requireSigningToken && token == "" {
+		return port.RecipientResult{}, false
+	}
+
+	result := port.RecipientResult{
+		RoleID:               roleID,
+		ProviderRecipientID:  providerRecipientID,
+		ProviderSigningToken: token,
+		Status:               MapRecipientStatus(recipient.Status),
+	}
+	if token != "" {
+		result.SigningURL = fmt.Sprintf("%s/sign/%s", a.config.SigningBaseURL, token)
+	}
+	return result, true
+}
+
+func missingSigningRecipientRoles(env *envelopeDetailResponse, expected []port.SigningRecipient) []string {
+	roleByEmail := recipientRoleByEmail(expected)
+	present := make(map[string]struct{}, len(env.Recipients))
+	for _, recipient := range env.Recipients {
+		roleID := strings.TrimSpace(recipient.ExternalID)
+		if roleID == "" {
+			roleID = roleByEmail[strings.ToLower(strings.TrimSpace(recipient.Email))]
+		}
+		if roleID != "" {
+			present[roleID] = struct{}{}
+		}
+	}
+
+	missing := make([]string, 0)
+	for _, recipient := range expected {
+		roleID := strings.TrimSpace(recipient.RoleID)
+		if roleID == "" {
+			continue
+		}
+		if _, ok := present[roleID]; !ok {
+			missing = append(missing, roleID)
+		}
+	}
+
+	return missing
+}
+
+func buildMissingSignatureFieldPayloads(env *envelopeDetailResponse, signatureFields []port.SignatureFieldPosition, recipients []port.RecipientResult) []fieldPayload {
+	recipientIDByRole := make(map[string]int, len(recipients))
+	for _, recipient := range recipients {
+		roleID := strings.TrimSpace(recipient.RoleID)
+		if roleID == "" {
+			continue
+		}
+		providerRecipientID, err := strconv.Atoi(recipient.ProviderRecipientID)
+		if err != nil || providerRecipientID == 0 {
+			continue
+		}
+		recipientIDByRole[roleID] = providerRecipientID
+	}
+
+	existingByRecipient := countExistingSignatureFieldsByRecipient(env)
+	fieldPayloads := make([]fieldPayload, 0, len(signatureFields))
+	for _, sf := range signatureFields {
+		providerRecipientID, ok := recipientIDByRole[sf.RoleID]
+		if !ok {
+			continue
+		}
+		if existingByRecipient[providerRecipientID] > 0 {
+			existingByRecipient[providerRecipientID]--
+			continue
+		}
+
+		fieldPayloads = append(fieldPayloads, fieldPayload{
+			RecipientID: providerRecipientID,
+			Type:        "SIGNATURE",
+			Page:        sf.Page,
+			PositionX:   sf.PositionX,
+			PositionY:   sf.PositionY,
+			Width:       sf.Width,
+			Height:      sf.Height,
+		})
+	}
+
+	return fieldPayloads
+}
+
+func countRequiredSignatureFields(signatureFields []port.SignatureFieldPosition, recipients []port.RecipientResult) int {
+	recipientIDByRole := make(map[string]struct{}, len(recipients))
+	for _, recipient := range recipients {
+		if strings.TrimSpace(recipient.RoleID) == "" || strings.TrimSpace(recipient.ProviderRecipientID) == "" {
+			continue
+		}
+		recipientIDByRole[recipient.RoleID] = struct{}{}
+	}
+
+	count := 0
+	for _, sf := range signatureFields {
+		if _, ok := recipientIDByRole[sf.RoleID]; ok {
+			count++
+		}
+	}
+
+	return count
+}
+
+func countEnvelopeSignatureFields(env *envelopeDetailResponse) int {
+	if env == nil {
+		return 0
+	}
+
+	count := 0
+	for _, field := range env.Fields {
+		if isSignatureField(field) {
+			count++
+		}
+	}
+	for _, recipient := range env.Recipients {
+		for _, field := range recipient.Fields {
+			if isSignatureField(field) {
+				count++
+			}
+		}
+	}
+
+	return count
+}
+
+func countExistingSignatureFieldsByRecipient(env *envelopeDetailResponse) map[int]int {
+	counts := make(map[int]int)
+	if env == nil {
+		return counts
+	}
+
+	for _, field := range env.Fields {
+		if isSignatureField(field) && field.RecipientID != 0 {
+			counts[field.RecipientID]++
+		}
+	}
+	for _, recipient := range env.Recipients {
+		for _, field := range recipient.Fields {
+			incrementSignatureFieldCount(counts, field, recipient.ID)
+		}
+	}
+
+	return counts
+}
+
+func incrementSignatureFieldCount(counts map[int]int, field fieldResponse, fallbackRecipientID int) {
+	if !isSignatureField(field) {
+		return
+	}
+	recipientID := field.RecipientID
+	if recipientID == 0 {
+		recipientID = fallbackRecipientID
+	}
+	if recipientID != 0 {
+		counts[recipientID]++
+	}
+}
+
+func isSignatureField(field fieldResponse) bool {
+	return strings.EqualFold(strings.TrimSpace(field.Type), "SIGNATURE")
+}
+
+func isDistributedStatus(status string) bool {
+	return !strings.EqualFold(strings.TrimSpace(status), "DRAFT")
+}
+
+func validateEnvelopeCorrelation(env *envelopeDetailResponse, correlationKey string, phase entity.ProviderSubmitPhase) error {
+	if env == nil {
+		return nil
+	}
+
+	if env.ExternalID == correlationKey {
+		return nil
+	}
+
+	return newDocumensoProviderError(
+		entity.ProviderErrorClassConflictStale,
+		phase,
+		env.ID,
+		fmt.Sprintf("documenso envelope externalId %q does not match attempt correlation key %q", env.ExternalID, correlationKey),
+	)
+}
+
+func newDocumensoProviderError(class entity.ProviderErrorClass, phase entity.ProviderSubmitPhase, providerDocumentID string, message string) *port.ProviderError {
+	return &port.ProviderError{
+		Class:              class,
+		Phase:              phase,
+		ProviderName:       providerName,
+		ProviderDocumentID: &providerDocumentID,
+		Retryable:          false,
+		SafeToResubmit:     false,
+		Message:            message,
+	}
 }
 
 // processRecipients converts recipient responses to status results and determines signing states.
@@ -826,13 +1290,14 @@ type recipientsRequest struct {
 }
 
 type recipientResponse struct {
-	ID         int    `json:"id"`
-	Email      string `json:"email"`
-	Name       string `json:"name"`
-	Status     string `json:"status"`
-	Token      string `json:"token,omitempty"`
-	SignedAt   string `json:"signedAt,omitempty"`
-	ExternalID string `json:"externalId,omitempty"`
+	ID         int             `json:"id"`
+	Email      string          `json:"email"`
+	Name       string          `json:"name"`
+	Status     string          `json:"status"`
+	Token      string          `json:"token,omitempty"`
+	SignedAt   string          `json:"signedAt,omitempty"`
+	ExternalID string          `json:"externalId,omitempty"`
+	Fields     []fieldResponse `json:"fields,omitempty"`
 }
 
 type recipientsResponse struct {
@@ -853,6 +1318,7 @@ type envelopeDetailResponse struct {
 	Status               string              `json:"status"`
 	Title                string              `json:"title"`
 	Recipients           []recipientResponse `json:"recipients"`
+	Fields               []fieldResponse     `json:"fields,omitempty"`
 	EnvelopeItems        []envelopeItem      `json:"envelopeItems,omitempty"`
 	CompletedDocumentURL string              `json:"completedDocumentUrl,omitempty"`
 	CreatedAt            string              `json:"createdAt"`
@@ -927,4 +1393,10 @@ type fieldPayload struct {
 type fieldsRequest struct {
 	EnvelopeID string         `json:"envelopeId"`
 	Data       []fieldPayload `json:"data"`
+}
+
+type fieldResponse struct {
+	ID          int    `json:"id"`
+	RecipientID int    `json:"recipientId"`
+	Type        string `json:"type"`
 }

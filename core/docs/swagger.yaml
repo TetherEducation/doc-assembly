@@ -2335,9 +2335,17 @@ definitions:
         description: PdfURL is the URL to download the rendered PDF for preview (step=preview,
           Path A).
         type: string
+      processingReason:
+        description: ProcessingReason explains public processing copy without exposing
+          internal errors.
+        type: string
       recipientName:
         description: RecipientName is the signer's display name.
         type: string
+      retryAfterSeconds:
+        description: RetryAfterSeconds hints how soon the public page should poll
+          again.
+        type: integer
       signingPosition:
         description: SigningPosition is the signer's position in signing order (step=waiting).
         type: integer
@@ -2345,10 +2353,17 @@ definitions:
         description: |-
           Step indicates the current signing flow step.
           "preview" = show form (Path B) or PDF preview (Path A)
+          "processing" = River is preparing/retrying/reconciling the active attempt
           "signing" = show embedded signing iframe
           "waiting" = waiting for previous signers
           "completed" = signing completed
           "declined" = document was declined
+          "document_updated" = token points at a superseded/invalidated attempt
+          "unavailable" = active attempt failed or requires review
+        type: string
+      supportCode:
+        description: SupportCode is a safe identifier support can use for long-running
+          processing.
         type: string
       totalSigners:
         description: TotalSigners is the total number of signers (step=waiting).

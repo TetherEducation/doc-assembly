@@ -21,6 +21,8 @@ type mockDocument struct {
 	Status         string
 	CorrelationKey string
 	Recipients     []string
+	FieldsCreated  bool
+	Distributed    bool
 	PDFData        []byte
 }
 
@@ -94,11 +96,154 @@ func (a *Adapter) SubmitAttemptDocument(_ context.Context, req *port.SubmitAttem
 		Status:         "PENDING",
 		CorrelationKey: req.CorrelationKey,
 		Recipients:     recipientIDs,
+		FieldsCreated:  true,
+		Distributed:    true,
 		PDFData:        req.PDF,
 	}
 	a.byCorr[req.CorrelationKey] = docID
 
 	return a.buildSubmitResult(docID), nil
+}
+
+func (a *Adapter) InspectProviderSubmission(_ context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderSubmissionSnapshot, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	doc, ok := a.findDocumentLocked("", req.CorrelationKey)
+	if !ok {
+		return &port.ProviderSubmissionSnapshot{
+			ProviderName:   providerName,
+			CorrelationKey: req.CorrelationKey,
+			HasDocument:    false,
+			Reason:         "document not found",
+		}, nil
+	}
+
+	return &port.ProviderSubmissionSnapshot{
+		ProviderDocumentID: doc.ID,
+		ProviderName:       providerName,
+		CorrelationKey:     doc.CorrelationKey,
+		RawStatus:          doc.Status,
+		HasDocument:        true,
+		HasRecipients:      len(doc.Recipients) > 0,
+		HasFields:          doc.FieldsCreated,
+		IsDistributed:      doc.Distributed,
+		Recipients:         a.recipientResults(doc),
+	}, nil
+}
+
+func (a *Adapter) EnsureProviderDocument(_ context.Context, req *port.EnsureProviderDocumentRequest) (*port.EnsureProviderDocumentResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if doc, ok := a.findDocumentLocked("", req.CorrelationKey); ok {
+		return &port.EnsureProviderDocumentResult{
+			ProviderDocumentID: doc.ID,
+			ProviderName:       providerName,
+			CorrelationKey:     doc.CorrelationKey,
+			RawStatus:          doc.Status,
+		}, nil
+	}
+
+	docID := uuid.New().String()
+	a.documents[docID] = &mockDocument{
+		ID:             docID,
+		Title:          req.Title,
+		Status:         "DRAFT",
+		CorrelationKey: req.CorrelationKey,
+		PDFData:        append([]byte(nil), req.PDF...),
+	}
+	a.byCorr[req.CorrelationKey] = docID
+
+	return &port.EnsureProviderDocumentResult{
+		ProviderDocumentID: docID,
+		ProviderName:       providerName,
+		CorrelationKey:     req.CorrelationKey,
+		RawStatus:          "DRAFT",
+	}, nil
+}
+
+func (a *Adapter) EnsureProviderRecipients(_ context.Context, req *port.EnsureProviderRecipientsRequest) (*port.EnsureProviderRecipientsResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	doc, ok := a.findDocumentLocked(req.ProviderDocumentID, req.CorrelationKey)
+	if !ok {
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
+	}
+
+	if len(doc.Recipients) == 0 {
+		for _, r := range req.Recipients {
+			recipientID := uuid.New().String()
+			token := uuid.New().String()
+			doc.Recipients = append(doc.Recipients, recipientID)
+			a.recipients[recipientID] = &mockRecipient{
+				ID:         recipientID,
+				DocumentID: doc.ID,
+				RoleID:     r.RoleID,
+				Email:      r.Email,
+				Name:       r.Name,
+				Token:      token,
+				Status:     "DRAFT",
+			}
+		}
+	}
+
+	return &port.EnsureProviderRecipientsResult{
+		Recipients: a.recipientResults(doc),
+	}, nil
+}
+
+func (a *Adapter) EnsureProviderFields(_ context.Context, req *port.EnsureProviderFieldsRequest) (*port.EnsureProviderFieldsResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	doc, ok := a.findDocumentLocked(req.ProviderDocumentID, req.CorrelationKey)
+	if !ok {
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
+	}
+	doc.FieldsCreated = true
+
+	return &port.EnsureProviderFieldsResult{FieldCount: len(req.SignatureFields)}, nil
+}
+
+func (a *Adapter) EnsureProviderDistributed(_ context.Context, req *port.EnsureProviderDistributedRequest) (*port.EnsureProviderDistributedResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	doc, ok := a.findDocumentLocked(req.ProviderDocumentID, req.CorrelationKey)
+	if !ok {
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
+	}
+	doc.Distributed = true
+	doc.Status = "PENDING"
+	for _, rid := range doc.Recipients {
+		a.recipients[rid].Status = "SENT"
+	}
+
+	return &port.EnsureProviderDistributedResult{RawStatus: doc.Status}, nil
+}
+
+func (a *Adapter) FetchProviderSigningReferences(_ context.Context, req *port.FetchProviderSigningReferencesRequest) (*port.FetchProviderSigningReferencesResult, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	doc, ok := a.findDocumentLocked(req.ProviderDocumentID, req.CorrelationKey)
+	if !ok {
+		return nil, fmt.Errorf("mock: document %s not found", req.ProviderDocumentID)
+	}
+	if len(doc.Recipients) == 0 {
+		return nil, fmt.Errorf("mock: document %s has no recipients", doc.ID)
+	}
+	if !doc.Distributed {
+		return nil, fmt.Errorf("mock: document %s is not distributed", doc.ID)
+	}
+
+	return &port.FetchProviderSigningReferencesResult{
+		Recipients: a.recipientResults(doc),
+		Status:     entity.SigningAttemptStatusSigningReady,
+		RawStatus:  doc.Status,
+	}, nil
 }
 
 func (a *Adapter) FindProviderDocumentByCorrelationKey(_ context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderDocumentResult, error) {
@@ -300,10 +445,29 @@ func (a *Adapter) recipientResults(doc *mockDocument) []port.RecipientResult {
 			ProviderRecipientID:  r.ID,
 			ProviderSigningToken: r.Token,
 			SigningURL:           fmt.Sprintf("http://mock-signing/sign/%s", r.ID),
-			Status:               entity.RecipientStatusSent,
+			Status:               mapRecipientStatus(r.Status),
 		})
 	}
 	return out
+}
+
+func (a *Adapter) findDocumentLocked(providerDocumentID, correlationKey string) (*mockDocument, bool) {
+	if providerDocumentID != "" {
+		doc, ok := a.documents[providerDocumentID]
+		if !ok || correlationKey == "" {
+			return doc, ok
+		}
+		return doc, doc.CorrelationKey == correlationKey
+	}
+	if correlationKey == "" {
+		return nil, false
+	}
+	docID, ok := a.byCorr[correlationKey]
+	if !ok {
+		return nil, false
+	}
+	doc, ok := a.documents[docID]
+	return doc, ok
 }
 
 func mapRecipientStatus(status string) entity.RecipientStatus {

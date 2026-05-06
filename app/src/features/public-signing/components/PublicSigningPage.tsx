@@ -110,6 +110,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
       return
     }
     let cancelled = false
+    const retryAfterMs = Math.max(1, pageState.data.retryAfterSeconds ?? 3) * 1_000
     const timer = window.setTimeout(async () => {
       try {
         const data = await getPublicSigningPage(token)
@@ -119,7 +120,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
       } catch (err) {
         if (!cancelled) handleLoadError(err, setPageState, t)
       }
-    }, 3_000)
+    }, retryAfterMs)
     return () => {
       cancelled = true
       window.clearTimeout(timer)
@@ -312,7 +313,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
   )
 
   if (data.step === 'processing') {
-    return <ProcessingScreen documentTitle={displayDocumentTitle} />
+    return <ProcessingScreen documentTitle={displayDocumentTitle} response={data} />
   }
 
   if (data.step === 'document_updated') {
@@ -563,18 +564,30 @@ function ErrorScreen({ code, message }: { code: string; message: string }) {
   )
 }
 
-function ProcessingScreen({ documentTitle }: { documentTitle: string }) {
+function ProcessingScreen({
+  documentTitle,
+  response,
+}: {
+  documentTitle: string
+  response: PublicSigningResponse
+}) {
   const { t } = useTranslation()
+  const isRecovering = response.processingReason === 'recovering_provider_submission'
   return (
     <PageShell documentTitle={documentTitle}>
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-6 text-center">
         <Loader2 size={36} className="mb-4 animate-spin text-primary" />
         <h1 className="text-xl font-semibold text-foreground">
-          {t('publicSigning.processing.title')}
+          {t(isRecovering ? 'publicSigning.processing.recoveringTitle' : 'publicSigning.processing.title')}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {t('publicSigning.processing.message')}
+          {t(isRecovering ? 'publicSigning.processing.recoveringMessage' : 'publicSigning.processing.message')}
         </p>
+        {isRecovering && response.supportCode ? (
+          <p className="mt-3 font-mono text-xs text-muted-foreground">
+            {t('publicSigning.processing.supportCode', { code: response.supportCode })}
+          </p>
+        ) : null}
       </div>
     </PageShell>
   )
@@ -653,16 +666,6 @@ function CompletedScreen({
           )}
         </div>
 
-        {canDownload && downloadUrl && (
-          <div className="rounded-lg border border-border bg-card p-2">
-            <iframe
-              src={downloadUrl}
-              title="Completed Document PDF"
-              className="w-full border-0 rounded-md"
-              style={{ height: '70vh' }}
-            />
-          </div>
-        )}
       </div>
     </PageShell>
   )

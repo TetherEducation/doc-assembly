@@ -84,6 +84,15 @@ type PublicSigningResponse struct {
 	// DocumentStatus is the canonical internal document status.
 	DocumentStatus string `json:"documentStatus,omitempty"`
 
+	// ProcessingReason explains public processing copy without exposing internal errors.
+	ProcessingReason string `json:"processingReason,omitempty"`
+
+	// RetryAfterSeconds hints how soon the public page should poll again.
+	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
+
+	// SupportCode is a safe identifier support can use for long-running processing.
+	SupportCode string `json:"supportCode,omitempty"`
+
 	// HasCurrentUserSigned indicates whether the token recipient has signed.
 	HasCurrentUserSigned bool `json:"hasCurrentUserSigned"`
 

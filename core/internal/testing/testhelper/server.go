@@ -383,7 +383,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	// Internal API routes (DB-backed API key auth, no JWT middleware)
 	internalV1 := engine.Group("/api/v1")
 	internalV1.Use(middleware.Operation())
-	internalDocController.RegisterRoutes(internalV1, automationKeyRepo)
+	internalDocController.RegisterRoutes(internalV1, middleware.InternalKeyAuth(automationKeyRepo))
 
 	// Webhook routes (no auth, registered on engine root)
 	webhookController.RegisterRoutes(engine)

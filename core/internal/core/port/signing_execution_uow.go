@@ -10,12 +10,13 @@ import (
 type SigningJobPhase string
 
 const (
-	SigningJobPhaseRenderAttemptPDF        SigningJobPhase = "render_attempt_pdf"
-	SigningJobPhaseSubmitAttemptToProvider SigningJobPhase = "submit_attempt_to_provider"
-	SigningJobPhaseReconcileProvider       SigningJobPhase = "reconcile_provider_submission"
-	SigningJobPhaseRefreshProviderStatus   SigningJobPhase = "refresh_attempt_provider_status"
-	SigningJobPhaseCleanupProviderAttempt  SigningJobPhase = "cleanup_provider_attempt"
-	SigningJobPhaseDispatchCompletion      SigningJobPhase = "dispatch_attempt_completion"
+	SigningJobPhaseRenderAttemptPDF          SigningJobPhase = "render_attempt_pdf"
+	SigningJobPhaseSubmitAttemptToProvider   SigningJobPhase = "submit_attempt_to_provider"
+	SigningJobPhaseAdvanceProviderSubmission SigningJobPhase = "advance_provider_submission"
+	SigningJobPhaseReconcileProvider         SigningJobPhase = "reconcile_provider_submission"
+	SigningJobPhaseRefreshProviderStatus     SigningJobPhase = "refresh_attempt_provider_status"
+	SigningJobPhaseCleanupProviderAttempt    SigningJobPhase = "cleanup_provider_attempt"
+	SigningJobPhaseDispatchCompletion        SigningJobPhase = "dispatch_attempt_completion"
 )
 
 // SigningExecutionUnitOfWork performs attempt state transitions and River enqueue atomically.

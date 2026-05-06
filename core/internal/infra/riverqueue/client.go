@@ -73,6 +73,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg config.WorkerConfig, deps 
 		})
 		river.AddWorker(workers, &RenderAttemptPDFWorker{executor: executor})
 		river.AddWorker(workers, &SubmitAttemptToProviderWorker{executor: executor})
+		river.AddWorker(workers, &AdvanceProviderSubmissionWorker{executor: executor})
 		river.AddWorker(workers, &ReconcileProviderSubmissionWorker{executor: executor})
 		river.AddWorker(workers, &RefreshAttemptProviderStatusWorker{executor: executor})
 		river.AddWorker(workers, &CleanupProviderAttemptWorker{executor: executor})
