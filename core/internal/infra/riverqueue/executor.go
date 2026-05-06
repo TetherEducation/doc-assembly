@@ -487,13 +487,13 @@ func (e *SigningAttemptExecutor) CleanupProviderAttempt(ctx context.Context, att
 		msg := failpointErr(failpointCleanupFail).Error()
 		attempt.CleanupStatus = &status
 		attempt.CleanupError = &msg
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED", nil, nil)
+		return e.persistProviderCleanup(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED")
 	}
 	caps := e.signingProvider.ProviderCapabilities()
 	if !caps.CanCancel {
 		status := "UNSUPPORTED"
 		attempt.CleanupStatus = &status
-		return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED", nil, nil)
+		return e.persistProviderCleanup(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED")
 	}
 	result, err := e.signingProvider.CleanupProviderDocument(ctx, &port.CleanupProviderDocumentRequest{ProviderDocumentID: *attempt.ProviderDocumentID, Environment: entity.EnvironmentProd})
 	status := "SUCCEEDED"
@@ -505,7 +505,31 @@ func (e *SigningAttemptExecutor) CleanupProviderAttempt(ctx context.Context, att
 		attempt.CleanupAction = &result.Action
 	}
 	attempt.CleanupStatus = &status
-	return e.transition(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED", nil, nil)
+	return e.persistProviderCleanup(ctx, attempt, "ATTEMPT_PROVIDER_CLEANUP_FINISHED")
+}
+
+func (e *SigningAttemptExecutor) persistProviderCleanup(ctx context.Context, attempt *entity.SigningAttempt, eventType string) error {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	current, err := e.lockTransitionAttemptTx(ctx, tx, attempt.ID)
+	if err != nil {
+		return err
+	}
+	old := current.Status
+	current.CleanupStatus = attempt.CleanupStatus
+	current.CleanupAction = attempt.CleanupAction
+	current.CleanupError = attempt.CleanupError
+	if err := e.attemptRepo.UpdateTx(ctx, tx, current); err != nil {
+		return err
+	}
+	if err := e.insertTransitionEventTx(ctx, tx, current, eventType, old); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (e *SigningAttemptExecutor) DispatchAttemptCompletion(ctx context.Context, attemptID string) error {

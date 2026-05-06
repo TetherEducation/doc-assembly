@@ -144,6 +144,69 @@ func TestSigningAttemptUOW_SupersedeCreatesNewAttemptAndCleanupJob(t *testing.T)
 	require.Equal(t, 1, cleanupJobs)
 }
 
+func TestSigningAttemptExecutor_CleanupProviderAttemptRecordsHistoricalSupersededAttempt(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	provider := signingmock.New()
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+
+	oldAttempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, fx.documentID, fx.recipients(), fx.signerOrders())
+	require.NoError(t, err)
+	corr := fmt.Sprintf("%s:%s", fx.documentID, oldAttempt.ID)
+	providerDoc, err := provider.EnsureProviderDocument(ctx, &port.EnsureProviderDocumentRequest{
+		AttemptID:      oldAttempt.ID,
+		DocumentID:     fx.documentID,
+		CorrelationKey: corr,
+		PDF:            []byte("%PDF-1.4 cleanup regression\n"),
+		PDFChecksum:    "cleanup",
+		Title:          "cleanup regression",
+		Environment:    entity.EnvironmentProd,
+	})
+	require.NoError(t, err)
+	providerName := provider.ProviderName()
+	oldAttempt.ProviderName = &providerName
+	oldAttempt.ProviderCorrelationKey = &corr
+	oldAttempt.ProviderDocumentID = &providerDoc.ProviderDocumentID
+	require.NoError(t, fx.attemptRepo.Update(ctx, oldAttempt))
+
+	newAttempt, err := riverSvc.SigningExecutionUOW().SupersedeActiveAndCreateAttempt(
+		ctx,
+		fx.documentID,
+		oldAttempt.ID,
+		"cleanup regression",
+		fx.recipients(),
+		fx.signerOrders(),
+	)
+	require.NoError(t, err)
+
+	executor := riverqueue.NewSigningAttemptExecutor(riverqueue.SigningAttemptExecutorConfig{
+		Pool:            fx.pool,
+		DocumentRepo:    fx.docRepo,
+		AttemptRepo:     fx.attemptRepo,
+		SigningProvider: provider,
+	})
+	require.NoError(t, executor.CleanupProviderAttempt(ctx, oldAttempt.ID))
+
+	cleaned := fx.mustAttempt(t, ctx, oldAttempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusSuperseded, cleaned.Status)
+	require.NotNil(t, cleaned.CleanupStatus)
+	require.Equal(t, "SUCCEEDED", *cleaned.CleanupStatus)
+	require.NotNil(t, cleaned.CleanupAction)
+	require.Equal(t, "CANCEL", *cleaned.CleanupAction)
+	require.Nil(t, cleaned.CleanupError)
+
+	var activeAttemptID string
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id=$1`, fx.documentID).Scan(&activeAttemptID))
+	require.Equal(t, newAttempt.ID, activeAttemptID)
+
+	var cleanupEvents int
+	require.NoError(t, fx.pool.QueryRow(ctx, `
+		SELECT count(*) FROM execution.signing_attempt_events
+		WHERE attempt_id=$1 AND event_type='ATTEMPT_PROVIDER_CLEANUP_FINISHED'`, oldAttempt.ID).Scan(&cleanupEvents))
+	require.Equal(t, 1, cleanupEvents)
+}
+
 func TestSigningAttemptConstraints_ActiveAttemptMustBelongToDocument(t *testing.T) {
 	ctx := context.Background()
 	fx := newAttemptFixture(t, ctx)
