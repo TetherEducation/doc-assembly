@@ -14,7 +14,7 @@ const (
 	systemWorkspaceCode = "SYS_WRKSP"
 )
 
-// DefaultTemplateResolver resolves template versions by deterministic fallback.
+// DefaultTemplateResolver resolves template context by deterministic fallback.
 type DefaultTemplateResolver struct{}
 
 // NewDefaultTemplateResolver creates a new default resolver instance.
@@ -22,13 +22,13 @@ func NewDefaultTemplateResolver() port.TemplateResolver {
 	return &DefaultTemplateResolver{}
 }
 
-// Resolve applies tenant/workspace/documentType fallback and requires a published version.
+// Resolve applies tenant/workspace/documentType fallback and returns a published template context.
 // When Environment==dev and SandboxWorkspaceCode is set, sandbox workspace is tried first.
 func (r *DefaultTemplateResolver) Resolve(
 	ctx context.Context,
 	req *port.TemplateResolverRequest,
-	adapter port.TemplateVersionSearchAdapter,
-) (*string, error) {
+	adapter port.InternalTemplateContextSearchAdapter,
+) (*port.InternalTemplateContext, error) {
 	if req == nil {
 		return nil, fmt.Errorf("template resolver request is nil")
 	}
@@ -37,56 +37,30 @@ func (r *DefaultTemplateResolver) Resolve(
 }
 
 // resolveWithFallback builds the fallback chain depending on environment.
-//
-//nolint:funlen
 func (r *DefaultTemplateResolver) resolveWithFallback(
 	ctx context.Context,
 	req *port.TemplateResolverRequest,
-	adapter port.TemplateVersionSearchAdapter,
-) (*string, error) {
+	adapter port.InternalTemplateContextSearchAdapter,
+) (*port.InternalTemplateContext, error) {
 	published := true
-
-	type fallbackStep struct {
-		tenantCode     string
-		workspaceCodes []string
-		stage          string
-	}
-
-	var fallbacks []fallbackStep
-
-	// When dev + sandbox workspace code is set, try sandbox first
-	if req.Environment == entity.EnvironmentDev && req.SandboxWorkspaceCode != "" {
-		fallbacks = append(fallbacks, fallbackStep{
-			tenantCode:     req.TenantCode,
-			workspaceCodes: []string{req.SandboxWorkspaceCode},
-			stage:          "tenant_sandbox_workspace",
-		})
-	}
-
-	// Standard fallback chain (prod or after sandbox miss)
-	fallbacks = append(fallbacks,
-		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
-		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "tenant_system_workspace"},
-		fallbackStep{tenantCode: systemTenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "system_system_workspace"},
-	)
-
 	process := req.Process
 	if process == "" {
 		process = entity.DefaultProcess
 	}
 
-	for _, step := range fallbacks {
-		items, err := adapter.SearchTemplateVersions(ctx, port.TemplateVersionSearchParams{
-			TenantCode:     step.tenantCode,
-			WorkspaceCodes: step.workspaceCodes,
-			DocumentType:   req.DocumentType,
-			Process:        process,
-			Published:      &published,
+	for _, step := range fallbackSteps(req) {
+		resolved, err := adapter.ResolveInternalTemplateContext(ctx, port.InternalTemplateContextSearchParams{
+			TenantCode:             step.tenantCode,
+			RequestedWorkspaceCode: req.WorkspaceCode,
+			WorkspaceCodes:         step.workspaceCodes,
+			DocumentType:           req.DocumentType,
+			Process:                process,
+			Published:              &published,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("default template resolution failed at stage %s: %w", step.stage, err)
 		}
-		if len(items) == 0 {
+		if resolved == nil {
 			slog.DebugContext(ctx, "default template resolver stage miss",
 				"stage", step.stage,
 				"tenantCode", step.tenantCode,
@@ -96,16 +70,38 @@ func (r *DefaultTemplateResolver) resolveWithFallback(
 			continue
 		}
 
-		versionID := items[0].VersionID
 		slog.InfoContext(ctx, "default template resolver hit",
 			"stage", step.stage,
 			"tenantCode", step.tenantCode,
 			"workspaceCode", step.workspaceCodes[0],
 			"documentType", req.DocumentType,
-			"templateVersionID", versionID,
+			"templateVersionID", resolved.Version.ID,
 		)
-		return &versionID, nil
+		return resolved, nil
 	}
 
 	return nil, entity.ErrInternalTemplateResolutionNotFound
+}
+
+type fallbackStep struct {
+	tenantCode     string
+	workspaceCodes []string
+	stage          string
+}
+
+func fallbackSteps(req *port.TemplateResolverRequest) []fallbackStep {
+	fallbacks := make([]fallbackStep, 0, 4)
+	if req.Environment == entity.EnvironmentDev && req.SandboxWorkspaceCode != "" {
+		fallbacks = append(fallbacks, fallbackStep{
+			tenantCode:     req.TenantCode,
+			workspaceCodes: []string{req.SandboxWorkspaceCode},
+			stage:          "tenant_sandbox_workspace",
+		})
+	}
+
+	return append(fallbacks,
+		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{req.WorkspaceCode}, stage: "tenant_workspace"},
+		fallbackStep{tenantCode: req.TenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "tenant_system_workspace"},
+		fallbackStep{tenantCode: systemTenantCode, workspaceCodes: []string{systemWorkspaceCode}, stage: "system_system_workspace"},
+	)
 }

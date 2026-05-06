@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	providerName = "documenso"
+	providerName         = "documenso"
+	documensoHTTPTimeout = 120 * time.Second
 )
 
 // Adapter implements port.SigningProvider for Documenso.
@@ -40,7 +41,7 @@ func New(config *Config) (*Adapter, error) {
 	return &Adapter{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: documensoHTTPTimeout,
 		},
 	}, nil
 }
@@ -52,7 +53,7 @@ func (a *Adapter) ProviderName() string {
 
 func (a *Adapter) ProviderCapabilities() port.ProviderCapabilities {
 	return port.ProviderCapabilities{
-		CanFindByCorrelationKey: false,
+		CanFindByCorrelationKey: true,
 		CanCancel:               true,
 		CanEmbedSigning:         true,
 		CanDownloadCompletedPDF: true,
@@ -363,15 +364,41 @@ func (a *Adapter) buildUploadResult(envelopeID string, envDetails *envelopeDetai
 	return result
 }
 
-// FindProviderDocumentByCorrelationKey is unsupported by current Documenso API integration.
-func (a *Adapter) FindProviderDocumentByCorrelationKey(_ context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderDocumentResult, error) {
-	return &port.ProviderDocumentResult{
+// FindProviderDocumentByCorrelationKey reconciles ambiguous submissions by
+// scanning recent Documenso envelopes for the externalId written during create.
+func (a *Adapter) FindProviderDocumentByCorrelationKey(ctx context.Context, req *port.FindProviderDocumentRequest) (*port.ProviderDocumentResult, error) {
+	const perPage = 100
+
+	base := &port.ProviderDocumentResult{
 		Found:          false,
 		Usable:         false,
 		ProviderName:   providerName,
 		CorrelationKey: req.CorrelationKey,
-		Reason:         "documenso correlation-key search is not supported by this adapter",
-	}, nil
+	}
+
+	for page := 1; ; page++ {
+		listResp, err := a.listEnvelopePage(ctx, page, perPage)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, envelope := range listResp.Data {
+			if envelope.ExternalID != req.CorrelationKey {
+				continue
+			}
+
+			detail, err := a.fetchEnvelope(ctx, envelope.ID)
+			if err != nil {
+				return nil, err
+			}
+			return a.buildProviderDocumentResultFromEnvelope(detail, req.CorrelationKey), nil
+		}
+
+		if page >= listResp.Pagination.TotalPages || len(listResp.Data) == 0 {
+			base.Reason = "documenso envelope with matching externalId was not found"
+			return base, nil
+		}
+	}
 }
 
 // GetSigningURL returns the URL where a specific recipient can sign the document.
@@ -520,6 +547,88 @@ func (a *Adapter) fetchEnvelope(ctx context.Context, providerDocID string) (*env
 	}
 
 	return &envResp, nil
+}
+
+func (a *Adapter) listEnvelopePage(ctx context.Context, page, perPage int) (*envelopeListResponse, error) {
+	endpoint, err := url.Parse(a.config.BaseURL + "/envelope")
+	if err != nil {
+		return nil, fmt.Errorf("parsing envelope list URL: %w", err)
+	}
+	query := endpoint.Query()
+	query.Set("type", "DOCUMENT")
+	query.Set("page", strconv.Itoa(page))
+	query.Set("perPage", strconv.Itoa(perPage))
+	query.Set("orderByColumn", "createdAt")
+	query.Set("orderByDirection", "desc")
+	endpoint.RawQuery = query.Encode()
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating envelope list request: %w", err)
+	}
+	a.setAuthHeader(httpReq)
+
+	resp, err := a.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("executing envelope list request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("documenso API error listing envelopes (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var listResp envelopeListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, fmt.Errorf("decoding envelope list response: %w", err)
+	}
+	if listResp.Pagination.TotalPages == 0 {
+		listResp.Pagination.TotalPages = 1
+	}
+
+	return &listResp, nil
+}
+
+func (a *Adapter) buildProviderDocumentResultFromEnvelope(env *envelopeDetailResponse, correlationKey string) *port.ProviderDocumentResult {
+	result := &port.ProviderDocumentResult{
+		Found:              true,
+		Usable:             true,
+		ProviderDocumentID: env.ID,
+		ProviderName:       providerName,
+		CorrelationKey:     correlationKey,
+		Status:             MapEnvelopeStatus(env.Status),
+		RawStatus:          env.Status,
+		Recipients:         make([]port.RecipientResult, 0, len(env.Recipients)),
+	}
+	if result.Status == "" {
+		result.Status = entity.SigningAttemptStatusSigningReady
+	}
+
+	for _, recipient := range env.Recipients {
+		if strings.TrimSpace(recipient.ExternalID) == "" || strings.TrimSpace(recipient.Token) == "" {
+			result.Usable = false
+			result.Reason = "documenso envelope is missing recipient externalId or signing token"
+			continue
+		}
+
+		result.Recipients = append(result.Recipients, port.RecipientResult{
+			RoleID:               recipient.ExternalID,
+			ProviderRecipientID:  strconv.Itoa(recipient.ID),
+			ProviderSigningToken: recipient.Token,
+			SigningURL:           fmt.Sprintf("%s/sign/%s", a.config.SigningBaseURL, recipient.Token),
+			Status:               MapRecipientStatus(recipient.Status),
+		})
+	}
+
+	if len(result.Recipients) == 0 {
+		result.Usable = false
+		if result.Reason == "" {
+			result.Reason = "documenso envelope has no usable recipients"
+		}
+	}
+
+	return result
 }
 
 // processRecipients converts recipient responses to status results and determines signing states.
@@ -740,6 +849,7 @@ type recipientData struct {
 
 type envelopeDetailResponse struct {
 	ID                   string              `json:"id"`
+	ExternalID           string              `json:"externalId"`
 	Status               string              `json:"status"`
 	Title                string              `json:"title"`
 	Recipients           []recipientResponse `json:"recipients"`
@@ -753,6 +863,24 @@ type envelopeItem struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Order int    `json:"order"`
+}
+
+type envelopeListResponse struct {
+	Data       []envelopeSummary `json:"data"`
+	Pagination pagination        `json:"pagination"`
+}
+
+type envelopeSummary struct {
+	ID         string `json:"id"`
+	ExternalID string `json:"externalId"`
+	Status     string `json:"status"`
+}
+
+type pagination struct {
+	Page       int `json:"page"`
+	PerPage    int `json:"perPage"`
+	TotalPages int `json:"totalPages"`
+	TotalItems int `json:"totalItems"`
 }
 
 type webhookPayload struct {

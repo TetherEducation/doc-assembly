@@ -22,9 +22,11 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/testing/testhelper"
 )
 
-type resolverFunc func(context.Context, *port.TemplateResolverRequest, port.TemplateVersionSearchAdapter) (*string, error)
+const systemWorkspaceCode = "SYS_WRKSP"
 
-func (f resolverFunc) Resolve(ctx context.Context, req *port.TemplateResolverRequest, adapter port.TemplateVersionSearchAdapter) (*string, error) {
+type resolverFunc func(context.Context, *port.TemplateResolverRequest, port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error)
+
+func (f resolverFunc) Resolve(ctx context.Context, req *port.TemplateResolverRequest, adapter port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 	return f(ctx, req, adapter)
 }
 
@@ -352,8 +354,16 @@ func TestInternalDocumentController_DefaultResolverFallbackLevels(t *testing.T) 
 func TestInternalDocumentController_CustomResolver(t *testing.T) {
 	t.Run("custom hit uses returned version", func(t *testing.T) {
 		var forcedVersionID string
-		resolver := resolverFunc(func(_ context.Context, _ *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
-			return &forcedVersionID, nil
+		resolver := resolverFunc(func(ctx context.Context, req *port.TemplateResolverRequest, adapter port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
+			published := true
+			return adapter.ResolveInternalTemplateContext(ctx, port.InternalTemplateContextSearchParams{
+				TenantCode:             req.TenantCode,
+				RequestedWorkspaceCode: req.WorkspaceCode,
+				WorkspaceCodes:         []string{systemWorkspaceCode},
+				DocumentType:           req.DocumentType,
+				Process:                req.Process,
+				Published:              &published,
+			})
 		})
 
 		env := setupInternalCreateEnv(t, resolver, true)
@@ -367,7 +377,7 @@ func TestInternalDocumentController_CustomResolver(t *testing.T) {
 	})
 
 	t.Run("custom nil falls back to default", func(t *testing.T) {
-		resolver := resolverFunc(func(_ context.Context, _ *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+		resolver := resolverFunc(func(_ context.Context, _ *port.TemplateResolverRequest, _ port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 			return nil, nil
 		})
 
@@ -380,7 +390,7 @@ func TestInternalDocumentController_CustomResolver(t *testing.T) {
 	})
 
 	t.Run("custom error aborts request", func(t *testing.T) {
-		resolver := resolverFunc(func(_ context.Context, _ *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+		resolver := resolverFunc(func(_ context.Context, _ *port.TemplateResolverRequest, _ port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 			return nil, errors.New("resolver failed")
 		})
 
@@ -499,7 +509,7 @@ func TestInternalDocumentController_EnvironmentPropagatedToResolver(t *testing.T
 	t.Run("dev environment reaches custom resolver", func(t *testing.T) {
 		var receivedEnv entity.Environment
 		var receivedSandboxCode string
-		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 			receivedEnv = req.Environment
 			receivedSandboxCode = req.SandboxWorkspaceCode
 			return nil, nil // fall back to default
@@ -521,7 +531,7 @@ func TestInternalDocumentController_EnvironmentPropagatedToResolver(t *testing.T
 	t.Run("prod environment reaches custom resolver without sandbox code", func(t *testing.T) {
 		var receivedEnv entity.Environment
 		var receivedSandboxCode string
-		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.TemplateVersionSearchAdapter) (*string, error) {
+		resolver := resolverFunc(func(_ context.Context, req *port.TemplateResolverRequest, _ port.InternalTemplateContextSearchAdapter) (*port.InternalTemplateContext, error) {
 			receivedEnv = req.Environment
 			receivedSandboxCode = req.SandboxWorkspaceCode
 			return nil, nil

@@ -5,6 +5,10 @@ import (
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 )
 
+// SystemWorkspaceCode is the canonical code for the tenant/system workspace.
+// Consumers should use this constant instead of hardcoding the workspace code.
+const SystemWorkspaceCode = "SYS_WRKSP"
+
 // --- Core Extensibility Interfaces ---
 
 // Injector resolves injectable values during document rendering.
@@ -27,18 +31,6 @@ type TemplateResolver = port.TemplateResolver
 
 // TemplateResolverRequest provides context for custom template resolution.
 type TemplateResolverRequest = port.TemplateResolverRequest
-
-// TemplateVersionSearchAdapter is the read-only adapter passed to custom resolvers.
-type TemplateVersionSearchAdapter = port.TemplateVersionSearchAdapter
-
-// TemplateVersionSearchParams are filters for searching candidate versions.
-type TemplateVersionSearchParams = port.TemplateVersionSearchParams
-
-// TemplateVersionSearchItem is one search result item.
-type TemplateVersionSearchItem = port.TemplateVersionSearchItem
-
-// InternalTemplateContextResolver can resolve a full internal template context in one read model.
-type InternalTemplateContextResolver = port.InternalTemplateContextResolver
 
 // InternalTemplateContextSearchAdapter exposes full context search to resolvers.
 type InternalTemplateContextSearchAdapter = port.InternalTemplateContextSearchAdapter
