@@ -208,7 +208,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	contentValidator := contentvalidator.New(injectableSvc)
 	templateVersionSvc := templatesvc.NewTemplateVersionService(
 		templateVersionRepo, templateVersionInjectableRepo, templateVersionSignerRoleRepo,
-		templateRepo, templateTagRepo, contentValidator, workspaceRepo,
+		systemInjectableRepo, templateRepo, templateTagRepo, contentValidator, workspaceRepo,
 	)
 
 	// --- Storage Adapter ---

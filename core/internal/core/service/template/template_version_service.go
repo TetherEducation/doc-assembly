@@ -19,31 +19,34 @@ func NewTemplateVersionService(
 	versionRepo port.TemplateVersionRepository,
 	injectableRepo port.TemplateVersionInjectableRepository,
 	signerRoleRepo port.TemplateVersionSignerRoleRepository,
+	systemInjectableRepo port.SystemInjectableRepository,
 	templateRepo port.TemplateRepository,
 	tagRepo port.TemplateTagRepository,
 	contentValidator port.ContentValidator,
 	workspaceRepo port.WorkspaceRepository,
 ) templateuc.TemplateVersionUseCase {
 	return &TemplateVersionService{
-		versionRepo:      versionRepo,
-		injectableRepo:   injectableRepo,
-		signerRoleRepo:   signerRoleRepo,
-		templateRepo:     templateRepo,
-		tagRepo:          tagRepo,
-		contentValidator: contentValidator,
-		workspaceRepo:    workspaceRepo,
+		versionRepo:          versionRepo,
+		injectableRepo:       injectableRepo,
+		signerRoleRepo:       signerRoleRepo,
+		systemInjectableRepo: systemInjectableRepo,
+		templateRepo:         templateRepo,
+		tagRepo:              tagRepo,
+		contentValidator:     contentValidator,
+		workspaceRepo:        workspaceRepo,
 	}
 }
 
 // TemplateVersionService implements template version business logic.
 type TemplateVersionService struct {
-	versionRepo      port.TemplateVersionRepository
-	injectableRepo   port.TemplateVersionInjectableRepository
-	signerRoleRepo   port.TemplateVersionSignerRoleRepository
-	templateRepo     port.TemplateRepository
-	tagRepo          port.TemplateTagRepository
-	contentValidator port.ContentValidator
-	workspaceRepo    port.WorkspaceRepository
+	versionRepo          port.TemplateVersionRepository
+	injectableRepo       port.TemplateVersionInjectableRepository
+	signerRoleRepo       port.TemplateVersionSignerRoleRepository
+	systemInjectableRepo port.SystemInjectableRepository
+	templateRepo         port.TemplateRepository
+	tagRepo              port.TemplateTagRepository
+	contentValidator     port.ContentValidator
+	workspaceRepo        port.WorkspaceRepository
 }
 
 // CreateVersion creates a new version for a template.
@@ -792,6 +795,9 @@ func (s *TemplateVersionService) replaceInjectables(ctx context.Context, version
 
 	for _, injectable := range injectables {
 		injectable.ID = uuid.NewString()
+		if err := s.ensureSystemInjectableDefinition(ctx, injectable); err != nil {
+			return err
+		}
 		if _, err := s.injectableRepo.Create(ctx, injectable); err != nil {
 			key := ""
 			if injectable.SystemInjectableKey != nil {
@@ -808,6 +814,24 @@ func (s *TemplateVersionService) replaceInjectables(ctx context.Context, version
 		slog.Int("count", len(injectables)),
 	)
 
+	return nil
+}
+
+func (s *TemplateVersionService) ensureSystemInjectableDefinition(
+	ctx context.Context,
+	injectable *entity.TemplateVersionInjectable,
+) error {
+	if injectable == nil || injectable.SystemInjectableKey == nil || *injectable.SystemInjectableKey == "" {
+		return nil
+	}
+	if s.systemInjectableRepo == nil {
+		return nil
+	}
+
+	key := *injectable.SystemInjectableKey
+	if err := s.systemInjectableRepo.EnsureDefinition(ctx, key); err != nil {
+		return fmt.Errorf("ensuring system injectable definition %s: %w", key, err)
+	}
 	return nil
 }
 

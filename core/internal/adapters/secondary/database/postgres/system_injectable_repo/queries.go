@@ -38,6 +38,12 @@ INSERT INTO content.system_injectable_definitions (key, is_active, created_at, u
 VALUES ($1, $2, NOW(), NOW())
 ON CONFLICT (key) DO UPDATE SET is_active = $2, updated_at = NOW()`
 
+	// queryEnsureDefinition creates a definition only when the key is missing.
+	queryEnsureDefinition = `
+INSERT INTO content.system_injectable_definitions (key, is_active, created_at, updated_at)
+VALUES ($1, true, NOW(), NOW())
+ON CONFLICT (key) DO NOTHING`
+
 	// queryFindAssignmentsByKey returns all assignments for a given injectable key with tenant/workspace names.
 	// For WORKSPACE scope: tenant info comes from workspace's tenant (wt)
 	// For TENANT scope: tenant info comes from direct tenant join (t)

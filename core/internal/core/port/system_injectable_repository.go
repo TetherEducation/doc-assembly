@@ -24,6 +24,10 @@ type SystemInjectableRepository interface {
 	// If the key doesn't exist, creates it. If it exists, updates is_active.
 	UpsertDefinition(ctx context.Context, key string, isActive bool) error
 
+	// EnsureDefinition creates an active definition when the key is missing.
+	// If the key already exists, it does not modify is_active or updated_at.
+	EnsureDefinition(ctx context.Context, key string) error
+
 	// FindAssignmentsByKey returns all assignments for a given injectable key.
 	FindAssignmentsByKey(ctx context.Context, key string) ([]*entity.SystemInjectableAssignment, error)
 
