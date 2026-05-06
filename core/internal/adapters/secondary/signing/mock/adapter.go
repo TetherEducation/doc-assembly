@@ -454,7 +454,10 @@ func (a *Adapter) recipientResults(doc *mockDocument) []port.RecipientResult {
 func (a *Adapter) findDocumentLocked(providerDocumentID, correlationKey string) (*mockDocument, bool) {
 	if providerDocumentID != "" {
 		doc, ok := a.documents[providerDocumentID]
-		return doc, ok
+		if !ok || correlationKey == "" {
+			return doc, ok
+		}
+		return doc, doc.CorrelationKey == correlationKey
 	}
 	if correlationKey == "" {
 		return nil, false
