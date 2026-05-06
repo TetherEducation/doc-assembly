@@ -40,6 +40,34 @@ const (
 	ProviderSubmitPhaseFetchSigningReferences ProviderSubmitPhase = "FETCH_SIGNING_REFERENCES"
 )
 
+func (p ProviderSubmitPhase) IsProviderMutationPhase() bool {
+	switch p {
+	case ProviderSubmitPhaseCreateProviderDocument,
+		ProviderSubmitPhaseAddRecipients,
+		ProviderSubmitPhaseCreateFields,
+		ProviderSubmitPhaseDistributeDocument,
+		ProviderSubmitPhaseFetchSigningReferences:
+		return true
+	default:
+		return false
+	}
+}
+
+func NextProviderSubmitPhase(p ProviderSubmitPhase) ProviderSubmitPhase {
+	switch p {
+	case ProviderSubmitPhaseCreateProviderDocument:
+		return ProviderSubmitPhaseAddRecipients
+	case ProviderSubmitPhaseAddRecipients:
+		return ProviderSubmitPhaseCreateFields
+	case ProviderSubmitPhaseCreateFields:
+		return ProviderSubmitPhaseDistributeDocument
+	case ProviderSubmitPhaseDistributeDocument:
+		return ProviderSubmitPhaseFetchSigningReferences
+	default:
+		return ""
+	}
+}
+
 // ProviderErrorClass controls whether a provider failure can be retried, reconciled, or must stop.
 type ProviderErrorClass string
 

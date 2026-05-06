@@ -16,6 +16,12 @@ var ErrEmbeddingNotSupported = errors.New("provider does not support embedded si
 type SigningProvider interface {
 	SubmitAttemptDocument(ctx context.Context, req *SubmitAttemptDocumentRequest) (*SubmitAttemptDocumentResult, error)
 	FindProviderDocumentByCorrelationKey(ctx context.Context, req *FindProviderDocumentRequest) (*ProviderDocumentResult, error)
+	InspectProviderSubmission(ctx context.Context, req *FindProviderDocumentRequest) (*ProviderSubmissionSnapshot, error)
+	EnsureProviderDocument(ctx context.Context, req *EnsureProviderDocumentRequest) (*EnsureProviderDocumentResult, error)
+	EnsureProviderRecipients(ctx context.Context, req *EnsureProviderRecipientsRequest) (*EnsureProviderRecipientsResult, error)
+	EnsureProviderFields(ctx context.Context, req *EnsureProviderFieldsRequest) (*EnsureProviderFieldsResult, error)
+	EnsureProviderDistributed(ctx context.Context, req *EnsureProviderDistributedRequest) (*EnsureProviderDistributedResult, error)
+	FetchProviderSigningReferences(ctx context.Context, req *FetchProviderSigningReferencesRequest) (*FetchProviderSigningReferencesResult, error)
 	GetProviderDocumentStatus(ctx context.Context, req *GetProviderDocumentStatusRequest) (*ProviderDocumentStatusResult, error)
 	GetAttemptRecipientEmbeddedURL(ctx context.Context, req *GetAttemptRecipientEmbeddedURLRequest) (*GetAttemptRecipientEmbeddedURLResult, error)
 	DownloadCompletedPDF(ctx context.Context, req *DownloadCompletedPDFRequest) (*DownloadCompletedPDFResult, error)
@@ -86,6 +92,81 @@ type SubmitAttemptDocumentResult struct {
 	CorrelationKey     string
 	Recipients         []RecipientResult
 	InitialStatus      entity.SigningAttemptStatus
+}
+
+type ProviderSubmissionSnapshot struct {
+	ProviderDocumentID string
+	ProviderName       string
+	CorrelationKey     string
+	RawStatus          string
+	HasDocument        bool
+	HasRecipients      bool
+	HasFields          bool
+	IsDistributed      bool
+	Recipients         []RecipientResult
+	Reason             string
+}
+
+type EnsureProviderDocumentRequest struct {
+	AttemptID      string
+	DocumentID     string
+	CorrelationKey string
+	PDF            []byte
+	PDFChecksum    string
+	Title          string
+	Environment    entity.Environment
+}
+
+type EnsureProviderDocumentResult struct {
+	ProviderDocumentID string
+	ProviderName       string
+	CorrelationKey     string
+	RawStatus          string
+}
+
+type EnsureProviderRecipientsRequest struct {
+	ProviderDocumentID string
+	CorrelationKey     string
+	Recipients         []SigningRecipient
+	Environment        entity.Environment
+}
+
+type EnsureProviderRecipientsResult struct {
+	Recipients []RecipientResult
+}
+
+type EnsureProviderFieldsRequest struct {
+	ProviderDocumentID string
+	CorrelationKey     string
+	Recipients         []RecipientResult
+	SignatureFields    []SignatureFieldPosition
+	Environment        entity.Environment
+}
+
+type EnsureProviderFieldsResult struct {
+	FieldCount int
+}
+
+type EnsureProviderDistributedRequest struct {
+	ProviderDocumentID string
+	CorrelationKey     string
+	Environment        entity.Environment
+}
+
+type EnsureProviderDistributedResult struct {
+	RawStatus string
+}
+
+type FetchProviderSigningReferencesRequest struct {
+	ProviderDocumentID string
+	CorrelationKey     string
+	Environment        entity.Environment
+}
+
+type FetchProviderSigningReferencesResult struct {
+	Recipients []RecipientResult
+	Status     entity.SigningAttemptStatus
+	RawStatus  string
 }
 
 // FindProviderDocumentRequest finds existing provider state for an attempt correlation key.
