@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Save } from 'lucide-react'
+import { redirectSystemWorkspaceProductSurface } from '@/lib/system-workspace-guard'
 import { DocumentEditor } from '@/features/editor'
 import { useInjectables } from '@/features/editor/hooks/useInjectables'
 import { usePaginationStore, useSignerRolesStore } from '@/features/editor/stores'
@@ -11,6 +12,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/workspace/$workspaceId/editor/$versionId')({
+  beforeLoad: ({ params }) => redirectSystemWorkspaceProductSurface(params),
   component: EditorPage,
 })
 

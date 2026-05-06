@@ -90,10 +90,17 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 		return nil, err
 	}
 
-	template, err := s.templateRepo.FindByID(ctx, version.TemplateID)
+	templateWorkspace, err := s.templateRepo.FindTemplateWorkspaceByTemplateID(ctx, version.TemplateID)
 	if err != nil {
 		return nil, fmt.Errorf("finding template from version: %w", err)
 	}
+	if templateWorkspace == nil || templateWorkspace.Template == nil {
+		return nil, entity.ErrTemplateNotFound
+	}
+	if templateWorkspace.Workspace != nil && templateWorkspace.Workspace.Type == entity.WorkspaceTypeSystem {
+		return nil, entity.ErrInvalidWorkspaceType
+	}
+	template := templateWorkspace.Template
 	if template.DocumentTypeID == nil || *template.DocumentTypeID == "" {
 		return nil, entity.ErrDocumentTypeNotFound
 	}

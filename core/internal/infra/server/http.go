@@ -443,7 +443,8 @@ func corsMiddleware(corsCfg config.CORSConfig) gin.HandlerFunc {
 		wildcard = true
 	}
 
-	baseHeaders := []string{
+	baseHeaders := make([]string, 0, 20+len(corsCfg.AllowedHeaders))
+	baseHeaders = append(baseHeaders,
 		"Origin", "Content-Type", "Accept", "Authorization",
 		"Cache-Control", "Pragma",
 		"X-Workspace-ID", "X-Tenant-ID", "X-Tenant-Code", "X-Sandbox-Mode", "X-API-Key",
@@ -451,7 +452,7 @@ func corsMiddleware(corsCfg config.CORSConfig) gin.HandlerFunc {
 		"X-Workspace-Code", "X-Document-Type",
 		"X-External-ID", "X-Transactional-ID",
 		"X-Process", "X-Process-Type",
-	}
+	)
 	allowedHeaders := strings.Join(append(baseHeaders, corsCfg.AllowedHeaders...), ", ")
 
 	return func(c *gin.Context) {

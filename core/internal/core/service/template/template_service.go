@@ -18,12 +18,14 @@ func NewTemplateService(
 	templateRepo port.TemplateRepository,
 	versionRepo port.TemplateVersionRepository,
 	tagRepo port.TemplateTagRepository,
+	workspaceRepo port.WorkspaceRepository,
 	processResolver port.ProcessResolver,
 ) templateuc.TemplateUseCase {
 	return &TemplateService{
 		templateRepo:    templateRepo,
 		versionRepo:     versionRepo,
 		tagRepo:         tagRepo,
+		workspaceRepo:   workspaceRepo,
 		processResolver: processResolver,
 	}
 }
@@ -33,6 +35,7 @@ type TemplateService struct {
 	templateRepo    port.TemplateRepository
 	versionRepo     port.TemplateVersionRepository
 	tagRepo         port.TemplateTagRepository
+	workspaceRepo   port.WorkspaceRepository
 	processResolver port.ProcessResolver
 }
 
@@ -40,6 +43,10 @@ type TemplateService struct {
 //
 //nolint:funlen
 func (s *TemplateService) CreateTemplate(ctx context.Context, cmd templateuc.CreateTemplateCommand) (*entity.Template, *entity.TemplateVersion, error) {
+	if err := s.validateTemplateWorkspace(ctx, cmd.WorkspaceID); err != nil {
+		return nil, nil, err
+	}
+
 	// Check for duplicate title
 	exists, err := s.templateRepo.ExistsByTitle(ctx, cmd.WorkspaceID, cmd.Title)
 	if err != nil {
@@ -104,6 +111,20 @@ func (s *TemplateService) CreateTemplate(ctx context.Context, cmd templateuc.Cre
 	)
 
 	return template, version, nil
+}
+
+func (s *TemplateService) validateTemplateWorkspace(ctx context.Context, workspaceID string) error {
+	if s.workspaceRepo == nil {
+		return nil
+	}
+	workspace, err := s.workspaceRepo.FindByID(ctx, workspaceID)
+	if err != nil {
+		return fmt.Errorf("finding template workspace: %w", err)
+	}
+	if workspace.Type == entity.WorkspaceTypeSystem {
+		return entity.ErrInvalidWorkspaceType
+	}
+	return nil
 }
 
 // GetTemplate retrieves a template by ID.
@@ -259,6 +280,9 @@ func (s *TemplateService) validateCloneSource(ctx context.Context, templateID, v
 	source, err := s.templateRepo.FindByIDWithDetails(ctx, templateID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("finding source template: %w", err)
+	}
+	if err := s.validateTemplateWorkspace(ctx, source.WorkspaceID); err != nil {
+		return nil, nil, err
 	}
 
 	return source, sourceVersion, nil

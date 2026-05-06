@@ -77,11 +77,12 @@ Document the document creation flow from a domain service to `POST /api/v1/inter
 - If it returns `nil`: default fallback applies.
 - If it returns error: operation aborts.
 
-### Default fallback (3 levels)
+### Default resolution
 
-1. requested `tenant + workspace`.
-2. `tenant + SYS_WRKSP`.
-3. `SYS + SYS_WRKSP`.
+1. `prod`: requested `tenant + workspace`, where the workspace is not sandbox.
+2. `dev`: sandbox workspace for the requested `tenant + workspace`.
+
+`SYS_WRKSP` is reserved for system administration and is never used for template resolution.
 
 Published version is always required.
 

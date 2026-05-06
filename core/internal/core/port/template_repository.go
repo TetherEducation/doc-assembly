@@ -44,6 +44,7 @@ type InternalTemplateContextQuery struct {
 	Process                string
 	Tags                   []string
 	Published              *bool
+	Environment            entity.Environment
 }
 
 // InternalTemplateContext contains the full internal-create template context.

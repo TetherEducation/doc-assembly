@@ -637,6 +637,10 @@ func (r *Repository) FindInternalTemplateContext(
 	ctx context.Context,
 	query port.InternalTemplateContextQuery,
 ) (*port.InternalTemplateContext, error) {
+	environment := query.Environment
+	if environment == "" {
+		environment = entity.EnvironmentProd
+	}
 	result, err := scanInternalTemplateContext(r.pool.QueryRow(ctx, queryFindInternalTemplateContext,
 		query.TenantCode,
 		query.RequestedWorkspaceCode,
@@ -645,6 +649,7 @@ func (r *Repository) FindInternalTemplateContext(
 		query.Process,
 		query.Tags,
 		query.Published,
+		string(environment),
 	))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

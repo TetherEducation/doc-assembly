@@ -79,6 +79,7 @@ export function SidebarContent({
   const showWorkspaceName = transitionPhase === 'idle' || transitionPhase === 'complete'
 
   const workspaceId = currentWorkspace?.id || ''
+  const isSystem = isSystemContext()
 
   const allNavItems: NavItem[] = [
     {
@@ -87,24 +88,28 @@ export function SidebarContent({
       href: `/workspace/${workspaceId}`,
       showInSandbox: false,
     },
-    {
-      label: t('nav.templates'),
-      icon: FileText,
-      href: `/workspace/${workspaceId}/templates`,
-      showInSandbox: true,
-    },
-    {
-      label: t('nav.documents'),
-      icon: FolderOpen,
-      href: `/workspace/${workspaceId}/documents`,
-      showInSandbox: true,
-    },
-    {
-      label: t('nav.signing'),
-      icon: PenTool,
-      href: `/workspace/${workspaceId}/signing`,
-      showInSandbox: false,
-    },
+    ...(!isSystem
+      ? [
+          {
+            label: t('nav.templates'),
+            icon: FileText,
+            href: `/workspace/${workspaceId}/templates`,
+            showInSandbox: true,
+          },
+          {
+            label: t('nav.documents'),
+            icon: FolderOpen,
+            href: `/workspace/${workspaceId}/documents`,
+            showInSandbox: true,
+          },
+          {
+            label: t('nav.signing'),
+            icon: PenTool,
+            href: `/workspace/${workspaceId}/signing`,
+            showInSandbox: false,
+          },
+        ]
+      : []),
     {
       label: t('nav.variables'),
       icon: Variable,
@@ -132,7 +137,6 @@ export function SidebarContent({
   ]
 
   // Filter nav items based on sandbox mode and workspace type
-  const isSystem = isSystemContext()
   const visibleNavItems = allNavItems.filter((item) => {
     if (isSandboxActive && !item.showInSandbox) return false
     if (isSystem && item.hideForSystem) return false

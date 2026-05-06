@@ -39,6 +39,7 @@ func TestDefaultTemplateResolver_Resolve(t *testing.T) {
 		TenantCode:    "TENANT_A",
 		WorkspaceCode: "CLIENT_WS",
 		DocumentType:  "CONTRACT",
+		Environment:   entity.EnvironmentProd,
 	}
 
 	t.Run("level 1 hit", func(t *testing.T) {
@@ -54,7 +55,7 @@ func TestDefaultTemplateResolver_Resolve(t *testing.T) {
 		assert.Equal(t, "v-level-1", resolved.Version.ID)
 	})
 
-	t.Run("level 2 fallback hit", func(t *testing.T) {
+	t.Run("does not fall back to tenant system workspace", func(t *testing.T) {
 		adapter := &stubInternalTemplateContextSearchAdapter{
 			responses: map[string]*port.InternalTemplateContext{
 				"TENANT_A|SYS_WRKSP|CONTRACT": templateContext("v-level-2"),
@@ -62,12 +63,11 @@ func TestDefaultTemplateResolver_Resolve(t *testing.T) {
 		}
 
 		resolved, err := resolver.Resolve(context.Background(), req, adapter)
-		require.NoError(t, err)
-		require.NotNil(t, resolved)
-		assert.Equal(t, "v-level-2", resolved.Version.ID)
+		require.ErrorIs(t, err, entity.ErrInternalTemplateResolutionNotFound)
+		assert.Nil(t, resolved)
 	})
 
-	t.Run("level 3 fallback hit", func(t *testing.T) {
+	t.Run("does not fall back to global system workspace", func(t *testing.T) {
 		adapter := &stubInternalTemplateContextSearchAdapter{
 			responses: map[string]*port.InternalTemplateContext{
 				"SYS|SYS_WRKSP|CONTRACT": templateContext("v-level-3"),
@@ -75,9 +75,54 @@ func TestDefaultTemplateResolver_Resolve(t *testing.T) {
 		}
 
 		resolved, err := resolver.Resolve(context.Background(), req, adapter)
+		require.ErrorIs(t, err, entity.ErrInternalTemplateResolutionNotFound)
+		assert.Nil(t, resolved)
+	})
+
+	t.Run("dev resolves only sandbox workspace", func(t *testing.T) {
+		devReq := *req
+		devReq.Environment = entity.EnvironmentDev
+		devReq.SandboxWorkspaceCode = "CLIENT_WS_SBX"
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"CLIENT_A|CLIENT_WS|CONTRACT":     templateContext("v-prod"),
+				"TENANT_A|CLIENT_WS_SBX|CONTRACT": templateContext("v-sandbox"),
+			},
+		}
+
+		resolved, err := resolver.Resolve(context.Background(), &devReq, adapter)
 		require.NoError(t, err)
 		require.NotNil(t, resolved)
-		assert.Equal(t, "v-level-3", resolved.Version.ID)
+		assert.Equal(t, "v-sandbox", resolved.Version.ID)
+	})
+
+	t.Run("dev does not fall back to prod workspace after sandbox miss", func(t *testing.T) {
+		devReq := *req
+		devReq.Environment = entity.EnvironmentDev
+		devReq.SandboxWorkspaceCode = "CLIENT_WS_SBX"
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"TENANT_A|CLIENT_WS|CONTRACT": templateContext("v-prod"),
+			},
+		}
+
+		resolved, err := resolver.Resolve(context.Background(), &devReq, adapter)
+		require.ErrorIs(t, err, entity.ErrInternalTemplateResolutionNotFound)
+		assert.Nil(t, resolved)
+	})
+
+	t.Run("dev without sandbox returns not found", func(t *testing.T) {
+		devReq := *req
+		devReq.Environment = entity.EnvironmentDev
+		adapter := &stubInternalTemplateContextSearchAdapter{
+			responses: map[string]*port.InternalTemplateContext{
+				"TENANT_A|CLIENT_WS|CONTRACT": templateContext("v-prod"),
+			},
+		}
+
+		resolved, err := resolver.Resolve(context.Background(), &devReq, adapter)
+		require.ErrorIs(t, err, entity.ErrInternalTemplateResolutionNotFound)
+		assert.Nil(t, resolved)
 	})
 
 	t.Run("not found", func(t *testing.T) {
