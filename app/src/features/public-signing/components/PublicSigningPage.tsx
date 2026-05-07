@@ -10,14 +10,12 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  Send,
   Clock,
   XCircle,
   Download,
 } from 'lucide-react'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import axios from 'axios'
-import { cn } from '@/lib/utils'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 
@@ -46,6 +44,7 @@ import { PublicSignatureBlock } from './PublicSignatureBlock'
 import { EmbeddedSigningFrame } from './EmbeddedSigningFrame'
 import { PDFPreview } from './PDFPreview'
 import { PublicDocumentAccessPage } from './PublicDocumentAccessPage'
+import { FloatingSigningProgress, type SigningProgressTask } from './FloatingSigningProgress'
 import type {
   PublicSigningResponse,
   FieldResponses,
@@ -72,6 +71,48 @@ function sanitizeDocumentTitle(title: string | undefined, fallback: string): str
     return fallback
   }
   return trimmed
+}
+
+type PublicSigningField = NonNullable<PublicSigningResponse['form']>['fields'][number]
+
+function isInteractiveFieldComplete(
+  field: PublicSigningField,
+  responses: FieldResponses,
+): boolean {
+  const resp = responses[field.id]
+  if (!resp) return false
+
+  if (field.fieldType === 'text') {
+    const value = resp.response.text?.trim() ?? ''
+    if (!value) return false
+    return field.maxLength <= 0 || value.length <= field.maxLength
+  }
+
+  return (resp.response.selectedOptionIds?.length ?? 0) > 0
+}
+
+function buildSigningProgressTasks(
+  form: NonNullable<PublicSigningResponse['form']>,
+  responses: FieldResponses,
+  agreed: boolean,
+  agreementLabel: string,
+  interactiveDescription: string,
+): SigningProgressTask[] {
+  return [
+    ...form.fields.map((field) => ({
+      id: field.id,
+      label: field.label || interactiveDescription,
+      description: interactiveDescription,
+      completed: isInteractiveFieldComplete(field, responses),
+      kind: 'interactive' as const,
+    })),
+    {
+      id: 'agreement',
+      label: agreementLabel,
+      completed: agreed,
+      kind: 'agreement' as const,
+    },
+  ]
 }
 
 export function PublicSigningPage({ token }: PublicSigningPageProps) {
@@ -375,9 +416,21 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     const isSubmitting = pageState.status === 'submitting'
     const allowedFieldIds = new Set(data.form.fields.map((field) => field.id))
     const showValidationSummary = submitted && validationErrors.size > 0
+    const progressTasks = buildSigningProgressTasks(
+      data.form,
+      responses,
+      agreed,
+      t('publicSigning.guidance.agreementTask'),
+      t('publicSigning.guidance.interactiveTaskDescription'),
+    )
+    const handleTaskSelect = (task: SigningProgressTask) => {
+      const field = document.getElementById(`public-field-${task.id}`)
+      field?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
     return (
       <PageShell documentTitle={displayDocumentTitle}>
-        <div className="mx-auto max-w-4xl px-6 pt-8 pb-56">
+        <div className="mx-auto max-w-4xl px-6 pt-8 pb-32">
           <div className="mb-8 space-y-2">
             <h1 className="text-2xl font-semibold text-foreground">
               {displayDocumentTitle}
@@ -403,61 +456,29 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
               />
             </div>
           </div>
-        </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-          <div className="mx-auto max-w-4xl px-6 pt-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-            <div className="space-y-4 rounded-lg border border-border bg-card/95 p-4 shadow-xl">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                disabled={isSubmitting}
-                className="mt-0.5 h-4 w-4 rounded border-border text-primary accent-primary focus:ring-primary"
-              />
-              <span className="text-sm text-foreground">
-                {t('publicSigning.agreement')}
+          {showValidationSummary && (
+            <div className="mb-8 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <AlertCircle size={16} />
+              <span>
+                {t('publicSigning.validationSummary', {
+                  count: validationErrors.size,
+                })}
               </span>
-            </label>
-
-            {showValidationSummary && (
-              <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                <AlertCircle size={16} />
-                <span>
-                  {t('publicSigning.validationSummary', {
-                    count: validationErrors.size,
-                  })}
-                </span>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !agreed}
-              className={cn(
-                'flex w-full items-center justify-center gap-3 rounded-md py-3',
-                'font-mono text-sm uppercase tracking-wider transition-colors',
-                'bg-foreground text-background hover:bg-foreground/90',
-                'disabled:cursor-not-allowed disabled:opacity-50',
-              )}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>{t('publicSigning.submitting')}</span>
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  <span>{t('publicSigning.submit')}</span>
-                </>
-              )}
-            </button>
             </div>
-          </div>
+          )}
         </div>
+
+        <FloatingSigningProgress
+          tasks={progressTasks}
+          actionLabel={t('publicSigning.guidance.action')}
+          expandedActionLabel={t('publicSigning.guidance.expandedAction')}
+          onAction={handleSubmit}
+          onTaskSelect={handleTaskSelect}
+          onAgreementChange={setAgreed}
+          disabledReason={t('publicSigning.guidance.disabledReason')}
+          loading={isSubmitting}
+        />
       </PageShell>
     )
   }

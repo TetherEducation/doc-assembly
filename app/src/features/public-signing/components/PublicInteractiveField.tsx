@@ -302,7 +302,11 @@ export function createPublicInteractiveFieldComponent(ctx: PublicFieldContext) {
     }
 
     return (
-      <NodeViewWrapper className="my-4">
+      <NodeViewWrapper
+        className="my-4 scroll-mt-28"
+        id={`public-field-${fieldId}`}
+        data-public-field-id={fieldId}
+      >
         <div
           contentEditable={false}
           className={cn(
