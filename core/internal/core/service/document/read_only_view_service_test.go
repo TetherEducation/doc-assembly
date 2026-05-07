@@ -23,7 +23,10 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 		},
 	}
 	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
-	service := NewReadOnlyViewService(documentRepo, accessTokenRepo, 48, "https://public.example.test/")
+	recipientRepo := &readOnlyViewRecipientRepoFake{
+		recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: docID}},
+	}
+	service := NewReadOnlyViewService(documentRepo, accessTokenRepo, recipientRepo, 48, "https://public.example.test/")
 
 	before := time.Now().UTC()
 	result, err := service.CreateReadOnlyViewLink(ctx, docID)
@@ -34,7 +37,8 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 	require.NotNil(t, accessTokenRepo.created)
 	assert.Equal(t, docID, documentRepo.findByID)
 	assert.Equal(t, docID, accessTokenRepo.created.DocumentID)
-	assert.Empty(t, accessTokenRepo.created.RecipientID)
+	assert.Equal(t, docID, recipientRepo.findByDocumentID)
+	assert.Equal(t, "recipient-1", accessTokenRepo.created.RecipientID)
 	assert.Nil(t, accessTokenRepo.created.AttemptID)
 	assert.Equal(t, entity.TokenTypeViewOnly, accessTokenRepo.created.TokenType)
 	assert.NotEmpty(t, accessTokenRepo.created.Token)
@@ -47,7 +51,7 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 
 func TestReadOnlyViewService_CreateReadOnlyViewLink_DocumentNotFound(t *testing.T) {
 	documentRepo := &readOnlyViewDocumentRepoFake{err: entity.ErrDocumentNotFound}
-	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, 48, "")
+	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, &readOnlyViewRecipientRepoFake{}, 48, "")
 
 	result, err := service.CreateReadOnlyViewLink(context.Background(), "missing-doc")
 
@@ -90,7 +94,8 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_InvalidStateDoesNotPersistTo
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
-			service := NewReadOnlyViewService(&readOnlyViewDocumentRepoFake{doc: tt.doc}, accessTokenRepo, 48, "")
+			recipientRepo := &readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: tt.doc.ID}}}
+			service := NewReadOnlyViewService(&readOnlyViewDocumentRepoFake{doc: tt.doc}, accessTokenRepo, recipientRepo, 48, "")
 
 			result, err := service.CreateReadOnlyViewLink(context.Background(), tt.doc.ID)
 
@@ -98,8 +103,47 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_InvalidStateDoesNotPersistTo
 			assert.Nil(t, result)
 			assert.ErrorIs(t, err, entity.ErrInvalidDocumentState)
 			assert.Nil(t, accessTokenRepo.created)
+			assert.Empty(t, recipientRepo.findByDocumentID)
 		})
 	}
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLink_NoRecipientsDoesNotPersistToken(t *testing.T) {
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{ID: "doc-without-recipients", Status: entity.DocumentStatusReadyToSign}},
+		accessTokenRepo,
+		&readOnlyViewRecipientRepoFake{},
+		48,
+		"",
+	)
+
+	result, err := service.CreateReadOnlyViewLink(context.Background(), "doc-without-recipients")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorContains(t, err, "find read-only view anchor recipient")
+	assert.Nil(t, accessTokenRepo.created)
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLink_RecipientLookupFailureDoesNotPersistToken(t *testing.T) {
+	lookupErr := errors.New("recipient lookup failed")
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{ID: "doc-123", Status: entity.DocumentStatusReadyToSign}},
+		accessTokenRepo,
+		&readOnlyViewRecipientRepoFake{err: lookupErr},
+		48,
+		"",
+	)
+
+	result, err := service.CreateReadOnlyViewLink(context.Background(), "doc-123")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, lookupErr)
+	assert.ErrorContains(t, err, "find read-only view anchor recipient")
+	assert.Nil(t, accessTokenRepo.created)
 }
 
 func TestReadOnlyViewService_CreateReadOnlyViewLink_TokenCreateFailure(t *testing.T) {
@@ -108,6 +152,7 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_TokenCreateFailure(t *testin
 	service := NewReadOnlyViewService(
 		&readOnlyViewDocumentRepoFake{doc: &entity.Document{ID: "doc-123", Status: entity.DocumentStatusReadyToSign}},
 		accessTokenRepo,
+		&readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: "doc-123"}}},
 		48,
 		"",
 	)
@@ -144,4 +189,16 @@ func (f *readOnlyViewAccessTokenRepoFake) Create(_ context.Context, token *entit
 	}
 	f.created = token
 	return nil
+}
+
+type readOnlyViewRecipientRepoFake struct {
+	port.DocumentRecipientRepository
+	recipients       []*entity.DocumentRecipient
+	err              error
+	findByDocumentID string
+}
+
+func (f *readOnlyViewRecipientRepoFake) FindByDocumentID(_ context.Context, documentID string) ([]*entity.DocumentRecipient, error) {
+	f.findByDocumentID = documentID
+	return f.recipients, f.err
 }

@@ -18,6 +18,7 @@ var errReadOnlyViewNotImplemented = errors.New("read-only view retrieval is not 
 type ReadOnlyViewService struct {
 	documentRepo    port.DocumentRepository
 	accessTokenRepo port.DocumentAccessTokenRepository
+	recipientRepo   port.DocumentRecipientRepository
 	tokenTTLHours   int
 	publicURL       string
 }
@@ -28,12 +29,14 @@ var _ documentuc.ReadOnlyViewUseCase = (*ReadOnlyViewService)(nil)
 func NewReadOnlyViewService(
 	documentRepo port.DocumentRepository,
 	accessTokenRepo port.DocumentAccessTokenRepository,
+	recipientRepo port.DocumentRecipientRepository,
 	tokenTTLHours int,
 	publicURL string,
 ) *ReadOnlyViewService {
 	return &ReadOnlyViewService{
 		documentRepo:    documentRepo,
 		accessTokenRepo: accessTokenRepo,
+		recipientRepo:   recipientRepo,
 		tokenTTLHours:   tokenTTLHours,
 		publicURL:       publicURL,
 	}
@@ -52,6 +55,14 @@ func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, docume
 		return nil, entity.ErrInvalidDocumentState
 	}
 
+	recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID)
+	if err != nil {
+		return nil, fmt.Errorf("find read-only view anchor recipient: %w", err)
+	}
+	if len(recipients) == 0 {
+		return nil, fmt.Errorf("find read-only view anchor recipient: no recipients for document %s", doc.ID)
+	}
+
 	tokenStr, err := generateAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("generate read-only view token: %w", err)
@@ -60,10 +71,14 @@ func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, docume
 	now := time.Now().UTC()
 	accessToken := &entity.DocumentAccessToken{
 		DocumentID: doc.ID,
-		Token:      tokenStr,
-		TokenType:  entity.TokenTypeViewOnly,
-		ExpiresAt:  now.Add(time.Duration(s.tokenTTLHours) * time.Hour),
-		CreatedAt:  now,
+		// VIEW_ONLY tokens are technically anchored to an existing recipient only
+		// to satisfy the current persistence schema; read-only semantics must not
+		// treat this recipient as granting signing permission.
+		RecipientID: recipients[0].ID,
+		Token:       tokenStr,
+		TokenType:   entity.TokenTypeViewOnly,
+		ExpiresAt:   now.Add(time.Duration(s.tokenTTLHours) * time.Hour),
+		CreatedAt:   now,
 	}
 	if err := s.accessTokenRepo.Create(ctx, accessToken); err != nil {
 		return nil, fmt.Errorf("create read-only view token: %w", err)
