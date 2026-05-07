@@ -1835,6 +1835,9 @@
       "proceedToSigning": "Proceed to Signing",
       "pdfLoading": "Loading document preview...",
       "pdfError": "Failed to load document preview",
+      "toolbarAriaLabel": "Signing preview toolbar",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
       "pageOf": "Page {{current}} of {{total}}"
     },
     "proceeding": {
@@ -1887,6 +1890,26 @@
       "message": "Please wait while we confirm the signature and prepare the next step automatically.",
       "successTitle": "Signature confirmed",
       "successMessage": "Everything is ready. Opening your next step..."
+    },
+    "guidance": {
+      "ariaLabel": "Signing guidance",
+      "dragHandle": "Move signing guidance",
+      "expand": "Expand signing guidance",
+      "collapse": "Collapse signing guidance",
+      "readyTitle": "Ready to sign",
+      "completedTitle": "{{completed}} of {{total}} confirmations completed",
+      "readyDescription": "All requirements are complete. You can continue to signing.",
+      "interactiveTaskDescription": "Respond to generate the contract",
+      "agreementTask": "I have read and reviewed the document",
+      "action": "Go to sign",
+      "expandedAction": "Continue to signing",
+      "disabledReason": "Complete the final confirmation to enable signing",
+      "missingTitleOne": "Missing {{count}} confirmation",
+      "missingTitleOther": "Missing {{count}} confirmations",
+      "pendingOne": "{{count}} pending",
+      "pendingOther": "{{count}} pending",
+      "missingDescriptionOne": "You have {{count}} step left to enable signing",
+      "missingDescriptionOther": "You have {{count}} steps left to enable signing"
     }
   }
 }

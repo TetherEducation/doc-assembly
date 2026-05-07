@@ -1835,6 +1835,9 @@
       "proceedToSigning": "Proceder a Firmar",
       "pdfLoading": "Cargando vista previa del documento...",
       "pdfError": "No se pudo cargar la vista previa del documento",
+      "toolbarAriaLabel": "Barra de vista previa para firmar",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
       "pageOf": "Pagina {{current}} de {{total}}"
     },
     "proceeding": {
@@ -1887,6 +1890,26 @@
       "message": "Espera un momento mientras confirmamos la firma y preparamos el siguiente paso automaticamente.",
       "successTitle": "Firma confirmada",
       "successMessage": "Todo esta listo. Abriendo el siguiente paso..."
+    },
+    "guidance": {
+      "ariaLabel": "Guía de firma",
+      "dragHandle": "Mover guía de firma",
+      "expand": "Expandir guía de firma",
+      "collapse": "Contraer guía de firma",
+      "readyTitle": "Listo para firmar",
+      "completedTitle": "{{completed}} de {{total}} confirmaciones completadas",
+      "readyDescription": "Todos los requisitos están completos. Puedes continuar a la firma.",
+      "interactiveTaskDescription": "Responde para generar el contrato",
+      "agreementTask": "He leído y revisado el documento",
+      "action": "Ir a firmar",
+      "expandedAction": "Continuar a firma",
+      "disabledReason": "Completa la confirmación final para habilitar la firma",
+      "missingTitleOne": "Falta {{count}} confirmación",
+      "missingTitleOther": "Faltan {{count}} confirmaciones",
+      "pendingOne": "{{count}} pendiente",
+      "pendingOther": "{{count}} pendientes",
+      "missingDescriptionOne": "Te falta {{count}} paso para habilitar la firma",
+      "missingDescriptionOther": "Te faltan {{count}} pasos para habilitar la firma"
     }
   }
 }
