@@ -344,6 +344,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         recipientName={data.recipientName}
         position={data.signingPosition ?? 0}
         total={data.totalSigners ?? 0}
+        waitingForPrevious={data.waitingForPrevious ?? !data.hasCurrentUserSigned}
         token={token}
         onReady={(newData) => setPageState({ status: 'loaded', data: newData })}
       />
@@ -509,8 +510,8 @@ function PageShell({
 
       {children}
 
-      <footer className="border-t border-border py-6 text-center">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
+      <footer className="border-t border-border py-2 text-center">
+        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">
           Doc-Assembly
         </span>
       </footer>
@@ -687,7 +688,7 @@ function CompletedScreen({
           </div>
 
           {canDownload && downloadUrl && (
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center">
               <a
                 href={downloadUrl}
                 className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -726,6 +727,7 @@ function WaitingScreen({
   recipientName,
   position,
   total,
+  waitingForPrevious,
   token,
   onReady,
 }: {
@@ -733,6 +735,7 @@ function WaitingScreen({
   recipientName: string
   position: number
   total: number
+  waitingForPrevious: boolean
   token: string
   onReady: (data: PublicSigningResponse) => void
 }) {
@@ -759,15 +762,24 @@ function WaitingScreen({
       <div className="mx-auto max-w-md text-center space-y-4">
         <Clock size={48} className="mx-auto text-muted-foreground" />
         <h1 className="text-xl font-semibold text-foreground">
-          {t('publicSigning.waiting.title')}
+          {t(
+            waitingForPrevious
+              ? 'publicSigning.waiting.title'
+              : 'publicSigning.waiting.afterSigningTitle',
+          )}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {t('publicSigning.waiting.message', {
-            name: recipientName,
-            position,
-            total,
-            title: documentTitle,
-          })}
+          {t(
+            waitingForPrevious
+              ? 'publicSigning.waiting.message'
+              : 'publicSigning.waiting.afterSigningMessage',
+            {
+              name: recipientName,
+              position,
+              total,
+              title: documentTitle,
+            },
+          )}
         </p>
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
           <Loader2 size={14} className="animate-spin" />

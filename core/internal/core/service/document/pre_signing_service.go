@@ -653,6 +653,9 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 	if err != nil {
 		return nil, err
 	}
+	if waitResp := s.checkAttemptRecipientAlreadySigned(ctx, doc, recipient, attemptRecipient, accessToken.Token); waitResp != nil {
+		return waitResp, nil
+	}
 	if waitResp := s.checkAttemptSigningOrder(ctx, doc, recipient, attemptRecipient, accessToken.Token); waitResp != nil {
 		return waitResp, nil
 	}
@@ -677,6 +680,28 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 	resp := &documentuc.PublicSigningResponse{Step: documentuc.StepSigning, DocumentTitle: title, RecipientName: recipient.Name, EmbeddedSigningURL: embeddedResult.EmbeddedURL}
 	s.applyAccessFlags(resp, doc, recipient, accessToken.Token)
 	return resp, nil
+}
+
+func (s *PreSigningService) checkAttemptRecipientAlreadySigned(ctx context.Context, doc *entity.Document, recipient *entity.DocumentRecipient, attemptRecipient *entity.SigningAttemptRecipient, token string) *documentuc.PublicSigningResponse {
+	if attemptRecipient.Status != entity.RecipientStatusSigned {
+		return nil
+	}
+	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptRecipient.AttemptID)
+	if err != nil {
+		return nil
+	}
+	for _, r := range recipients {
+		if r.Status == entity.RecipientStatusSigned {
+			continue
+		}
+		resp := &documentuc.PublicSigningResponse{Step: documentuc.StepWaiting, DocumentTitle: documentTitle(doc), RecipientName: recipient.Name, WaitingForPrevious: false, SigningPosition: attemptRecipient.SignerOrder, TotalSigners: len(recipients)}
+		s.applyAccessFlags(resp, doc, recipient, token)
+		return resp
+	}
+	resp := s.buildProcessingResponse(doc, recipient, token)
+	resp.HasCurrentUserSigned = true
+	resp.CanSign = false
+	return resp
 }
 
 func (s *PreSigningService) enqueueProviderStatusRefreshIfDue(ctx context.Context, attempt *entity.SigningAttempt) {
@@ -757,7 +782,7 @@ func (s *PreSigningService) applyAccessFlags(
 ) {
 	resp.DocumentStatus = string(doc.Status)
 	resp.HasCurrentUserSigned = recipient.IsSigned()
-	resp.CanSign = doc.IsAwaitingInput() || doc.IsPending() || doc.IsInProgress()
+	resp.CanSign = (doc.IsAwaitingInput() || doc.IsPending() || doc.IsInProgress()) && !recipient.IsSigned()
 	resp.CanDownload = doc.IsCompleted() && recipient.IsSigned()
 	if resp.CanDownload {
 		resp.DownloadURL = fmt.Sprintf("/public/sign/%s/download", token)

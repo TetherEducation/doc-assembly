@@ -1826,6 +1826,8 @@
     "waiting": {
       "title": "Waiting for Previous Signers",
       "message": "You are signer {{position}} of {{total}}. The document will be ready for your signature once previous signers have completed.",
+      "afterSigningTitle": "Signature received",
+      "afterSigningMessage": "Your signature for \"{{title}}\" was received. We are waiting for the remaining signers before the final download is available.",
       "autoRefresh": "This page will refresh automatically."
     },
     "preview": {
@@ -1879,6 +1881,12 @@
     "unavailable": {
       "title": "Signing unavailable",
       "message": "This document cannot be signed right now. Please contact support."
+    },
+    "finalizing": {
+      "title": "Finalizing your document",
+      "message": "Please wait while we confirm the signature and prepare the next step automatically.",
+      "successTitle": "Signature confirmed",
+      "successMessage": "Everything is ready. Opening your next step..."
     }
   }
 }

@@ -1826,6 +1826,8 @@
     "waiting": {
       "title": "Esperando Firmantes Anteriores",
       "message": "Eres el firmante {{position}} de {{total}}. El documento estara listo para tu firma una vez que los firmantes anteriores hayan completado.",
+      "afterSigningTitle": "Firma recibida",
+      "afterSigningMessage": "Recibimos tu firma para \"{{title}}\". Estamos esperando a los firmantes restantes antes de habilitar la descarga final.",
       "autoRefresh": "Esta pagina se actualizara automaticamente."
     },
     "preview": {
@@ -1879,6 +1881,12 @@
     "unavailable": {
       "title": "Firma no disponible",
       "message": "Este documento no puede firmarse en este momento. Contacta a soporte."
+    },
+    "finalizing": {
+      "title": "Finalizando tu documento",
+      "message": "Espera un momento mientras confirmamos la firma y preparamos el siguiente paso automaticamente.",
+      "successTitle": "Firma confirmada",
+      "successMessage": "Todo esta listo. Abriendo el siguiente paso..."
     }
   }
 }
