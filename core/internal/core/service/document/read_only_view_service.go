@@ -13,16 +13,19 @@ import (
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
-var errReadOnlyViewNotImplemented = errors.New("read-only view retrieval is not implemented")
-
 // ReadOnlyViewService implements expiring public read-only document views.
 type ReadOnlyViewService struct {
-	documentRepo    port.DocumentRepository
-	accessTokenRepo port.DocumentAccessTokenRepository
-	recipientRepo   port.DocumentRecipientRepository
-	versionRepo     port.TemplateVersionRepository
-	tokenTTLHours   int
-	publicURL       string
+	documentRepo      port.DocumentRepository
+	accessTokenRepo   port.DocumentAccessTokenRepository
+	recipientRepo     port.DocumentRecipientRepository
+	versionRepo       port.TemplateVersionRepository
+	signerRoleRepo    port.TemplateVersionSignerRoleRepository
+	fieldResponseRepo port.DocumentFieldResponseRepository
+	pdfRenderer       port.PDFRenderer
+	storageAdapter    port.StorageAdapter
+	storageEnabled    bool
+	tokenTTLHours     int
+	publicURL         string
 }
 
 var _ documentuc.ReadOnlyViewUseCase = (*ReadOnlyViewService)(nil)
@@ -33,16 +36,26 @@ func NewReadOnlyViewService(
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	recipientRepo port.DocumentRecipientRepository,
 	versionRepo port.TemplateVersionRepository,
+	signerRoleRepo port.TemplateVersionSignerRoleRepository,
+	fieldResponseRepo port.DocumentFieldResponseRepository,
+	pdfRenderer port.PDFRenderer,
+	storageAdapter port.StorageAdapter,
+	storageEnabled bool,
 	tokenTTLHours int,
 	publicURL string,
 ) *ReadOnlyViewService {
 	return &ReadOnlyViewService{
-		documentRepo:    documentRepo,
-		accessTokenRepo: accessTokenRepo,
-		recipientRepo:   recipientRepo,
-		versionRepo:     versionRepo,
-		tokenTTLHours:   tokenTTLHours,
-		publicURL:       publicURL,
+		documentRepo:      documentRepo,
+		accessTokenRepo:   accessTokenRepo,
+		recipientRepo:     recipientRepo,
+		versionRepo:       versionRepo,
+		signerRoleRepo:    signerRoleRepo,
+		fieldResponseRepo: fieldResponseRepo,
+		pdfRenderer:       pdfRenderer,
+		storageAdapter:    storageAdapter,
+		storageEnabled:    storageEnabled,
+		tokenTTLHours:     tokenTTLHours,
+		publicURL:         publicURL,
 	}
 }
 
@@ -137,8 +150,30 @@ func (s *ReadOnlyViewService) GetReadOnlyView(ctx context.Context, token string)
 }
 
 // GetReadOnlyViewPDF returns the read-only PDF bytes for a public token.
-func (s *ReadOnlyViewService) GetReadOnlyViewPDF(context.Context, string) ([]byte, string, error) {
-	return nil, "", errReadOnlyViewNotImplemented
+func (s *ReadOnlyViewService) GetReadOnlyViewPDF(ctx context.Context, token string) ([]byte, string, error) {
+	accessToken, err := s.validateReadOnlyViewToken(ctx, token)
+	if err != nil {
+		return nil, "", err
+	}
+
+	doc, err := s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, "", entity.ErrDocumentNotFound
+	}
+
+	switch doc.Status {
+	case entity.DocumentStatusCompleted:
+		return s.getCompletedReadOnlyViewPDF(ctx, doc)
+	case entity.DocumentStatusPreparingSignature,
+		entity.DocumentStatusReadyToSign,
+		entity.DocumentStatusSigning:
+		return s.renderReadOnlyViewPreviewPDF(ctx, doc)
+	default:
+		return nil, "", errors.New("PDF is not available")
+	}
 }
 
 func (s *ReadOnlyViewService) buildReadOnlyViewURL(token string) string {
@@ -208,4 +243,81 @@ func (s *ReadOnlyViewService) readOnlyViewContent(ctx context.Context, doc *enti
 	}
 
 	return content, nil
+}
+
+func (s *ReadOnlyViewService) getCompletedReadOnlyViewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	if !s.storageEnabled || s.storageAdapter == nil {
+		return nil, "", errors.New("signed PDF storage is disabled")
+	}
+
+	storageKey := completedPDFStorageKey(doc.CompletedPDFURL)
+	if storageKey == "" {
+		return nil, "", errors.New("signed PDF not available for this document")
+	}
+
+	pdfData, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: storageKey})
+	if err != nil {
+		return nil, "", fmt.Errorf("download signed PDF: %w", err)
+	}
+
+	return pdfData, signedDocumentFilename(doc), nil
+}
+
+func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	if s.pdfRenderer == nil {
+		return nil, "", errors.New("PDF is not available")
+	}
+
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find template version: %w", err)
+	}
+	if version == nil {
+		return nil, "", fmt.Errorf("find template version: %w", entity.ErrVersionNotFound)
+	}
+
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse portable document: %w", err)
+	}
+	if portableDoc == nil {
+		return nil, "", errors.New("document has no content")
+	}
+
+	recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID)
+	if err != nil {
+		return nil, "", fmt.Errorf("load recipients: %w", err)
+	}
+
+	signerRoles, err := s.signerRoleRepo.FindByVersionID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", fmt.Errorf("load signer roles: %w", err)
+	}
+
+	var injectables map[string]any
+	if doc.InjectedValuesSnapshot != nil {
+		_ = json.Unmarshal(doc.InjectedValuesSnapshot, &injectables)
+	}
+
+	var fieldResponses map[string]json.RawMessage
+	if s.fieldResponseRepo != nil {
+		fieldResponses = loadFieldResponseMap(ctx, s.fieldResponseRepo, doc.ID)
+	}
+
+	renderResult, err := s.pdfRenderer.RenderPreview(ctx, &port.RenderPreviewRequest{
+		Document:         portableDoc,
+		Injectables:      injectables,
+		SignerRoleValues: buildSignerRoleValues(recipients, signerRoles, portableDoc.SignerRoles),
+		FieldResponses:   fieldResponses,
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("render preview PDF: %w", err)
+	}
+
+	filename := signedDocumentFilename(doc)
+	if strings.TrimSpace(renderResult.Filename) != "" {
+		filename = renderResult.Filename
+	}
+
+	return renderResult.PDF, filename, nil
 }

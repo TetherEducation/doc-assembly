@@ -29,7 +29,7 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 	recipientRepo := &readOnlyViewRecipientRepoFake{
 		recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: docID}},
 	}
-	service := NewReadOnlyViewService(documentRepo, accessTokenRepo, recipientRepo, &readOnlyViewVersionRepoFake{}, 48, "https://public.example.test/")
+	service := NewReadOnlyViewService(documentRepo, accessTokenRepo, recipientRepo, &readOnlyViewVersionRepoFake{}, nil, nil, nil, nil, false, 48, "https://public.example.test/")
 
 	before := time.Now().UTC()
 	result, err := service.CreateReadOnlyViewLink(ctx, docID)
@@ -54,7 +54,7 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 
 func TestReadOnlyViewService_CreateReadOnlyViewLink_DocumentNotFound(t *testing.T) {
 	documentRepo := &readOnlyViewDocumentRepoFake{err: entity.ErrDocumentNotFound}
-	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, &readOnlyViewRecipientRepoFake{}, &readOnlyViewVersionRepoFake{}, 48, "")
+	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, &readOnlyViewRecipientRepoFake{}, &readOnlyViewVersionRepoFake{}, nil, nil, nil, nil, false, 48, "")
 
 	result, err := service.CreateReadOnlyViewLink(context.Background(), "missing-doc")
 
@@ -98,7 +98,7 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_InvalidStateDoesNotPersistTo
 		t.Run(tt.name, func(t *testing.T) {
 			accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
 			recipientRepo := &readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: tt.doc.ID}}}
-			service := NewReadOnlyViewService(&readOnlyViewDocumentRepoFake{doc: tt.doc}, accessTokenRepo, recipientRepo, &readOnlyViewVersionRepoFake{}, 48, "")
+			service := NewReadOnlyViewService(&readOnlyViewDocumentRepoFake{doc: tt.doc}, accessTokenRepo, recipientRepo, &readOnlyViewVersionRepoFake{}, nil, nil, nil, nil, false, 48, "")
 
 			result, err := service.CreateReadOnlyViewLink(context.Background(), tt.doc.ID)
 
@@ -118,6 +118,11 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_NoRecipientsDoesNotPersistTo
 		accessTokenRepo,
 		&readOnlyViewRecipientRepoFake{},
 		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
 		48,
 		"",
 	)
@@ -138,6 +143,11 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_RecipientLookupFailureDoesNo
 		accessTokenRepo,
 		&readOnlyViewRecipientRepoFake{err: lookupErr},
 		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
 		48,
 		"",
 	)
@@ -159,6 +169,11 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_TokenCreateFailure(t *testin
 		accessTokenRepo,
 		&readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: "doc-123"}}},
 		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
 		48,
 		"",
 	)
@@ -236,6 +251,11 @@ func TestReadOnlyViewService_GetReadOnlyView_RejectsInvalidMissingExpiredOrWrong
 				&readOnlyViewAccessTokenRepoFake{found: tt.stored, findErr: tt.repoErr},
 				&readOnlyViewRecipientRepoFake{},
 				&readOnlyViewVersionRepoFake{},
+				nil,
+				nil,
+				nil,
+				nil,
+				false,
 				48,
 				"",
 			)
@@ -309,6 +329,11 @@ func newReadOnlyViewGetServiceWithToken(status entity.DocumentStatus, expiresAt 
 			ID:               versionID,
 			ContentStructure: mustReadOnlyViewPortableDocContent(),
 		}},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
 		48,
 		"",
 	)
