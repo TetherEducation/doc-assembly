@@ -1,0 +1,3 @@
+display_name: Doc-Assembly Signing Lifecycle
+short_description: Workflows for internal reset, deprecate, Documenso cleanup, and signing UI validation.
+default_prompt: Use this when changing or validating doc-assembly signing lifecycle flows, especially internal reset, signed document deprecate, Documenso cleanup, and signing UI actions.
