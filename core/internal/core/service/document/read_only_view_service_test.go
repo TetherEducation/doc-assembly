@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -44,101 +45,103 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 	assert.WithinDuration(t, before, accessTokenRepo.created.CreatedAt, after.Sub(before)+time.Second)
 }
 
-type readOnlyViewDocumentRepoFake struct {
-	doc      *entity.Document
-	findByID string
+func TestReadOnlyViewService_CreateReadOnlyViewLink_DocumentNotFound(t *testing.T) {
+	documentRepo := &readOnlyViewDocumentRepoFake{err: entity.ErrDocumentNotFound}
+	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, 48, "")
+
+	result, err := service.CreateReadOnlyViewLink(context.Background(), "missing-doc")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, entity.ErrDocumentNotFound)
+	assert.ErrorContains(t, err, "find document")
 }
 
-func (f *readOnlyViewDocumentRepoFake) Create(context.Context, *entity.Document) (string, error) {
-	panic("not implemented")
+func TestReadOnlyViewService_CreateReadOnlyViewLink_InvalidStateDoesNotPersistToken(t *testing.T) {
+	expiredAt := time.Now().UTC().Add(-time.Hour)
+	tests := []struct {
+		name string
+		doc  *entity.Document
+	}{
+		{
+			name: "cancelled",
+			doc: &entity.Document{
+				ID:     "doc-cancelled",
+				Status: entity.DocumentStatusCancelled,
+			},
+		},
+		{
+			name: "invalidated",
+			doc: &entity.Document{
+				ID:     "doc-invalidated",
+				Status: entity.DocumentStatusInvalidated,
+			},
+		},
+		{
+			name: "expired",
+			doc: &entity.Document{
+				ID:        "doc-expired",
+				Status:    entity.DocumentStatusReadyToSign,
+				ExpiresAt: &expiredAt,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+			service := NewReadOnlyViewService(&readOnlyViewDocumentRepoFake{doc: tt.doc}, accessTokenRepo, 48, "")
+
+			result, err := service.CreateReadOnlyViewLink(context.Background(), tt.doc.ID)
+
+			require.Error(t, err)
+			assert.Nil(t, result)
+			assert.ErrorIs(t, err, entity.ErrInvalidDocumentState)
+			assert.Nil(t, accessTokenRepo.created)
+		})
+	}
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLink_TokenCreateFailure(t *testing.T) {
+	createErr := errors.New("insert token failed")
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{err: createErr}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{ID: "doc-123", Status: entity.DocumentStatusReadyToSign}},
+		accessTokenRepo,
+		48,
+		"",
+	)
+
+	result, err := service.CreateReadOnlyViewLink(context.Background(), "doc-123")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, createErr)
+	assert.ErrorContains(t, err, "create read-only view token")
+}
+
+type readOnlyViewDocumentRepoFake struct {
+	port.DocumentRepository
+	doc      *entity.Document
+	err      error
+	findByID string
 }
 
 func (f *readOnlyViewDocumentRepoFake) FindByID(_ context.Context, id string) (*entity.Document, error) {
 	f.findByID = id
-	return f.doc, nil
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindByIDWithRecipients(context.Context, string) (*entity.DocumentWithRecipients, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindByWorkspace(context.Context, string, port.DocumentFilters) ([]*entity.DocumentListItem, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindByClientExternalRef(context.Context, string, string) ([]*entity.Document, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindByTemplateVersion(context.Context, string) ([]*entity.DocumentListItem, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindExpired(context.Context, int) ([]*entity.Document, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) Update(context.Context, *entity.Document) error {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) UpdateStatus(context.Context, string, entity.DocumentStatus) error {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) Delete(context.Context, string) error {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) CountByWorkspace(context.Context, string) (int, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) CountByStatus(context.Context, string, entity.DocumentStatus) (int, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindInternalCreateReplay(context.Context, string, string, string, string) (string, bool, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) FindActiveByLogicalKey(context.Context, string, string, string) (string, bool, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewDocumentRepoFake) InternalCreateOrReplay(context.Context, *port.InternalCreateRequest) (*port.InternalCreateResult, error) {
-	panic("not implemented")
+	return f.doc, f.err
 }
 
 type readOnlyViewAccessTokenRepoFake struct {
+	port.DocumentAccessTokenRepository
 	created *entity.DocumentAccessToken
+	err     error
 }
 
 func (f *readOnlyViewAccessTokenRepoFake) Create(_ context.Context, token *entity.DocumentAccessToken) error {
+	if f.err != nil {
+		return f.err
+	}
 	f.created = token
 	return nil
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) FindByToken(context.Context, string) (*entity.DocumentAccessToken, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) FindActiveByRecipientAndType(context.Context, string, string) (*entity.DocumentAccessToken, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) FindActiveByDocumentAndRecipientAndType(context.Context, string, string, string) (*entity.DocumentAccessToken, error) {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) MarkAsUsed(context.Context, string) error {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) InvalidateByDocumentID(context.Context, string) error {
-	panic("not implemented")
-}
-
-func (f *readOnlyViewAccessTokenRepoFake) CountRecentByDocumentAndRecipient(context.Context, string, string, time.Time) (int, error) {
-	panic("not implemented")
 }

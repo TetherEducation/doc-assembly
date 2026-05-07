@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -42,7 +43,7 @@ func NewReadOnlyViewService(
 func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("find document: %w", err)
 	}
 	if doc == nil {
 		return nil, entity.ErrDocumentNotFound
@@ -53,7 +54,7 @@ func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, docume
 
 	tokenStr, err := generateAccessToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate read-only view token: %w", err)
 	}
 
 	now := time.Now().UTC()
@@ -65,7 +66,7 @@ func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, docume
 		CreatedAt:  now,
 	}
 	if err := s.accessTokenRepo.Create(ctx, accessToken); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create read-only view token: %w", err)
 	}
 
 	return &documentuc.CreateReadOnlyViewLinkResult{
