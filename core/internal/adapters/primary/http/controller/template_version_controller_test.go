@@ -3,6 +3,7 @@
 package controller_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -630,6 +631,70 @@ func TestTemplateVersionController_CancelSchedule(t *testing.T) {
 
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
+}
+
+func TestTemplateVersionController_PromoteVersionAsNewTemplateUsesPersistedTemplateID(t *testing.T) {
+	pool := testhelper.GetTestPool(t)
+	ts := testhelper.NewTestServer(t, pool)
+	client := testhelper.NewHTTPClient(t, ts.URL())
+
+	tenantID := testhelper.CreateTestTenant(t, pool, "Promotion Tenant", "TVPR01")
+	defer testhelper.CleanupTenant(t, pool, tenantID)
+
+	prodWorkspaceID := testhelper.CreateTestWorkspace(t, pool, &tenantID, "Promotion Workspace", entity.WorkspaceTypeClient)
+	defer testhelper.CleanupWorkspace(t, pool, prodWorkspaceID)
+
+	sandboxWorkspaceID := testhelper.CreateTestSandboxWorkspace(t, pool, prodWorkspaceID)
+	defer testhelper.CleanupWorkspace(t, pool, sandboxWorkspaceID)
+
+	editor := testhelper.CreateTestUser(t, pool, "editor-promote@test.com", "Editor", nil)
+	defer testhelper.CleanupUser(t, pool, editor.ID)
+	testhelper.CreateTestWorkspaceMember(t, pool, prodWorkspaceID, editor.ID, entity.WorkspaceRoleEditor, nil)
+
+	sourceTemplateID := testhelper.CreateTestTemplate(t, pool, sandboxWorkspaceID, "Sandbox Promotion Source", nil)
+	defer testhelper.CleanupTemplate(t, pool, sourceTemplateID)
+
+	sourceVersionID := testhelper.CreateTestTemplateVersion(
+		t,
+		pool,
+		sourceTemplateID,
+		1,
+		"Published Sandbox Version",
+		entity.VersionStatusPublished,
+	)
+
+	req := dto.PromoteVersionRequest{
+		Mode:        dto.PromotionModeNewTemplate,
+		VersionName: ptrString("Promoted Version"),
+	}
+	resp, body := client.
+		WithAuth(editor.BearerHeader).
+		WithWorkspaceID(prodWorkspaceID).
+		WithHeader("X-Sandbox-Mode", "false").
+		POST("/api/v1/content/templates/"+sourceTemplateID+"/versions/"+sourceVersionID+"/promote", req)
+
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+
+	var promoteResp dto.PromoteAsNewTemplateResponse
+	err := json.Unmarshal(body, &promoteResp)
+	require.NoError(t, err)
+	defer testhelper.CleanupTemplate(t, pool, promoteResp.Template.ID)
+
+	assert.Equal(t, prodWorkspaceID, promoteResp.Template.WorkspaceID)
+	assert.Equal(t, promoteResp.Template.ID, promoteResp.Version.TemplateID)
+
+	var persistedTemplateID string
+	err = pool.QueryRow(
+		context.Background(),
+		`SELECT template_id FROM content.template_versions WHERE id = $1`,
+		promoteResp.Version.ID,
+	).Scan(&persistedTemplateID)
+	require.NoError(t, err)
+	assert.Equal(t, promoteResp.Template.ID, persistedTemplateID)
+}
+
+func ptrString(value string) *string {
+	return &value
 }
 
 // --- Injectable Tests ---

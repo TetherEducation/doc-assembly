@@ -544,17 +544,21 @@ func (s *TemplateVersionService) promoteAsNewTemplate(ctx context.Context, sourc
 	}
 
 	newTemplate := s.buildPromotedTemplate(cmd.TargetWorkspaceID, cmd.TargetFolderID, sourceTemplate.Title)
-	if _, err := s.templateRepo.Create(ctx, newTemplate); err != nil {
+	templateID, err := s.templateRepo.Create(ctx, newTemplate)
+	if err != nil {
 		return nil, fmt.Errorf("creating template: %w", err)
 	}
+	newTemplate.ID = templateID
 
 	versionName := s.resolvePromotionVersionName(cmd.VersionName)
 	description := s.buildPromotionDescription(sourceTemplate.Title, sourceVersion.VersionNumber)
 
 	newVersion := s.buildNewVersion(newTemplate.ID, 1, versionName, &description, &cmd.PromotedBy, sourceVersion.ContentStructure)
-	if _, err := s.versionRepo.Create(ctx, newVersion); err != nil {
+	versionID, err := s.versionRepo.Create(ctx, newVersion)
+	if err != nil {
 		return nil, fmt.Errorf("creating version: %w", err)
 	}
+	newVersion.ID = versionID
 
 	s.copyVersionRelatedData(ctx, sourceVersion.ID, newVersion.ID)
 	s.copyTemplateTags(ctx, sourceTemplate.Tags, newTemplate.ID)
@@ -605,9 +609,11 @@ func (s *TemplateVersionService) promoteAsNewVersion(ctx context.Context, source
 	description := s.buildPromotionDescription(sourceTemplate.Title, sourceVersion.VersionNumber)
 	newVersion := s.buildNewVersion(*cmd.TargetTemplateID, versionNumber, versionName, &description, &cmd.PromotedBy, sourceVersion.ContentStructure)
 
-	if _, err := s.versionRepo.Create(ctx, newVersion); err != nil {
+	versionID, err := s.versionRepo.Create(ctx, newVersion)
+	if err != nil {
 		return nil, fmt.Errorf("creating version: %w", err)
 	}
+	newVersion.ID = versionID
 
 	s.copyVersionRelatedData(ctx, sourceVersion.ID, newVersion.ID)
 
