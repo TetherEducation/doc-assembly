@@ -264,8 +264,8 @@ func (s *ReadOnlyViewService) getCompletedReadOnlyViewPDF(ctx context.Context, d
 }
 
 func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
-	if s.pdfRenderer == nil {
-		return nil, "", errors.New("PDF is not available")
+	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
+		return nil, "", err
 	}
 
 	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
@@ -296,12 +296,14 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 
 	var injectables map[string]any
 	if doc.InjectedValuesSnapshot != nil {
-		_ = json.Unmarshal(doc.InjectedValuesSnapshot, &injectables)
+		if err := json.Unmarshal(doc.InjectedValuesSnapshot, &injectables); err != nil {
+			return nil, "", fmt.Errorf("parse injected values snapshot: %w", err)
+		}
 	}
 
-	var fieldResponses map[string]json.RawMessage
-	if s.fieldResponseRepo != nil {
-		fieldResponses = loadFieldResponseMap(ctx, s.fieldResponseRepo, doc.ID)
+	fieldResponses, err := loadReadOnlyViewFieldResponseMap(ctx, s.fieldResponseRepo, doc.ID)
+	if err != nil {
+		return nil, "", fmt.Errorf("load field responses: %w", err)
 	}
 
 	renderResult, err := s.pdfRenderer.RenderPreview(ctx, &port.RenderPreviewRequest{
@@ -313,6 +315,9 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 	if err != nil {
 		return nil, "", fmt.Errorf("render preview PDF: %w", err)
 	}
+	if renderResult == nil || len(renderResult.PDF) == 0 {
+		return nil, "", errors.New("PDF is not available")
+	}
 
 	filename := signedDocumentFilename(doc)
 	if strings.TrimSpace(renderResult.Filename) != "" {
@@ -320,4 +325,27 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 	}
 
 	return renderResult.PDF, filename, nil
+}
+
+func (s *ReadOnlyViewService) validateReadOnlyViewPreviewPDFDependencies() error {
+	if s.pdfRenderer == nil || s.versionRepo == nil || s.recipientRepo == nil || s.signerRoleRepo == nil || s.fieldResponseRepo == nil {
+		return errors.New("PDF is not available: preview PDF renderer is not configured")
+	}
+	return nil
+}
+
+func loadReadOnlyViewFieldResponseMap(ctx context.Context, repo port.DocumentFieldResponseRepository, documentID string) (map[string]json.RawMessage, error) {
+	responses, err := repo.FindByDocumentID(ctx, documentID)
+	if err != nil {
+		return nil, err
+	}
+	if len(responses) == 0 {
+		return nil, nil
+	}
+
+	m := make(map[string]json.RawMessage, len(responses))
+	for _, resp := range responses {
+		m[resp.FieldID] = resp.Response
+	}
+	return m, nil
 }

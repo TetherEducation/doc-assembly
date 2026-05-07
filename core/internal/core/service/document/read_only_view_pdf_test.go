@@ -105,6 +105,186 @@ func TestReadOnlyViewService_GetReadOnlyViewPDF_RendersPreviewPDFForSigningState
 	assert.Equal(t, port.SignerRoleValue{Name: "Jane Doe", Email: "jane@example.test"}, renderer.request.SignerRoleValues["portable-signer"])
 }
 
+func TestReadOnlyViewService_GetReadOnlyViewPDF_FailsClosedWhenPreviewDependenciesMissing(t *testing.T) {
+	baseDeps := readOnlyViewPDFServiceDeps{
+		doc: &entity.Document{
+			ID:                "doc-123",
+			TemplateVersionID: "version-123",
+			Status:            entity.DocumentStatusSigning,
+		},
+	}
+
+	tests := []struct {
+		name    string
+		service *ReadOnlyViewService
+	}{
+		{
+			name: "nil renderer",
+			service: NewReadOnlyViewService(
+				&readOnlyViewDocumentRepoFake{doc: baseDeps.doc},
+				&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken("doc-123", "view-token", time.Now().UTC().Add(time.Hour), entity.TokenTypeViewOnly)},
+				&readOnlyViewRecipientRepoFake{},
+				&readOnlyViewVersionRepoFake{version: &entity.TemplateVersion{ID: "version-123", ContentStructure: mustReadOnlyViewPDFPortableDocContent()}},
+				&readOnlyViewSignerRoleRepoFake{},
+				&readOnlyViewFieldResponseRepoFake{},
+				nil,
+				nil,
+				false,
+				48,
+				"",
+			),
+		},
+		{
+			name: "nil version repo",
+			service: NewReadOnlyViewService(
+				&readOnlyViewDocumentRepoFake{doc: baseDeps.doc},
+				&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken("doc-123", "view-token", time.Now().UTC().Add(time.Hour), entity.TokenTypeViewOnly)},
+				&readOnlyViewRecipientRepoFake{},
+				nil,
+				&readOnlyViewSignerRoleRepoFake{},
+				&readOnlyViewFieldResponseRepoFake{},
+				&readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF")}},
+				nil,
+				false,
+				48,
+				"",
+			),
+		},
+		{
+			name: "nil recipient repo",
+			service: NewReadOnlyViewService(
+				&readOnlyViewDocumentRepoFake{doc: baseDeps.doc},
+				&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken("doc-123", "view-token", time.Now().UTC().Add(time.Hour), entity.TokenTypeViewOnly)},
+				nil,
+				&readOnlyViewVersionRepoFake{version: &entity.TemplateVersion{ID: "version-123", ContentStructure: mustReadOnlyViewPDFPortableDocContent()}},
+				&readOnlyViewSignerRoleRepoFake{},
+				&readOnlyViewFieldResponseRepoFake{},
+				&readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF")}},
+				nil,
+				false,
+				48,
+				"",
+			),
+		},
+		{
+			name: "nil signer role repo",
+			service: NewReadOnlyViewService(
+				&readOnlyViewDocumentRepoFake{doc: baseDeps.doc},
+				&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken("doc-123", "view-token", time.Now().UTC().Add(time.Hour), entity.TokenTypeViewOnly)},
+				&readOnlyViewRecipientRepoFake{},
+				&readOnlyViewVersionRepoFake{version: &entity.TemplateVersion{ID: "version-123", ContentStructure: mustReadOnlyViewPDFPortableDocContent()}},
+				nil,
+				&readOnlyViewFieldResponseRepoFake{},
+				&readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF")}},
+				nil,
+				false,
+				48,
+				"",
+			),
+		},
+		{
+			name: "nil field response repo",
+			service: NewReadOnlyViewService(
+				&readOnlyViewDocumentRepoFake{doc: baseDeps.doc},
+				&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken("doc-123", "view-token", time.Now().UTC().Add(time.Hour), entity.TokenTypeViewOnly)},
+				&readOnlyViewRecipientRepoFake{},
+				&readOnlyViewVersionRepoFake{version: &entity.TemplateVersion{ID: "version-123", ContentStructure: mustReadOnlyViewPDFPortableDocContent()}},
+				&readOnlyViewSignerRoleRepoFake{},
+				nil,
+				&readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF")}},
+				nil,
+				false,
+				48,
+				"",
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pdf, filename, err := tt.service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+			require.Error(t, err)
+			assert.Nil(t, pdf)
+			assert.Empty(t, filename)
+			assert.ErrorContains(t, err, "PDF is not available")
+		})
+	}
+}
+
+func TestReadOnlyViewService_GetReadOnlyViewPDF_RejectsInvalidInjectedSnapshot(t *testing.T) {
+	renderer := &readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF-preview")}}
+	service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
+		doc: &entity.Document{
+			ID:                     "doc-123",
+			TemplateVersionID:      "version-123",
+			Status:                 entity.DocumentStatusSigning,
+			InjectedValuesSnapshot: json.RawMessage(`{"customerName":`),
+		},
+		pdfRenderer: renderer,
+	})
+
+	pdf, filename, err := service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+	require.Error(t, err)
+	assert.Nil(t, pdf)
+	assert.Empty(t, filename)
+	assert.ErrorContains(t, err, "parse injected values snapshot")
+	assert.Nil(t, renderer.request)
+}
+
+func TestReadOnlyViewService_GetReadOnlyViewPDF_ReturnsFieldResponseLookupError(t *testing.T) {
+	renderer := &readOnlyViewPDFRendererFake{result: &port.RenderPreviewResult{PDF: []byte("%PDF-preview")}}
+	service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
+		doc: &entity.Document{
+			ID:                "doc-123",
+			TemplateVersionID: "version-123",
+			Status:            entity.DocumentStatusSigning,
+		},
+		fieldResponseErr: errors.New("database unavailable"),
+		pdfRenderer:      renderer,
+	})
+
+	pdf, filename, err := service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+	require.Error(t, err)
+	assert.Nil(t, pdf)
+	assert.Empty(t, filename)
+	assert.ErrorContains(t, err, "load field responses")
+	assert.ErrorContains(t, err, "database unavailable")
+	assert.Nil(t, renderer.request)
+}
+
+func TestReadOnlyViewService_GetReadOnlyViewPDF_RejectsEmptyRendererResult(t *testing.T) {
+	tests := []struct {
+		name   string
+		result *port.RenderPreviewResult
+	}{
+		{name: "nil result", result: nil},
+		{name: "empty pdf", result: &port.RenderPreviewResult{PDF: nil}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
+				doc: &entity.Document{
+					ID:                "doc-123",
+					TemplateVersionID: "version-123",
+					Status:            entity.DocumentStatusSigning,
+				},
+				pdfRenderer: &readOnlyViewPDFRendererFake{result: tt.result},
+			})
+
+			pdf, filename, err := service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+			require.Error(t, err)
+			assert.Nil(t, pdf)
+			assert.Empty(t, filename)
+			assert.ErrorContains(t, err, "PDF is not available")
+		})
+	}
+}
+
 func TestReadOnlyViewService_GetReadOnlyViewPDF_RejectsWrongTokenType(t *testing.T) {
 	service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
 		tokenType: entity.TokenTypeSigning,
@@ -143,15 +323,16 @@ func TestReadOnlyViewService_GetReadOnlyViewPDF_StorageDisabledForCompleted(t *t
 }
 
 type readOnlyViewPDFServiceDeps struct {
-	tokenType      string
-	doc            *entity.Document
-	version        *entity.TemplateVersion
-	recipients     []*entity.DocumentRecipient
-	signerRoles    []*entity.TemplateVersionSignerRole
-	fieldResponses []entity.DocumentFieldResponse
-	pdfRenderer    port.PDFRenderer
-	storageAdapter port.StorageAdapter
-	storageEnabled bool
+	tokenType        string
+	doc              *entity.Document
+	version          *entity.TemplateVersion
+	recipients       []*entity.DocumentRecipient
+	signerRoles      []*entity.TemplateVersionSignerRole
+	fieldResponses   []entity.DocumentFieldResponse
+	fieldResponseErr error
+	pdfRenderer      port.PDFRenderer
+	storageAdapter   port.StorageAdapter
+	storageEnabled   bool
 }
 
 func newReadOnlyViewPDFService(deps readOnlyViewPDFServiceDeps) *ReadOnlyViewService {
@@ -179,7 +360,7 @@ func newReadOnlyViewPDFService(deps readOnlyViewPDFServiceDeps) *ReadOnlyViewSer
 		&readOnlyViewRecipientRepoFake{recipients: deps.recipients},
 		&readOnlyViewVersionRepoFake{version: deps.version},
 		&readOnlyViewSignerRoleRepoFake{roles: deps.signerRoles},
-		&readOnlyViewFieldResponseRepoFake{responses: deps.fieldResponses},
+		&readOnlyViewFieldResponseRepoFake{responses: deps.fieldResponses, err: deps.fieldResponseErr},
 		deps.pdfRenderer,
 		deps.storageAdapter,
 		deps.storageEnabled,
