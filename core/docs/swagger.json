@@ -3659,6 +3659,82 @@
                 }
             }
         },
+        "/api/v1/documents/{documentId}/deprecate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Deprecate completed document",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace ID",
+                        "name": "X-Workspace-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deprecation request",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/documents/{documentId}/events": {
             "get": {
                 "consumes": [
@@ -4142,6 +4218,183 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/documents/reset": {
+            "post": {
+                "description": "Recreates an unsigned logical document using force-create semantics and reruns Mapper, Init, and Injectors",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Reset unsigned document via internal API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tenant business code",
+                        "name": "X-Tenant-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document type code",
+                        "name": "X-Document-Type",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "External ID",
+                        "name": "X-External-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Transactional ID",
+                        "name": "X-Transactional-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Internal reset request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/documents/{documentId}/deprecate": {
+            "post": {
+                "description": "Invalidates a completed document and attempts best-effort cleanup in the signing provider",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Deprecate completed document via internal API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deprecation request",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
@@ -10852,6 +11105,28 @@
                 }
             }
         },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "providerCleanup": {
+                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse": {
             "type": "object",
             "properties": {
@@ -11456,6 +11731,20 @@
                 "PromotionModeNewTemplate",
                 "PromotionModeNewVersion"
             ]
+        },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
         },
         "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse": {
             "type": "object",

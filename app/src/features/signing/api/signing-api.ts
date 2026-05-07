@@ -7,6 +7,8 @@ import type {
   DocumentEvent,
   SigningURLResponse,
   DocumentListFilters,
+  DeprecateDocumentRequest,
+  DeprecateDocumentResponse,
 } from '../types'
 
 const BASE_PATH = '/documents'
@@ -30,6 +32,11 @@ export const signingApi = {
   cancel: (id: string) =>
     apiClient
       .post<void>(`${BASE_PATH}/${id}/cancel`)
+      .then((r) => r.data),
+
+  deprecate: (id: string, req: DeprecateDocumentRequest = {}) =>
+    apiClient
+      .post<DeprecateDocumentResponse>(`${BASE_PATH}/${id}/deprecate`, req)
       .then((r) => r.data),
 
   refresh: (id: string) =>

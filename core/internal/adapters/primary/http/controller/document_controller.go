@@ -74,6 +74,9 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 		// Cancel document
 		docs.POST("/:documentId/cancel", middleware.RequireOperator(), c.CancelDocument)
 
+		// Deprecate completed document
+		docs.POST("/:documentId/deprecate", middleware.RequireOperator(), c.DeprecateDocument)
+
 		// Send reminder to pending recipients
 		docs.POST("/:documentId/remind", middleware.RequireOperator(), c.SendReminder)
 
@@ -377,6 +380,41 @@ func (c *DocumentController) CancelDocument(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"status": "cancelled",
 	})
+}
+
+// DeprecateDocument deprecates a completed document.
+// @Summary Deprecate completed document
+// @Tags Documents
+// @Accept json
+// @Produce json
+// @Param X-Workspace-ID header string true "Workspace ID"
+// @Param documentId path string true "Document ID"
+// @Param request body dto.InternalDeprecateDocumentRequest false "Deprecation request"
+// @Success 200 {object} dto.InternalDeprecateDocumentResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/{documentId}/deprecate [post]
+func (c *DocumentController) DeprecateDocument(ctx *gin.Context) {
+	documentID := ctx.Param("documentId")
+
+	var req dto.InternalDeprecateDocumentRequest
+	if ctx.Request.ContentLength > 0 {
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, dto.NewErrorResponse(err))
+			return
+		}
+	}
+
+	result, err := c.documentUC.DeprecateDocument(ctx.Request.Context(), documentID, req.Reason)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, buildDeprecateDocumentResponse(result))
 }
 
 // GetDocumentPDF returns the signed PDF for a completed document.

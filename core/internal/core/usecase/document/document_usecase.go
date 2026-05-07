@@ -35,6 +35,19 @@ type UpdateDocumentStatusCommand struct {
 	RecipientStatus     *entity.RecipientStatus
 }
 
+// ProviderCleanupResult describes a best-effort provider cleanup/deprecation action.
+type ProviderCleanupResult struct {
+	Action string
+	Status string
+	Reason string
+}
+
+// DeprecateDocumentResult contains the document projection after deprecation.
+type DeprecateDocumentResult struct {
+	Document        *entity.Document
+	ProviderCleanup *ProviderCleanupResult
+}
+
 // DocumentUseCase defines the input port for document operations.
 type DocumentUseCase interface {
 	// CreateAndSendDocument creates a document, generates the PDF, and sends it for signing.
@@ -57,6 +70,9 @@ type DocumentUseCase interface {
 
 	// CancelDocument cancels/voids a document that is pending signatures.
 	CancelDocument(ctx context.Context, documentID string) error
+
+	// DeprecateDocument invalidates a completed document and best-effort cleans it up in the signing provider.
+	DeprecateDocument(ctx context.Context, documentID string, reason *string) (*DeprecateDocumentResult, error)
 
 	// HandleWebhookEvent processes an incoming webhook event from the signing provider.
 	HandleWebhookEvent(ctx context.Context, event *port.WebhookEvent) error

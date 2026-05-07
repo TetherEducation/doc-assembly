@@ -163,6 +163,56 @@ func (s *InternalDocumentService) CreateDocument(
 	return result, nil
 }
 
+// ResetUnsignedDocument recreates a logical document with force-create semantics after ensuring the
+// current active document, when present, has not completed signing.
+func (s *InternalDocumentService) ResetUnsignedDocument(
+	ctx context.Context,
+	cmd documentuc.InternalCreateCommand,
+) (*documentuc.InternalCreateResult, error) {
+	resolved, err := s.resolveTemplateContext(ctx, cmd)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ensureActiveDocumentCanReset(ctx, cmd, resolved); err != nil {
+		return nil, err
+	}
+
+	cmd.ForceCreate = true
+	if cmd.SupersedeReason == nil {
+		reason := "internal reset"
+		cmd.SupersedeReason = &reason
+	}
+	return s.CreateDocument(ctx, cmd)
+}
+
+func (s *InternalDocumentService) ensureActiveDocumentCanReset(
+	ctx context.Context,
+	cmd documentuc.InternalCreateCommand,
+	resolved *internalResolvedContext,
+) error {
+	activeDocID, ok, err := s.documentRepo.FindActiveByLogicalKey(
+		ctx,
+		resolved.workspace.ID,
+		resolved.documentType.ID,
+		cmd.ExternalID,
+	)
+	if err != nil {
+		return fmt.Errorf("checking active internal document before reset: %w", err)
+	}
+	if !ok {
+		return nil
+	}
+
+	doc, err := s.documentRepo.FindByID(ctx, activeDocID)
+	if err != nil {
+		return fmt.Errorf("loading active internal document before reset: %w", err)
+	}
+	if doc.Status == entity.DocumentStatusCompleted {
+		return entity.ErrInvalidDocumentState
+	}
+	return nil
+}
+
 func (s *InternalDocumentService) findInternalCreateReplay(
 	ctx context.Context,
 	cmd documentuc.InternalCreateCommand,

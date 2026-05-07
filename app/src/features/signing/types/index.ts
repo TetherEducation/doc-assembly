@@ -60,6 +60,20 @@ export interface SigningDocumentDetail extends SigningDocumentListItem {
   fieldResponses?: FieldResponse[]
 }
 
+export interface DeprecateDocumentRequest {
+  reason?: string
+}
+
+export interface DeprecateDocumentResponse {
+  id: string
+  status: SigningDocumentStatus
+  providerCleanup?: {
+    action?: string
+    status: string
+    reason?: string
+  }
+}
+
 export interface CreateDocumentRequest {
   templateVersionId: string
   title: string

@@ -281,7 +281,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		templateVersionRepo,
 		templateResolver,
 	)
-	internalDocController := controller.NewInternalDocumentController(internalDocService)
+	internalDocController := controller.NewInternalDocumentController(internalDocService, documentService)
 
 	// Create mappers
 	injectableMapper := mapper.NewInjectableMapper()

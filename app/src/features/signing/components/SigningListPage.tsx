@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SigningListToolbar } from './SigningListToolbar'
 import { SigningDocumentRow } from './SigningDocumentRow'
 import { BulkActionsToolbar } from './BulkActionsToolbar'
+import { DeprecateDocumentDialog } from './DeprecateDocumentDialog'
 import { useSigningDocuments } from '../hooks/useSigningDocuments'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { DocumentListFilters, SigningDocumentListItem } from '../types'
@@ -24,6 +25,8 @@ export function SigningListPage() {
 
   // Row selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deprecateTarget, setDeprecateTarget] =
+    useState<SigningDocumentListItem | null>(null)
 
   // Debounce search — clear selection when debounced value changes
   useEffect(() => {
@@ -235,6 +238,7 @@ export function SigningListPage() {
                     onToggleSelect={() => handleToggleSelect(doc.id)}
                     onClick={() => handleNavigateToDetail(doc.id)}
                     onView={() => handleNavigateToDetail(doc.id)}
+                    onDeprecate={() => setDeprecateTarget(doc)}
                   />
                 ))}
               </tbody>
@@ -242,6 +246,16 @@ export function SigningListPage() {
           </>
         )}
       </div>
+
+      <DeprecateDocumentDialog
+        open={deprecateTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeprecateTarget(null)
+        }}
+        documentId={deprecateTarget?.id ?? ''}
+        documentTitle={deprecateTarget?.title ?? ''}
+        onSuccess={() => setDeprecateTarget(null)}
+      />
     </div>
   )
 }

@@ -77,6 +77,7 @@ export const Permission = {
   DOCUMENT_VIEW: 'document:view',
   DOCUMENT_CREATE: 'document:create',
   DOCUMENT_CANCEL: 'document:cancel',
+  DOCUMENT_DEPRECATE: 'document:deprecate',
   DOCUMENT_REFRESH: 'document:refresh',
 } as const
 export type Permission = (typeof Permission)[keyof typeof Permission]
@@ -113,6 +114,7 @@ export const WORKSPACE_RULES: Record<WorkspaceRole, Permission[]> = {
     Permission.DOCUMENT_VIEW,
     Permission.DOCUMENT_CREATE,
     Permission.DOCUMENT_CANCEL,
+    Permission.DOCUMENT_DEPRECATE,
     Permission.DOCUMENT_REFRESH,
   ],
   [WorkspaceRole.ADMIN]: [
@@ -135,6 +137,7 @@ export const WORKSPACE_RULES: Record<WorkspaceRole, Permission[]> = {
     Permission.DOCUMENT_VIEW,
     Permission.DOCUMENT_CREATE,
     Permission.DOCUMENT_CANCEL,
+    Permission.DOCUMENT_DEPRECATE,
     Permission.DOCUMENT_REFRESH,
   ],
   [WorkspaceRole.EDITOR]: [
@@ -155,6 +158,7 @@ export const WORKSPACE_RULES: Record<WorkspaceRole, Permission[]> = {
     Permission.DOCUMENT_VIEW,
     Permission.DOCUMENT_CREATE,
     Permission.DOCUMENT_CANCEL,
+    Permission.DOCUMENT_DEPRECATE,
     Permission.DOCUMENT_REFRESH,
   ],
   [WorkspaceRole.VIEWER]: [
@@ -213,6 +217,7 @@ export const SYSTEM_RULES: Record<SystemRole, Permission[]> = {
     Permission.DOCUMENT_VIEW,
     Permission.DOCUMENT_CREATE,
     Permission.DOCUMENT_CANCEL,
+    Permission.DOCUMENT_DEPRECATE,
     Permission.DOCUMENT_REFRESH,
   ],
   [SystemRole.PLATFORM_ADMIN]: [

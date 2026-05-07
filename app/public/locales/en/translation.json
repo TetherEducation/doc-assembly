@@ -1708,6 +1708,9 @@
     "search": "Search documents...",
     "filterByStatus": "Filter by status",
     "allStatuses": "All statuses",
+    "actions": {
+      "deprecate": "Deprecate"
+    },
     "detail": {
       "title": "Document Details",
       "metadata": "Document Information",
@@ -1718,6 +1721,15 @@
       "created": "Created",
       "updated": "Last Updated",
       "expiresAt": "Expires",
+      "deprecate": "Deprecate",
+      "deprecateTitle": "Deprecate Document",
+      "deprecateConfirm": "Are you sure you want to deprecate \"{{title}}\"?",
+      "deprecateWarning": "The signed document will be invalidated in doc-assembly and cleanup will be attempted in the signing provider.",
+      "deprecateReason": "Reason",
+      "deprecateReasonPlaceholder": "Why is this signed document being deprecated?",
+      "deprecateConfirmBtn": "Deprecate Document",
+      "deprecateSuccess": "Document deprecated",
+      "deprecateError": "Failed to deprecate document",
       "actions": {
         "refresh": "Refresh Status",
         "cancel": "Cancel Document",

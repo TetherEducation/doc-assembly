@@ -206,6 +206,29 @@ Lista workspaces del tenant actual con paginación y búsqueda opcional.
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/workspace_controller.go`
 
+### Endpoints de Documentos (`/api/v1/documents`)
+
+Gestión de documentos dentro del workspace actual.
+
+| Método | Endpoint | Descripción | OWNER | ADMIN | EDITOR | OPERATOR | VIEWER |
+|--------|----------|-------------|:-----:|:-----:|:------:|:--------:|:------:|
+| GET | `/documents` | Lista documentos del workspace | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/statistics` | Obtiene estadísticas de documentos | ✅ | ✅ | ✅ | ✅ | ✅ |
+| POST | `/documents` | Crea y envía un documento | ✅ | ✅ | ✅ | ✅ | ❌ |
+| POST | `/documents/batch` | Crea documentos en batch | ✅ | ✅ | ✅ | ✅ | ❌ |
+| GET | `/documents/{documentId}` | Obtiene un documento | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/{documentId}/recipients` | Lista recipients del documento | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/{documentId}/events` | Lista eventos/auditoría del documento | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/{documentId}/recipients/{recipientId}/signing-url` | Obtiene URL de firma para un recipient | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/{documentId}/pdf` | Descarga PDF firmado | ✅ | ✅ | ✅ | ✅ | ✅ |
+| POST | `/documents/{documentId}/refresh` | Refresca estado desde proveedor | ✅ | ✅ | ✅ | ✅ | ❌ |
+| POST | `/documents/{documentId}/cancel` | Cancela un documento no completado | ✅ | ✅ | ✅ | ✅ | ❌ |
+| POST | `/documents/{documentId}/deprecate` | Depreca un documento completado/firmado y ejecuta cleanup best-effort en proveedor | ✅ | ✅ | ✅ | ✅ | ❌ |
+| POST | `/documents/{documentId}/remind` | Envía recordatorio a recipients pendientes | ✅ | ✅ | ✅ | ✅ | ❌ |
+| POST | `/documents/{documentId}/invalidate-tokens` | Invalida/regenera tokens públicos de acceso/firma | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+**Archivo fuente**: `internal/adapters/primary/http/controller/document_controller.go`
+
 ### Endpoints de Gallery (`/api/v1/workspace/gallery`)
 
 Gestión de imágenes del workspace para reutilizarlas en el editor y en render/PDF mediante referencias `storage://`.
@@ -489,6 +512,8 @@ Este endpoint retorna los roles del usuario autenticado de forma condicional:
 | Método | Endpoint | Descripción | Requiere API Key |
 |--------|----------|-------------|:----------------:|
 | POST | `/internal/documents/create` | Crea un documento usando el sistema de extensiones | ✅ |
+| POST | `/internal/documents/reset` | Reemite/reset de contrato no firmado usando `forceCreate=true`, mapper/init/injectors y supersede lógico si existe activo | ✅ |
+| POST | `/internal/documents/{documentId}/deprecate` | Depreca un contrato firmado/completado en doc-assembly y ejecuta cleanup best-effort en el proveedor de firma | ✅ |
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/internal_document_controller.go`
 
@@ -523,6 +548,22 @@ Contrato v1 actual (breaking change):
 ```
 
 `payload` es el único bloque enviado al Mapper como `RawBody`.
+
+### Endpoint `/internal/documents/reset` - Detalle
+
+Reutiliza el contrato de `/internal/documents/create`, pero fuerza `forceCreate=true` desde el servidor. Si existe un documento activo para la clave lógica (`workspace + document type + external ID`) y no está `COMPLETED`, lo supersede y crea uno nuevo reejecutando Mapper, Init e Injectors con el `payload` recibido. Si el activo está `COMPLETED`, responde conflicto.
+
+### Endpoint `/internal/documents/{documentId}/deprecate` - Detalle
+
+Requiere sólo `X-API-Key` y un body opcional:
+
+```json
+{
+  "reason": "replacement signed"
+}
+```
+
+Sólo acepta documentos `COMPLETED`. Marca el documento como `INVALIDATED`, lo deja inactivo y registra evento `DOCUMENT_DEPRECATED`. Si el documento tiene un signing attempt activo con `providerDocumentId`, intenta cleanup/cancel best-effort contra el proveedor y persiste el resultado en el attempt.
 
 **Respuestas:**
 - `201 Created`: create real

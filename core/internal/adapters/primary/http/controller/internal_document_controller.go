@@ -39,15 +39,21 @@ type internalDocHeaders struct {
 // These endpoints are used for service-to-service communication.
 type InternalDocumentController struct {
 	internalDocUC documentuc.InternalDocumentUseCase
+	documentUC    documentuc.DocumentUseCase
 }
 
 // NewInternalDocumentController creates a new internal document controller.
 func NewInternalDocumentController(
 	internalDocUC documentuc.InternalDocumentUseCase,
+	documentUC ...documentuc.DocumentUseCase,
 ) *InternalDocumentController {
-	return &InternalDocumentController{
+	c := &InternalDocumentController{
 		internalDocUC: internalDocUC,
 	}
+	if len(documentUC) > 0 {
+		c.documentUC = documentUC[0]
+	}
+	return c
 }
 
 // RegisterRoutes registers all internal document routes.
@@ -57,6 +63,8 @@ func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, authMi
 	internal.Use(authMiddleware)
 	{
 		internal.POST("/create", c.CreateDocument)
+		internal.POST("/reset", c.ResetDocument)
+		internal.POST("/:documentId/deprecate", c.DeprecateDocument)
 	}
 }
 
@@ -83,6 +91,34 @@ func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, authMi
 //
 //nolint:funlen // HTTP orchestration keeps validation/mapping flow explicit.
 func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
+	c.handleCreateDocument(ctx, false)
+}
+
+// ResetDocument recreates a document via internal API using force-create semantics.
+// @Summary Reset unsigned document via internal API
+// @Description Recreates an unsigned logical document using force-create semantics and reruns Mapper, Init, and Injectors
+// @Tags Internal
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "API Key for authentication"
+// @Param X-Tenant-Code header string true "Tenant business code"
+// @Param X-Workspace-Code header string true "Workspace business code"
+// @Param X-Document-Type header string true "Document type code"
+// @Param X-External-ID header string true "External ID"
+// @Param X-Transactional-ID header string true "Transactional ID"
+// @Param request body dto.InternalCreateDocumentRequest true "Internal reset request"
+// @Success 201 {object} dto.InternalCreateDocumentWithRecipientsResponse
+// @Failure 400 {object} dto.InternalErrorResponse
+// @Failure 401 {object} dto.InternalErrorResponse
+// @Failure 409 {object} dto.InternalErrorResponse
+// @Failure 500 {object} dto.InternalErrorResponse
+// @Router /api/v1/internal/documents/reset [post]
+func (c *InternalDocumentController) ResetDocument(ctx *gin.Context) {
+	c.handleCreateDocument(ctx, true)
+}
+
+//nolint:funlen // HTTP orchestration keeps validation/mapping flow explicit.
+func (c *InternalDocumentController) handleCreateDocument(ctx *gin.Context, reset bool) {
 	h, missing := validateAndExtractHeaders(ctx)
 	if len(missing) > 0 {
 		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
@@ -166,7 +202,12 @@ func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
 		PayloadRaw:      req.Payload,
 	}
 
-	result, err := c.internalDocUC.CreateDocument(ctx.Request.Context(), cmd)
+	var result *documentuc.InternalCreateResult
+	if reset {
+		result, err = c.internalDocUC.ResetUnsignedDocument(ctx.Request.Context(), cmd)
+	} else {
+		result, err = c.internalDocUC.CreateDocument(ctx.Request.Context(), cmd)
+	}
 	if err != nil {
 		HandleError(ctx, err)
 		return
@@ -178,6 +219,65 @@ func (c *InternalDocumentController) CreateDocument(ctx *gin.Context) {
 	}
 
 	ctx.JSON(status, buildCreateDocumentResponse(result, h))
+}
+
+// DeprecateDocument deprecates a completed document via internal API.
+// @Summary Deprecate completed document via internal API
+// @Description Invalidates a completed document and attempts best-effort cleanup in the signing provider
+// @Tags Internal
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "API Key for authentication"
+// @Param documentId path string true "Document ID"
+// @Param request body dto.InternalDeprecateDocumentRequest false "Deprecation request"
+// @Success 200 {object} dto.InternalDeprecateDocumentResponse
+// @Failure 400 {object} dto.InternalErrorResponse
+// @Failure 401 {object} dto.InternalErrorResponse
+// @Failure 404 {object} dto.InternalErrorResponse
+// @Failure 409 {object} dto.InternalErrorResponse
+// @Failure 500 {object} dto.InternalErrorResponse
+// @Router /api/v1/internal/documents/{documentId}/deprecate [post]
+func (c *InternalDocumentController) DeprecateDocument(ctx *gin.Context) {
+	if c.documentUC == nil {
+		ctx.JSON(http.StatusInternalServerError, dto.InternalErrorResponse{
+			Error: "document use case is not configured",
+			Code:  "INTERNAL_ERROR",
+		})
+		return
+	}
+
+	documentID := ctx.Param("documentId")
+	req, ok := readInternalDeprecateRequest(ctx)
+	if !ok {
+		return
+	}
+
+	result, err := c.documentUC.DeprecateDocument(ctx.Request.Context(), documentID, req.Reason)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, buildDeprecateDocumentResponse(result))
+}
+
+func readInternalDeprecateRequest(ctx *gin.Context) (dto.InternalDeprecateDocumentRequest, bool) {
+	var req dto.InternalDeprecateDocumentRequest
+	if ctx.Request.Body == nil {
+		return req, true
+	}
+	rawBody, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{Error: "failed to read request body", Code: "INVALID_BODY"})
+		return req, false
+	}
+	if len(rawBody) == 0 {
+		return req, true
+	}
+	if err := json.Unmarshal(rawBody, &req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{Error: "invalid request body", Code: "INVALID_BODY"})
+		return req, false
+	}
+	return req, true
 }
 
 // validateAndExtractHeaders validates and extracts required headers from the request.
@@ -243,5 +343,20 @@ func buildCreateDocumentResponse(
 		})
 	}
 
+	return response
+}
+
+func buildDeprecateDocumentResponse(result *documentuc.DeprecateDocumentResult) dto.InternalDeprecateDocumentResponse {
+	response := dto.InternalDeprecateDocumentResponse{
+		ID:     result.Document.ID,
+		Status: string(result.Document.Status),
+	}
+	if result.ProviderCleanup != nil {
+		response.ProviderCleanup = &dto.ProviderCleanupResponse{
+			Action: result.ProviderCleanup.Action,
+			Status: result.ProviderCleanup.Status,
+			Reason: result.ProviderCleanup.Reason,
+		}
+	}
 	return response
 }

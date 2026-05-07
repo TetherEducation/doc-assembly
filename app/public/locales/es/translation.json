@@ -1708,6 +1708,9 @@
     "search": "Buscar documentos...",
     "filterByStatus": "Filtrar por estado",
     "allStatuses": "Todos los estados",
+    "actions": {
+      "deprecate": "Deprecar"
+    },
     "detail": {
       "title": "Detalles del Documento",
       "metadata": "Información del Documento",
@@ -1718,6 +1721,15 @@
       "created": "Creado",
       "updated": "Última Actualización",
       "expiresAt": "Expira",
+      "deprecate": "Deprecar",
+      "deprecateTitle": "Deprecar Documento",
+      "deprecateConfirm": "¿Seguro que deseas deprecar \"{{title}}\"?",
+      "deprecateWarning": "El documento firmado será invalidado en doc-assembly y se intentará limpiar en el proveedor de firma.",
+      "deprecateReason": "Motivo",
+      "deprecateReasonPlaceholder": "¿Por qué se depreca este documento firmado?",
+      "deprecateConfirmBtn": "Deprecar Documento",
+      "deprecateSuccess": "Documento deprecado",
+      "deprecateError": "No se pudo deprecar el documento",
       "actions": {
         "refresh": "Actualizar Estado",
         "cancel": "Cancelar Documento",

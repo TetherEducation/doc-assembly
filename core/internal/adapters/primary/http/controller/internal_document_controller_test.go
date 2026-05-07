@@ -162,6 +162,58 @@ func (e *internalCreateEnv) postCreateRaw(
 	return c.POST("/api/v1/internal/documents/create", req)
 }
 
+func (e *internalCreateEnv) postReset(
+	t *testing.T,
+	docTypeCode,
+	externalID,
+	transactionalID string,
+	supersedeReason *string,
+	payload any,
+) (*http.Response, []byte, dto.InternalCreateDocumentWithRecipientsResponse) {
+	t.Helper()
+
+	req := map[string]any{
+		"payload": payload,
+	}
+	if supersedeReason != nil {
+		req["supersedeReason"] = *supersedeReason
+	}
+
+	resp, body := e.client.
+		WithHeader("X-API-Key", testhelper.TestInternalAPIKey).
+		WithHeader("X-Tenant-Code", e.tenantCode).
+		WithHeader("X-Workspace-Code", e.workspaceCode).
+		WithHeader("X-Document-Type", docTypeCode).
+		WithHeader("X-External-ID", externalID).
+		WithHeader("X-Transactional-ID", transactionalID).
+		WithHeader("X-Environment", "prod").
+		POST("/api/v1/internal/documents/reset", req)
+
+	var parsed dto.InternalCreateDocumentWithRecipientsResponse
+	if resp.StatusCode == http.StatusCreated || resp.StatusCode == http.StatusOK {
+		require.NoError(t, json.Unmarshal(body, &parsed), "body: %s", string(body))
+	}
+
+	return resp, body, parsed
+}
+
+func (e *internalCreateEnv) postDeprecate(
+	t *testing.T,
+	documentID string,
+	reason *string,
+) (*http.Response, []byte) {
+	t.Helper()
+
+	req := map[string]any{}
+	if reason != nil {
+		req["reason"] = *reason
+	}
+
+	return e.client.
+		WithHeader("X-API-Key", testhelper.TestInternalAPIKey).
+		POST("/api/v1/internal/documents/"+documentID+"/deprecate", req)
+}
+
 func TestInternalDocumentController_CreateAndReplay(t *testing.T) {
 	env := setupInternalCreateEnv(t, nil, true)
 	_, versionID := env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
@@ -227,6 +279,87 @@ func TestInternalDocumentController_ForceCreateSupersedesPrevious(t *testing.T) 
 	require.NotNil(t, prev.SupersededAt)
 
 	assert.Equal(t, 1, countActiveDocumentsByLogicalKey(t, env.pool, env.workspaceID, env.documentTypeID, "ext-1"))
+}
+
+func TestInternalDocumentController_ResetUsesForceCreateForUnsignedActiveDocument(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, first := env.postCreate(t, env.documentTypeCode, "ext-reset", "tx-reset-1", nil, nil, map[string]any{"a": 1})
+
+	reason := "source system reset"
+	resp, body, second := env.postReset(t, env.documentTypeCode, "ext-reset", "tx-reset-2", &reason, map[string]any{"a": 2})
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+	require.NotEqual(t, first.ID, second.ID)
+	require.NotNil(t, second.SupersededPreviousDocumentID)
+	assert.Equal(t, first.ID, *second.SupersededPreviousDocumentID)
+
+	prev := loadDocumentSupersedeState(t, env.pool, first.ID)
+	assert.False(t, prev.IsActive)
+	require.NotNil(t, prev.SupersededByDocumentID)
+	assert.Equal(t, second.ID, *prev.SupersededByDocumentID)
+	require.NotNil(t, prev.SupersedeReason)
+	assert.Equal(t, reason, *prev.SupersedeReason)
+
+	assert.Equal(t, 1, countActiveDocumentsByLogicalKey(t, env.pool, env.workspaceID, env.documentTypeID, "ext-reset"))
+}
+
+func TestInternalDocumentController_ResetRejectsCompletedActiveDocument(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, first := env.postCreate(t, env.documentTypeCode, "ext-reset-completed", "tx-reset-completed-1", nil, nil, map[string]any{"a": 1})
+	setDocumentStatusInternal(t, env.pool, first.ID, entity.DocumentStatusCompleted)
+
+	resp, body, _ := env.postReset(t, env.documentTypeCode, "ext-reset-completed", "tx-reset-completed-2", nil, map[string]any{"a": 2})
+	require.Equal(t, http.StatusConflict, resp.StatusCode, string(body))
+	assert.Equal(t, 1, countActiveDocumentsByLogicalKey(t, env.pool, env.workspaceID, env.documentTypeID, "ext-reset-completed"))
+}
+
+func TestInternalDocumentController_DeprecateCompletedDocument(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-deprecate", "tx-deprecate-1", nil, nil, map[string]any{"a": 1})
+	setDocumentStatusInternal(t, env.pool, doc.ID, entity.DocumentStatusCompleted)
+
+	reason := "contract replaced externally"
+	resp, body := env.postDeprecate(t, doc.ID, &reason)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	var result dto.InternalDeprecateDocumentResponse
+	require.NoError(t, json.Unmarshal(body, &result))
+	assert.Equal(t, doc.ID, result.ID)
+	assert.Equal(t, string(entity.DocumentStatusInvalidated), result.Status)
+	assert.Nil(t, result.ProviderCleanup)
+
+	assert.Equal(t, entity.DocumentStatusInvalidated, loadDocumentStatusInternal(t, env.pool, doc.ID))
+	assert.Equal(t, 1, countDocumentEventsInternal(t, env.pool, doc.ID, entity.EventDocumentDeprecated))
+}
+
+func TestInternalDocumentController_DeprecateCompletedDocumentCleansProvider(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-deprecate-provider", "tx-deprecate-provider-1", nil, nil, map[string]any{"a": 1})
+	providerDocID := createMockProviderDocumentInternal(t, env, doc.ID)
+	attemptID := insertCompletedProviderAttemptInternal(t, env, doc.ID, providerDocID)
+	setDocumentActiveAttemptAndStatusInternal(t, env.pool, doc.ID, attemptID, entity.DocumentStatusCompleted)
+
+	resp, body := env.postDeprecate(t, doc.ID, nil)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	var result dto.InternalDeprecateDocumentResponse
+	require.NoError(t, json.Unmarshal(body, &result))
+	require.NotNil(t, result.ProviderCleanup)
+	assert.Equal(t, "CANCEL", result.ProviderCleanup.Action)
+	assert.Equal(t, "SUCCEEDED", result.ProviderCleanup.Status)
+
+	status, action := loadAttemptCleanupInternal(t, env.pool, attemptID)
+	require.NotNil(t, status)
+	assert.Equal(t, "SUCCEEDED", *status)
+	require.NotNil(t, action)
+	assert.Equal(t, "CANCEL", *action)
 }
 
 func TestInternalDocumentController_ConcurrentForceCreatePreservesSingleActive(t *testing.T) {
@@ -571,6 +704,99 @@ func setTemplateVersionContentInternal(t *testing.T, pool *pgxpool.Pool, version
 		versionID,
 	)
 	require.NoError(t, err)
+}
+
+func setDocumentStatusInternal(t *testing.T, pool *pgxpool.Pool, documentID string, status entity.DocumentStatus) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `UPDATE execution.documents SET status = $2 WHERE id = $1`, documentID, status)
+	require.NoError(t, err)
+}
+
+func setDocumentActiveAttemptAndStatusInternal(
+	t *testing.T,
+	pool *pgxpool.Pool,
+	documentID,
+	attemptID string,
+	status entity.DocumentStatus,
+) {
+	t.Helper()
+	_, err := pool.Exec(
+		context.Background(),
+		`UPDATE execution.documents SET active_attempt_id = $2, status = $3 WHERE id = $1`,
+		documentID,
+		attemptID,
+		status,
+	)
+	require.NoError(t, err)
+}
+
+func createMockProviderDocumentInternal(t *testing.T, env *internalCreateEnv, documentID string) string {
+	t.Helper()
+	result, err := env.ts.MockSigningAdapter.SubmitAttemptDocument(context.Background(), &port.SubmitAttemptDocumentRequest{
+		AttemptID:      "attempt-" + documentID,
+		DocumentID:     documentID,
+		CorrelationKey: documentID + ":deprecated-test",
+		PDF:            []byte("%PDF-1.4\n"),
+		PDFChecksum:    "checksum",
+		Title:          "Deprecated Provider Test",
+		Recipients: []port.SigningRecipient{{
+			Email:       "signer@example.com",
+			Name:        "Signer",
+			RoleID:      "role",
+			SignerOrder: 1,
+		}},
+		Environment: entity.EnvironmentProd,
+	})
+	require.NoError(t, err)
+	return result.ProviderDocumentID
+}
+
+func insertCompletedProviderAttemptInternal(t *testing.T, env *internalCreateEnv, documentID, providerDocID string) string {
+	t.Helper()
+	var attemptID string
+	providerName := "mock"
+	correlationKey := documentID + ":deprecated-test"
+	err := env.pool.QueryRow(context.Background(), `
+		INSERT INTO execution.signing_attempts (
+			document_id, sequence, status, provider_name, provider_correlation_key,
+			provider_document_id, terminal_at
+		) VALUES ($1, 1, $2, $3, $4, $5, now())
+		RETURNING id
+	`, documentID, entity.SigningAttemptStatusCompleted, providerName, correlationKey, providerDocID).Scan(&attemptID)
+	require.NoError(t, err)
+	return attemptID
+}
+
+func loadDocumentStatusInternal(t *testing.T, pool *pgxpool.Pool, documentID string) entity.DocumentStatus {
+	t.Helper()
+	var status entity.DocumentStatus
+	err := pool.QueryRow(context.Background(), `SELECT status FROM execution.documents WHERE id = $1`, documentID).Scan(&status)
+	require.NoError(t, err)
+	return status
+}
+
+func countDocumentEventsInternal(t *testing.T, pool *pgxpool.Pool, documentID, eventType string) int {
+	t.Helper()
+	var count int
+	err := pool.QueryRow(context.Background(), `
+		SELECT COUNT(*)
+		FROM execution.document_events
+		WHERE document_id = $1 AND event_type = $2
+	`, documentID, eventType).Scan(&count)
+	require.NoError(t, err)
+	return count
+}
+
+func loadAttemptCleanupInternal(t *testing.T, pool *pgxpool.Pool, attemptID string) (*string, *string) {
+	t.Helper()
+	var status, action *string
+	err := pool.QueryRow(context.Background(), `
+		SELECT cleanup_status::text, cleanup_action
+		FROM execution.signing_attempts
+		WHERE id = $1
+	`, attemptID).Scan(&status, &action)
+	require.NoError(t, err)
+	return status, action
 }
 
 func getWorkspaceCode(t *testing.T, pool *pgxpool.Pool, workspaceID string) string {

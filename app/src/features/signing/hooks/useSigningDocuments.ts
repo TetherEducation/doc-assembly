@@ -52,6 +52,19 @@ export function useCancelDocument() {
   })
 }
 
+export function useDeprecateDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      signingApi.deprecate(id, { reason }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: signingKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: signingKeys.detail(variables.id) })
+    },
+  })
+}
+
 export function useRefreshDocument() {
   const queryClient = useQueryClient()
 

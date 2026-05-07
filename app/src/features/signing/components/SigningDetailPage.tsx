@@ -24,6 +24,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/use-toast'
 import { useAppContextStore } from '@/stores/app-context-store'
+import { usePermission } from '@/features/auth/hooks/usePermission'
 import { SigningDocumentStatus } from '../types'
 import { signingApi } from '../api/signing-api'
 import {
@@ -35,6 +36,7 @@ import { SigningStatusBadge } from './SigningStatusBadge'
 import { RecipientTable } from './RecipientTable'
 import { DocumentEventTimeline } from './DocumentEventTimeline'
 import { CancelDocumentDialog } from './CancelDocumentDialog'
+import { DeprecateDocumentDialog } from './DeprecateDocumentDialog'
 
 const TERMINAL_STATUSES: string[] = [
   SigningDocumentStatus.COMPLETED,
@@ -61,10 +63,12 @@ export function SigningDetailPage() {
   })
   const { t } = useTranslation()
   const { toast } = useToast()
+  const { hasPermission, Permission } = usePermission()
   const navigate = useNavigate()
   const { currentWorkspace } = useAppContextStore()
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [deprecateDialogOpen, setDeprecateDialogOpen] = useState(false)
   const [eventsOpen, setEventsOpen] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [invalidateConfirmOpen, setInvalidateConfirmOpen] = useState(false)
@@ -175,6 +179,8 @@ export function SigningDetailPage() {
     ? TERMINAL_STATUSES.includes(document.status)
     : false
   const isCompleted = document?.status === SigningDocumentStatus.COMPLETED
+  const canDeprecate =
+    isCompleted && hasPermission(Permission.DOCUMENT_DEPRECATE)
   const isAwaitingInput =
     document?.status === SigningDocumentStatus.AWAITING_INPUT
 
@@ -266,6 +272,16 @@ export function SigningDetailPage() {
                   <Download size={14} />
                 )}
                 {t('signing.detail.downloadPdf', 'Download PDF')}
+              </button>
+            )}
+
+            {canDeprecate && (
+              <button
+                onClick={() => setDeprecateDialogOpen(true)}
+                className="inline-flex items-center gap-2 rounded-none border border-destructive px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground"
+              >
+                <ShieldOff size={14} />
+                {t('signing.detail.deprecate', 'Deprecate')}
               </button>
             )}
 
@@ -516,6 +532,14 @@ export function SigningDetailPage() {
       <CancelDocumentDialog
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
+        documentId={documentId}
+        documentTitle={document.title}
+        onSuccess={handleBackToList}
+      />
+
+      <DeprecateDocumentDialog
+        open={deprecateDialogOpen}
+        onOpenChange={setDeprecateDialogOpen}
         documentId={documentId}
         documentTitle={document.title}
         onSuccess={handleBackToList}
