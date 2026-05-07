@@ -335,7 +335,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		docRecipientRepo,
 		templateVersionRepo,
 		templateVersionSignerRoleRepo,
-		documentFieldResponseRepo,
+		docFieldResponseRepo,
 		nil,
 		nil,
 		false,
