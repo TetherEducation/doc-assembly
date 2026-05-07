@@ -96,7 +96,7 @@ func (s *DocumentAccessService) RequestAccessByToken(ctx context.Context, token,
 	}
 
 	accessToken, _ := s.accessTokenRepo.FindByToken(ctx, token)
-	if accessToken == nil {
+	if accessToken == nil || (!accessToken.IsSigning() && !accessToken.IsPreSigning()) {
 		return nil
 	}
 
