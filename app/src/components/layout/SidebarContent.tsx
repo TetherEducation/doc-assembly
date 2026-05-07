@@ -214,7 +214,7 @@ export function SidebarContent({
                 scale: isExpanded ? 0.8 : 1,
               }}
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute inset-0 flex items-center"
+              className="absolute top-0 left-0 flex h-10 items-center"
               style={{ pointerEvents: isExpanded || !showWorkspaceName ? 'none' : 'auto' }}
             >
               <Tooltip>
