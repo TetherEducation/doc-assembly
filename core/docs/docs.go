@@ -4336,6 +4336,12 @@ const docTemplate = `{
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8953,6 +8959,12 @@ const docTemplate = `{
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8994,6 +9006,12 @@ const docTemplate = `{
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     },
                     {
                         "description": "Email address (not required when auth is provided)",
@@ -9397,6 +9415,12 @@ const docTemplate = `{
                         "name": "token",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     },
                     {
                         "description": "Email address",

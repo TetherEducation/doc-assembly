@@ -10,11 +10,11 @@ type DocumentAccessUseCase interface {
 
 	// RequestAccess validates email against document recipients and sends an access link.
 	// Always returns nil to prevent email enumeration.
-	RequestAccess(ctx context.Context, documentID, email string) error
+	RequestAccess(ctx context.Context, documentID, email, language string) error
 
 	// RequestAccessByToken requests access using an existing (possibly expired)
 	// token as the entrypoint. Always returns nil to prevent token/email enumeration.
-	RequestAccessByToken(ctx context.Context, token, email string) error
+	RequestAccessByToken(ctx context.Context, token, email, language string) error
 
 	// RequestDirectAccess generates a tokenized signing URL directly for an
 	// already-authenticated recipient (custom middleware path).

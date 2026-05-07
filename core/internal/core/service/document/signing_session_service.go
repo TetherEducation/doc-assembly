@@ -140,7 +140,7 @@ func (s *SigningSessionService) CreateOrGetSession(
 	)
 
 	return &documentuc.SigningSessionResponse{
-		SessionURL:  fmt.Sprintf("/public/sign/%s", tokenStr),
+		SessionURL:  appendSigningURLLanguage(fmt.Sprintf("/public/sign/%s", tokenStr), principal.Language),
 		Step:        publicPage.Step,
 		CanSign:     publicPage.CanSign,
 		CanDownload: publicPage.CanDownload,

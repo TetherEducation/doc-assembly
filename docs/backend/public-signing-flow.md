@@ -227,7 +227,7 @@ sequenceDiagram
     participant Svc as SigningSessionService
     participant Public as PreSigningService
 
-    Front->>API: POST /api/v1/signing-sessions/{documentId} + Bearer
+    Front->>API: POST /api/v1/signing-sessions/{documentId}?language=en + Bearer
     API->>Auth: validate JWT/custom claims
     Auth-->>API: {email, subject, provider}
     API->>Svc: CreateOrGetSession(documentId, principal)
@@ -236,12 +236,12 @@ sequenceDiagram
     Svc->>Svc: If signing can start, create/reuse active attempt through River UoW
     Svc->>Public: GetPublicSigningPage(token)
     Public-->>Svc: {step, canSign, canDownload, downloadUrl}
-    Svc-->>API: {sessionUrl: /public/sign/{token}, step, ...}
+    Svc-->>API: {sessionUrl: /public/sign/{token}?language=en, step, ...}
     API-->>Front: 200 response
     Front->>Front: Load sessionUrl in iframe or show processing/current state
 ```
 
-The returned `sessionUrl` always points to `/public/sign/{token}`. That page remains the single UX for sign, view, waiting, and download states.
+The returned `sessionUrl` always points to `/public/sign/{token}`. If the request includes `language=en|es`, the URL includes the same query parameter; unsupported explicit values fall back to `language=en`. That page remains the single UX for sign, view, waiting, and download states.
 
 ---
 
@@ -400,8 +400,8 @@ After invalidation, the recipient can still access `/public/doc/{documentID}` an
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/public/doc/{documentId}` | Get document info (title, status) |
-| `POST` | `/public/doc/{documentId}/request-access` | Request access link (email verification) |
+| `GET` | `/public/doc/{documentId}` | Get document info (title, status); optional `language=en|es` is preserved on custom-auth direct redirects |
+| `POST` | `/public/doc/{documentId}/request-access` | Request access link (email verification); optional `language=en|es` is preserved on custom-auth direct responses |
 | `GET` | `/public/sign/{token}` | Get signing page state |
 | `POST` | `/public/sign/{token}` | Submit pre-signing form (Path B) |
 | `POST` | `/public/sign/{token}/request-access` | Request a new link from expired token entrypoint |
@@ -416,7 +416,7 @@ After invalidation, the recipient can still access `/public/doc/{documentID}` an
 
 | Method | Path | Role | Purpose |
 |--------|------|------|---------|
-| `POST` | `/api/v1/signing-sessions/{documentId}` | Authenticated user | Create/reuse iframe signing session and return `/public/sign/{token}` URL |
+| `POST` | `/api/v1/signing-sessions/{documentId}` | Authenticated user | Create/reuse iframe signing session and return `/public/sign/{token}` URL; optional `language=en|es` is preserved |
 | `POST` | `/api/v1/documents` | Operator | Create document + send notifications |
 | `POST` | `/api/v1/documents/{id}/invalidate-tokens` | Operator | Invalidate all active tokens |
 

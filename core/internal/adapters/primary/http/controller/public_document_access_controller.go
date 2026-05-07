@@ -50,6 +50,7 @@ type requestAccessBody struct {
 // @Tags Public Document Access
 // @Produce json
 // @Param documentId path string true "Document ID"
+// @Param language query string false "Public signing UI language (en or es)"
 // @Success 200 {object} documentuc.PublicDocumentInfoResponse
 // @Failure 404 {object} map[string]string
 // @Router /public/doc/{documentId} [get]
@@ -61,7 +62,7 @@ func (c *PublicDocumentAccessController) GetPublicDocumentInfo(ctx *gin.Context)
 	if claims, ok := middleware.GetPublicDocumentAccessClaims(ctx); ok {
 		redirectURL, err := c.accessUC.RequestDirectAccess(ctx.Request.Context(), documentID, claims.Email)
 		if err == nil && redirectURL != "" {
-			ctx.Redirect(http.StatusSeeOther, redirectURL)
+			ctx.Redirect(http.StatusSeeOther, appendPublicLanguage(redirectURL, ctx.Query("language")))
 			return
 		}
 	}
@@ -85,6 +86,7 @@ func (c *PublicDocumentAccessController) GetPublicDocumentInfo(ctx *gin.Context)
 // @Accept json
 // @Produce json
 // @Param documentId path string true "Document ID"
+// @Param language query string false "Public signing UI language (en or es)"
 // @Param request body requestAccessBody false "Email address (not required when auth is provided)"
 // @Success 200 {object} map[string]string
 // @Router /public/doc/{documentId}/request-access [post]
@@ -95,7 +97,7 @@ func (c *PublicDocumentAccessController) RequestAccess(ctx *gin.Context) {
 	if claims, ok := middleware.GetPublicDocumentAccessClaims(ctx); ok {
 		signingURL, err := c.accessUC.RequestDirectAccess(ctx.Request.Context(), documentID, claims.Email)
 		if err == nil && signingURL != "" {
-			ctx.JSON(http.StatusOK, gin.H{"signingUrl": signingURL})
+			ctx.JSON(http.StatusOK, gin.H{"signingUrl": appendPublicLanguage(signingURL, ctx.Query("language"))})
 			return
 		}
 	}
@@ -108,7 +110,7 @@ func (c *PublicDocumentAccessController) RequestAccess(ctx *gin.Context) {
 	}
 
 	email := strings.TrimSpace(req.Email)
-	_ = c.accessUC.RequestAccess(ctx.Request.Context(), documentID, email)
+	_ = c.accessUC.RequestAccess(ctx.Request.Context(), documentID, email, explicitPublicLanguage(ctx.Query("language")))
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "If your email is associated with this document, you will receive a signing link shortly.",

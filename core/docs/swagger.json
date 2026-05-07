@@ -4330,6 +4330,12 @@
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8947,6 +8953,12 @@
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -8988,6 +9000,12 @@
                         "name": "documentId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     },
                     {
                         "description": "Email address (not required when auth is provided)",
@@ -9391,6 +9409,12 @@
                         "name": "token",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Public signing UI language (en or es)",
+                        "name": "language",
+                        "in": "query"
                     },
                     {
                         "description": "Email address",

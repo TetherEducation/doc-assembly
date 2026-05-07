@@ -39,6 +39,7 @@ func (c *SigningSessionController) RegisterRoutes(router gin.IRouter, authMiddle
 // @Tags Signing Sessions
 // @Produce json
 // @Param documentId path string true "Document ID"
+// @Param language query string false "Public signing UI language (en or es)"
 // @Success 200 {object} documentuc.SigningSessionResponse
 // @Failure 401 {object} map[string]string
 // @Failure 403 {object} map[string]string
@@ -62,6 +63,7 @@ func (c *SigningSessionController) CreateOrGetSession(ctx *gin.Context) {
 		Email:    strings.TrimSpace(claims.Email),
 		Subject:  strings.TrimSpace(claims.Subject),
 		Provider: strings.TrimSpace(claims.Provider),
+		Language: explicitPublicLanguage(ctx.Query("language")),
 		Extra:    claims.Extra,
 	})
 	if err != nil {

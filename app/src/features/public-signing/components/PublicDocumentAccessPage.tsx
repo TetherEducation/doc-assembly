@@ -10,12 +10,17 @@ import {
 } from 'lucide-react'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { changeLanguage } from '@/lib/i18n'
 import {
   getDocumentAccessInfo,
   requestDocumentAccess,
   requestDocumentAccessFromToken,
 } from '../api/public-signing-api'
 import type { DocumentAccessInfo } from '../types'
+import {
+  publicLanguageOptions,
+  type PublicSigningLanguage,
+} from '../public-signing-language'
 
 type AccessStatus = 'active' | 'completed' | 'expired'
 
@@ -35,12 +40,14 @@ interface PublicDocumentAccessPageProps {
   documentId?: string
   expiredToken?: string
   expiredMessage?: string
+  language?: PublicSigningLanguage
 }
 
 export function PublicDocumentAccessPage({
   documentId,
   expiredToken,
   expiredMessage,
+  language,
 }: PublicDocumentAccessPageProps) {
   const { t } = useTranslation()
   const tokenMode = Boolean(expiredToken)
@@ -59,11 +66,18 @@ export function PublicDocumentAccessPage({
   const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
+    if (!language) return
+    void changeLanguage(language)
+  }, [language])
+
+  useEffect(() => {
     if (tokenMode || !documentId) {
       return
     }
 
-    getDocumentAccessInfo(documentId)
+    (language
+      ? getDocumentAccessInfo(documentId, publicLanguageOptions(language))
+      : getDocumentAccessInfo(documentId))
       .then((info: DocumentAccessInfo) =>
         setState({
           status: 'loaded',
@@ -74,7 +88,7 @@ export function PublicDocumentAccessPage({
         }),
       )
       .catch(() => setState({ status: 'error' }))
-  }, [tokenMode, documentId])
+  }, [tokenMode, documentId, language])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -92,9 +106,25 @@ export function PublicDocumentAccessPage({
 
       try {
         if (tokenMode && expiredToken) {
-          await requestDocumentAccessFromToken(expiredToken, email)
+          if (language) {
+            await requestDocumentAccessFromToken(
+              expiredToken,
+              email,
+              publicLanguageOptions(language),
+            )
+          } else {
+            await requestDocumentAccessFromToken(expiredToken, email)
+          }
         } else if (documentId) {
-          await requestDocumentAccess(documentId, email)
+          if (language) {
+            await requestDocumentAccess(
+              documentId,
+              email,
+              publicLanguageOptions(language),
+            )
+          } else {
+            await requestDocumentAccess(documentId, email)
+          }
         }
       } catch {
         // Always show success to prevent enumeration
@@ -103,7 +133,7 @@ export function PublicDocumentAccessPage({
       setState({ status: 'submitted', context })
       setCooldown(60)
     },
-    [state, tokenMode, expiredToken, documentId, email],
+    [state, tokenMode, expiredToken, documentId, email, language],
   )
 
   if (state.status === 'loading') {

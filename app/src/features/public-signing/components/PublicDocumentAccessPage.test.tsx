@@ -19,6 +19,10 @@ vi.mock('@/components/common/ThemeToggle', () => ({
   ThemeToggle: () => <div data-testid="theme-toggle" />,
 }))
 
+vi.mock('@/lib/i18n', () => ({
+  changeLanguage: vi.fn(() => Promise.resolve()),
+}))
+
 vi.mock('../api/public-signing-api', () => ({
   getDocumentAccessInfo: vi.fn(),
   requestDocumentAccess: vi.fn(),

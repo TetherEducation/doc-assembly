@@ -71,13 +71,13 @@ func (s *DocumentAccessService) GetPublicDocumentInfo(ctx context.Context, docum
 
 // RequestAccess validates the email against document recipients and sends an access link.
 // Always returns nil to prevent email enumeration.
-func (s *DocumentAccessService) RequestAccess(ctx context.Context, documentID, email string) error {
+func (s *DocumentAccessService) RequestAccess(ctx context.Context, documentID, email, language string) error {
 	doc, recipient, ok := s.validateAccessRequest(ctx, documentID, email)
 	if !ok {
 		return nil
 	}
 
-	if err := s.generateAndSendToken(ctx, doc, recipient); err != nil {
+	if err := s.generateAndSendToken(ctx, doc, recipient, language); err != nil {
 		slog.ErrorContext(ctx, "failed to send access link",
 			slog.String("document_id", documentID),
 			slog.String("error", err.Error()),
@@ -89,7 +89,7 @@ func (s *DocumentAccessService) RequestAccess(ctx context.Context, documentID, e
 
 // RequestAccessByToken requests a new access link using an existing token as the
 // entrypoint (expired-link recovery). Always returns nil to prevent enumeration.
-func (s *DocumentAccessService) RequestAccessByToken(ctx context.Context, token, email string) error {
+func (s *DocumentAccessService) RequestAccessByToken(ctx context.Context, token, email, language string) error {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return nil
@@ -100,7 +100,7 @@ func (s *DocumentAccessService) RequestAccessByToken(ctx context.Context, token,
 		return nil
 	}
 
-	return s.RequestAccess(ctx, accessToken.DocumentID, email)
+	return s.RequestAccess(ctx, accessToken.DocumentID, email, language)
 }
 
 // RequestDirectAccess generates a tokenized signing URL for an authenticated
@@ -162,14 +162,14 @@ func (s *DocumentAccessService) validateAccessRequest(
 
 // generateAndSendToken creates an access token and sends it to the recipient.
 func (s *DocumentAccessService) generateAndSendToken(
-	ctx context.Context, doc *entity.Document, recipient *entity.DocumentRecipient,
+	ctx context.Context, doc *entity.Document, recipient *entity.DocumentRecipient, language string,
 ) error {
 	tokenStr, err := s.createAccessToken(ctx, doc, recipient)
 	if err != nil {
 		return err
 	}
 
-	s.notificationSvc.SendAccessLink(ctx, recipient, doc, tokenStr)
+	s.notificationSvc.SendAccessLink(ctx, recipient, doc, tokenStr, language)
 
 	slog.InfoContext(ctx, "access link sent",
 		slog.String("document_id", doc.ID),

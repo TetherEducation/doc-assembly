@@ -15,6 +15,7 @@ type SigningSessionPrincipal struct {
 	Email    string         `json:"email"`
 	Subject  string         `json:"subject,omitempty"`
 	Provider string         `json:"provider,omitempty"`
+	Language string         `json:"language,omitempty"`
 	Extra    map[string]any `json:"extra,omitempty"`
 }
 

@@ -135,6 +135,7 @@ func (c *PublicSigningController) SubmitPreSigningForm(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param token path string true "Access token"
+// @Param language query string false "Public signing UI language (en or es)"
 // @Param request body requestAccessFromTokenBody true "Email address"
 // @Success 200 {object} map[string]string
 // @Router /public/sign/{token}/request-access [post]
@@ -148,7 +149,7 @@ func (c *PublicSigningController) RequestAccessFromToken(ctx *gin.Context) {
 	}
 
 	email := strings.TrimSpace(req.Email)
-	_ = c.accessUC.RequestAccessByToken(ctx.Request.Context(), token, email)
+	_ = c.accessUC.RequestAccessByToken(ctx.Request.Context(), token, email, explicitPublicLanguage(ctx.Query("language")))
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "If your email is associated with this document, you will receive a signing link shortly.",

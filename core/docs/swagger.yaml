@@ -5249,6 +5249,10 @@ paths:
         name: documentId
         required: true
         type: string
+      - description: Public signing UI language (en or es)
+        in: query
+        name: language
+        type: string
       produces:
       - application/json
       responses:
@@ -8230,6 +8234,10 @@ paths:
         name: documentId
         required: true
         type: string
+      - description: Public signing UI language (en or es)
+        in: query
+        name: language
+        type: string
       produces:
       - application/json
       responses:
@@ -8258,6 +8266,10 @@ paths:
         in: path
         name: documentId
         required: true
+        type: string
+      - description: Public signing UI language (en or es)
+        in: query
+        name: language
         type: string
       - description: Email address (not required when auth is provided)
         in: body
@@ -8531,6 +8543,10 @@ paths:
         in: path
         name: token
         required: true
+        type: string
+      - description: Public signing UI language (en or es)
+        in: query
+        name: language
         type: string
       - description: Email address
         in: body

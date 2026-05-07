@@ -4,6 +4,14 @@ import type {
   FieldResponsePayload,
   DocumentAccessInfo,
 } from '../types'
+import {
+  appendPublicLanguage,
+  type PublicSigningLanguage,
+} from '../public-signing-language'
+
+interface PublicLanguageOptions {
+  language?: PublicSigningLanguage
+}
 
 /**
  * Standalone Axios instance for public endpoints.
@@ -20,9 +28,10 @@ const publicApi = axios.create({
 
 export async function getPublicSigningPage(
   token: string,
+  options: PublicLanguageOptions = {},
 ): Promise<PublicSigningResponse> {
   const { data } = await publicApi.get<PublicSigningResponse>(
-    `/public/sign/${token}`,
+    appendPublicLanguage(`/public/sign/${token}`, options.language),
   )
   return data
 }
@@ -30,9 +39,10 @@ export async function getPublicSigningPage(
 export async function requestDocumentAccessFromToken(
   token: string,
   email: string,
+  options: PublicLanguageOptions = {},
 ): Promise<{ message: string }> {
   const { data } = await publicApi.post<{ message: string }>(
-    `/public/sign/${token}/request-access`,
+    appendPublicLanguage(`/public/sign/${token}/request-access`, options.language),
     { email },
   )
   return data
@@ -41,9 +51,10 @@ export async function requestDocumentAccessFromToken(
 export async function submitPreSigningForm(
   token: string,
   responses: FieldResponsePayload[],
+  options: PublicLanguageOptions = {},
 ): Promise<PublicSigningResponse> {
   const { data } = await publicApi.post<PublicSigningResponse>(
-    `/public/sign/${token}`,
+    appendPublicLanguage(`/public/sign/${token}`, options.language),
     { responses },
   )
   return data
@@ -51,42 +62,52 @@ export async function submitPreSigningForm(
 
 export async function proceedToSigning(
   token: string,
+  options: PublicLanguageOptions = {},
 ): Promise<PublicSigningResponse> {
   const { data } = await publicApi.post<PublicSigningResponse>(
-    `/public/sign/${token}/proceed`,
+    appendPublicLanguage(`/public/sign/${token}/proceed`, options.language),
   )
   return data
 }
 
 export async function completeEmbeddedSigning(
   token: string,
+  options: PublicLanguageOptions = {},
 ): Promise<void> {
-  await publicApi.post(`/public/sign/${token}/complete`)
+  await publicApi.post(
+    appendPublicLanguage(`/public/sign/${token}/complete`, options.language),
+  )
 }
 
 export async function fetchPreviewPDF(
   token: string,
+  options: PublicLanguageOptions = {},
 ): Promise<ArrayBuffer> {
-  const { data } = await publicApi.get(`/public/sign/${token}/pdf`, {
-    responseType: 'arraybuffer',
-  })
+  const { data } = await publicApi.get(
+    appendPublicLanguage(`/public/sign/${token}/pdf`, options.language),
+    {
+      responseType: 'arraybuffer',
+    },
+  )
   return data
 }
 
 export async function refreshEmbeddedUrl(
   token: string,
+  options: PublicLanguageOptions = {},
 ): Promise<PublicSigningResponse> {
   const { data } = await publicApi.get<PublicSigningResponse>(
-    `/public/sign/${token}/refresh`,
+    appendPublicLanguage(`/public/sign/${token}/refresh`, options.language),
   )
   return data
 }
 
 export async function getDocumentAccessInfo(
   documentId: string,
+  options: PublicLanguageOptions = {},
 ): Promise<DocumentAccessInfo> {
   const { data } = await publicApi.get<DocumentAccessInfo>(
-    `/public/doc/${documentId}`,
+    appendPublicLanguage(`/public/doc/${documentId}`, options.language),
   )
   return data
 }
@@ -94,9 +115,10 @@ export async function getDocumentAccessInfo(
 export async function requestDocumentAccess(
   documentId: string,
   email: string,
+  options: PublicLanguageOptions = {},
 ): Promise<{ message: string }> {
   const { data } = await publicApi.post<{ message: string }>(
-    `/public/doc/${documentId}/request-access`,
+    appendPublicLanguage(`/public/doc/${documentId}/request-access`, options.language),
     { email },
   )
   return data
