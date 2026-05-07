@@ -1835,6 +1835,9 @@
       "proceedToSigning": "Proceed to Signing",
       "pdfLoading": "Loading document preview...",
       "pdfError": "Failed to load document preview",
+      "toolbarAriaLabel": "Signing preview toolbar",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
       "pageOf": "Page {{current}} of {{total}}"
     },
     "proceeding": {

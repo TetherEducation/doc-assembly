@@ -1835,6 +1835,9 @@
       "proceedToSigning": "Proceder a Firmar",
       "pdfLoading": "Cargando vista previa del documento...",
       "pdfError": "No se pudo cargar la vista previa del documento",
+      "toolbarAriaLabel": "Barra de vista previa para firmar",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
       "pageOf": "Pagina {{current}} de {{total}}"
     },
     "proceeding": {
