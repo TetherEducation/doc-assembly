@@ -673,6 +673,8 @@ func (s *TemplateVersionService) buildPromotedTemplate(workspaceID string, folde
 		FolderID:        folderID,
 		Title:           title,
 		IsPublicLibrary: false,
+		Process:         entity.DefaultProcess,
+		ProcessType:     entity.DefaultProcessType,
 		CreatedAt:       time.Now().UTC(),
 	}
 }

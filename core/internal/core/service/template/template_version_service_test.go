@@ -164,3 +164,19 @@ func (r *recordingSystemInjectableRepo) FindPublicAssignmentsByKeys(
 ) (map[string]string, error) {
 	panic("not implemented")
 }
+
+func TestBuildPromotedTemplate_HasValidDefaultProcessFields(t *testing.T) {
+	service := &TemplateVersionService{}
+
+	template := service.buildPromotedTemplate("workspace-1", nil, "Promoted Template")
+
+	if err := template.Validate(); err != nil {
+		t.Fatalf("expected promoted template to be valid, got %v", err)
+	}
+	if template.Process != entity.DefaultProcess {
+		t.Fatalf("expected default process %q, got %q", entity.DefaultProcess, template.Process)
+	}
+	if template.ProcessType != entity.DefaultProcessType {
+		t.Fatalf("expected default process type %q, got %q", entity.DefaultProcessType, template.ProcessType)
+	}
+}
