@@ -60,7 +60,7 @@ import { deriveHeaderEnabled } from '../utils/document-header'
 type ActiveSurface = 'header' | 'body'
 
 interface DocumentEditorProps {
-  initialContent?: string
+  initialContent?: string | Record<string, unknown>
   onContentChange?: (content: string) => void
   editable?: boolean
   variables?: Variable[]

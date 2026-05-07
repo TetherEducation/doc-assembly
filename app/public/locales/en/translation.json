@@ -1746,7 +1746,10 @@
       "invalidateWarning": "This will invalidate all active access tokens. Recipients will need to request a new link via email.",
       "tokensInvalidated": "Tokens invalidated successfully",
       "invalidateError": "Failed to invalidate tokens",
-      "fieldResponses": "Field Responses"
+      "fieldResponses": "Field Responses",
+      "copyReadOnlyLink": "Copy Read-only Link",
+      "readOnlyLinkCopied": "Read-only link copied to clipboard",
+      "readOnlyLinkCopyError": "Failed to create read-only link"
     },
     "cancel": {
       "title": "Cancel Document",
@@ -1922,6 +1925,23 @@
       "pendingOther": "{{count}} pending",
       "missingDescriptionOne": "You have {{count}} step left to enable signing",
       "missingDescriptionOther": "You have {{count}} steps left to enable signing"
+    }
+  },
+  "readonlyView": {
+    "header": "Read-only contract",
+    "noActions": "Viewing only — no recipient actions are available.",
+    "banner": "Read-only view",
+    "viewOnly": "View only",
+    "loading": "Loading contract",
+    "unavailableTitle": "Contract unavailable",
+    "unavailableDescription": "This read-only link is unavailable or has expired.",
+    "pdf": {
+      "title": "Read-only PDF",
+      "loading": "Loading PDF",
+      "error": "Unable to load this PDF",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "pageOf": "Page {{current}} of {{total}}"
     }
   }
 }
