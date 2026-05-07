@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,6 +20,7 @@ type ReadOnlyViewService struct {
 	documentRepo    port.DocumentRepository
 	accessTokenRepo port.DocumentAccessTokenRepository
 	recipientRepo   port.DocumentRecipientRepository
+	versionRepo     port.TemplateVersionRepository
 	tokenTTLHours   int
 	publicURL       string
 }
@@ -30,6 +32,7 @@ func NewReadOnlyViewService(
 	documentRepo port.DocumentRepository,
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	recipientRepo port.DocumentRecipientRepository,
+	versionRepo port.TemplateVersionRepository,
 	tokenTTLHours int,
 	publicURL string,
 ) *ReadOnlyViewService {
@@ -37,6 +40,7 @@ func NewReadOnlyViewService(
 		documentRepo:    documentRepo,
 		accessTokenRepo: accessTokenRepo,
 		recipientRepo:   recipientRepo,
+		versionRepo:     versionRepo,
 		tokenTTLHours:   tokenTTLHours,
 		publicURL:       publicURL,
 	}
@@ -92,8 +96,44 @@ func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, docume
 }
 
 // GetReadOnlyView returns read-only metadata/content for a public token.
-func (s *ReadOnlyViewService) GetReadOnlyView(context.Context, string) (*documentuc.ReadOnlyViewResponse, error) {
-	return nil, errReadOnlyViewNotImplemented
+func (s *ReadOnlyViewService) GetReadOnlyView(ctx context.Context, token string) (*documentuc.ReadOnlyViewResponse, error) {
+	accessToken, err := s.validateReadOnlyViewToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := s.documentRepo.FindByID(ctx, accessToken.DocumentID)
+	if err != nil {
+		return nil, fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, entity.ErrDocumentNotFound
+	}
+
+	response := &documentuc.ReadOnlyViewResponse{
+		Mode:           readOnlyViewMode(doc.Status),
+		DocumentID:     doc.ID,
+		DocumentTitle:  documentTitle(doc),
+		DocumentStatus: doc.Status,
+		ExpiresAt:      accessToken.ExpiresAt,
+	}
+
+	switch response.Mode {
+	case documentuc.ReadOnlyViewModeContent:
+		content, err := s.readOnlyViewContent(ctx, doc)
+		if err != nil {
+			return nil, err
+		}
+		response.Content = content
+	case documentuc.ReadOnlyViewModePDF:
+		pdfURL := "/public/view/" + token + "/pdf"
+		response.PDFURL = &pdfURL
+	case documentuc.ReadOnlyViewModeUnavailable:
+		reason := "document_unavailable"
+		response.Reason = &reason
+	}
+
+	return response, nil
 }
 
 // GetReadOnlyViewPDF returns the read-only PDF bytes for a public token.
@@ -107,4 +147,65 @@ func (s *ReadOnlyViewService) buildReadOnlyViewURL(token string) string {
 		return path
 	}
 	return strings.TrimRight(s.publicURL, "/") + path
+}
+
+func (s *ReadOnlyViewService) validateReadOnlyViewToken(ctx context.Context, token string) (*entity.DocumentAccessToken, error) {
+	if token == "" {
+		return nil, entity.ErrMissingToken
+	}
+
+	accessToken, err := s.accessTokenRepo.FindByToken(ctx, token)
+	if err != nil || accessToken == nil {
+		return nil, entity.ErrInvalidToken
+	}
+	if !accessToken.IsViewOnly() {
+		return nil, entity.ErrInvalidToken
+	}
+	if time.Now().UTC().After(accessToken.ExpiresAt) {
+		return nil, entity.ErrTokenExpired
+	}
+
+	return accessToken, nil
+}
+
+func readOnlyViewMode(status entity.DocumentStatus) documentuc.ReadOnlyViewMode {
+	switch status {
+	case entity.DocumentStatusDraft, entity.DocumentStatusAwaitingInput:
+		return documentuc.ReadOnlyViewModeContent
+	case entity.DocumentStatusPreparingSignature,
+		entity.DocumentStatusReadyToSign,
+		entity.DocumentStatusSigning,
+		entity.DocumentStatusCompleted:
+		return documentuc.ReadOnlyViewModePDF
+	default:
+		return documentuc.ReadOnlyViewModeUnavailable
+	}
+}
+
+func (s *ReadOnlyViewService) readOnlyViewContent(ctx context.Context, doc *entity.Document) (json.RawMessage, error) {
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, fmt.Errorf("find template version: %w", err)
+	}
+	if version == nil {
+		return nil, fmt.Errorf("find template version: %w", entity.ErrVersionNotFound)
+	}
+
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, fmt.Errorf("parse portable document: %w", err)
+	}
+	if portableDoc == nil || portableDoc.Content == nil {
+		return nil, errors.New("read-only view content is empty")
+	}
+
+	content, err := json.Marshal(portableDoc.Content)
+	if err != nil {
+		return nil, fmt.Errorf("marshal read-only view content: %w", err)
+	}
+	if len(content) == 0 {
+		return nil, errors.New("read-only view content is empty")
+	}
+
+	return content, nil
 }
