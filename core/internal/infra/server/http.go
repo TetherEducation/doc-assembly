@@ -600,7 +600,7 @@ func isPublicPageEntryPath(p string) bool {
 		return false
 	}
 
-	return parts[1] == "sign" || parts[1] == "doc"
+	return parts[1] == "sign" || parts[1] == "doc" || parts[1] == "view"
 }
 
 // stripBasePath removes the basePath prefix from reqPath.

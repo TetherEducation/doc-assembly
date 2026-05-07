@@ -76,6 +76,48 @@ func TestPublicPageEntrySPAMiddleware_ServesHTMLForDocumentEntry(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "<div id=\"app\"></div>")
 }
 
+func TestPublicPageEntrySPAMiddleware_ServesHTMLForReadOnlyViewEntry(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(publicPageEntrySPAMiddleware(testFrontendFS(), "/doc-assembly"))
+	router.GET("/doc-assembly/public/view/:token", func(c *gin.Context) {
+		c.Header("X-Handler", "json")
+		c.JSON(http.StatusOK, gin.H{"mode": "content"})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/doc-assembly/public/view/token-1", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+	assert.NotEqual(t, "json", rec.Header().Get("X-Handler"))
+	assert.Contains(t, rec.Body.String(), "<div id=\"app\"></div>")
+}
+
+func TestPublicPageEntrySPAMiddleware_PreservesJSONForReadOnlyViewEntry(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(publicPageEntrySPAMiddleware(testFrontendFS(), "/doc-assembly"))
+	router.GET("/doc-assembly/public/view/:token", func(c *gin.Context) {
+		c.Header("X-Handler", "json")
+		c.JSON(http.StatusOK, gin.H{"mode": "content"})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/doc-assembly/public/view/token-1", nil)
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "json", rec.Header().Get("X-Handler"))
+	assert.Contains(t, rec.Header().Get("Content-Type"), "application/json")
+	assert.JSONEq(t, `{"mode":"content"}`, rec.Body.String())
+}
+
 func TestSigningCSPMiddleware_UsesConfiguredFrameAncestors(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

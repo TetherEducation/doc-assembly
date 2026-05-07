@@ -20,6 +20,7 @@ import (
 
 type readOnlyViewUCStub struct {
 	createCalledWith string
+	createWorkspace  string
 	viewCalledWith   string
 	pdfCalledWith    string
 
@@ -30,7 +31,8 @@ type readOnlyViewUCStub struct {
 	err          error
 }
 
-func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, workspaceID, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+	s.createWorkspace = workspaceID
 	s.createCalledWith = documentID
 	if s.err != nil {
 		return nil, s.err
@@ -66,6 +68,7 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 		}}
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
+			c.Set("workspace_id", "workspace-1")
 			c.Set("workspace_role", entity.WorkspaceRoleViewer)
 			c.Next()
 		})
@@ -77,6 +80,7 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 
 		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 		assert.Equal(t, "doc-1", uc.createCalledWith)
+		assert.Equal(t, "workspace-1", uc.createWorkspace)
 
 		var body struct {
 			URL       string    `json:"url"`
@@ -100,6 +104,24 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 
 		require.Equal(t, http.StatusForbidden, recorder.Code, recorder.Body.String())
 		assert.Empty(t, uc.createCalledWith)
+	})
+
+	t.Run("missing workspace rejected before use case", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{createResult: &documentuc.CreateReadOnlyViewLinkResult{}}
+		router := gin.New()
+		router.Use(func(c *gin.Context) {
+			c.Set("workspace_role", entity.WorkspaceRoleViewer)
+			c.Next()
+		})
+		controller.NewDocumentController(nil, nil, uc, nil).RegisterRoutes(router.Group("/api/v1"))
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.createCalledWith)
+		assert.Empty(t, uc.createWorkspace)
 	})
 }
 

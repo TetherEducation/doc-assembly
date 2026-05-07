@@ -155,8 +155,13 @@ func (c *DocumentController) ListDocuments(ctx *gin.Context) {
 // @Router /api/v1/documents/{documentId}/view-link [post]
 func (c *DocumentController) CreateReadOnlyViewLink(ctx *gin.Context) {
 	documentID := ctx.Param("documentId")
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		return
+	}
 
-	result, err := c.readOnlyViewUC.CreateReadOnlyViewLink(ctx.Request.Context(), documentID)
+	result, err := c.readOnlyViewUC.CreateReadOnlyViewLink(ctx.Request.Context(), workspaceID, documentID)
 	if err != nil {
 		HandleError(ctx, err)
 		return

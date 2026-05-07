@@ -60,13 +60,16 @@ func NewReadOnlyViewService(
 }
 
 // CreateReadOnlyViewLink creates a fresh expiring token for a public read-only view.
-func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, workspaceID, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
 		return nil, fmt.Errorf("find document: %w", err)
 	}
 	if doc == nil {
 		return nil, entity.ErrDocumentNotFound
+	}
+	if doc.WorkspaceID != workspaceID {
+		return nil, entity.ErrForbidden
 	}
 	if doc.Status == entity.DocumentStatusInvalidated || doc.Status == entity.DocumentStatusCancelled || doc.IsExpired() {
 		return nil, entity.ErrInvalidDocumentState
@@ -319,12 +322,14 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 		return nil, "", errors.New("PDF is not available")
 	}
 
-	filename := signedDocumentFilename(doc)
-	if strings.TrimSpace(renderResult.Filename) != "" {
-		filename = renderResult.Filename
-	}
+	return renderResult.PDF, readOnlyViewPDFFilename(doc, renderResult.Filename), nil
+}
 
-	return renderResult.PDF, filename, nil
+func readOnlyViewPDFFilename(doc *entity.Document, rendererFilename string) string {
+	if strings.TrimSpace(rendererFilename) != "" {
+		return rendererFilename
+	}
+	return signedDocumentFilename(doc)
 }
 
 func (s *ReadOnlyViewService) validateReadOnlyViewPreviewPDFDependencies() error {

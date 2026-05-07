@@ -38,7 +38,7 @@ type ReadOnlyViewResponse struct {
 
 // ReadOnlyViewUseCase defines the input port for expiring read-only document views.
 type ReadOnlyViewUseCase interface {
-	CreateReadOnlyViewLink(ctx context.Context, documentID string) (*CreateReadOnlyViewLinkResult, error)
+	CreateReadOnlyViewLink(ctx context.Context, workspaceID, documentID string) (*CreateReadOnlyViewLinkResult, error)
 	GetReadOnlyView(ctx context.Context, token string) (*ReadOnlyViewResponse, error)
 	GetReadOnlyViewPDF(ctx context.Context, token string) ([]byte, string, error)
 }
