@@ -19,21 +19,24 @@ import (
 
 // DocumentController handles document HTTP requests.
 type DocumentController struct {
-	documentUC   documentuc.DocumentUseCase
-	preSigningUC documentuc.PreSigningUseCase
-	eventEmitter *documentsvc.EventEmitter
+	documentUC     documentuc.DocumentUseCase
+	preSigningUC   documentuc.PreSigningUseCase
+	readOnlyViewUC documentuc.ReadOnlyViewUseCase
+	eventEmitter   *documentsvc.EventEmitter
 }
 
 // NewDocumentController creates a new document controller.
 func NewDocumentController(
 	documentUC documentuc.DocumentUseCase,
 	preSigningUC documentuc.PreSigningUseCase,
+	readOnlyViewUC documentuc.ReadOnlyViewUseCase,
 	eventEmitter *documentsvc.EventEmitter,
 ) *DocumentController {
 	return &DocumentController{
-		documentUC:   documentUC,
-		preSigningUC: preSigningUC,
-		eventEmitter: eventEmitter,
+		documentUC:     documentUC,
+		preSigningUC:   preSigningUC,
+		readOnlyViewUC: readOnlyViewUC,
+		eventEmitter:   eventEmitter,
 	}
 }
 
@@ -67,6 +70,9 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 
 		// Download signed PDF
 		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.GetDocumentPDF)
+
+		// Create public read-only view link
+		docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.CreateReadOnlyViewLink)
 
 		// Refresh document status from provider
 		docs.POST("/:documentId/refresh", middleware.RequireOperator(), c.RefreshStatus)
@@ -130,6 +136,33 @@ func (c *DocumentController) ListDocuments(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, docs)
+}
+
+// CreateReadOnlyViewLink creates a public read-only view link for a document.
+// @Summary Create read-only view link
+// @Description Creates a fresh expiring public read-only link for the document.
+// @Tags Documents
+// @Accept json
+// @Produce json
+// @Param X-Workspace-ID header string true "Workspace ID"
+// @Param documentId path string true "Document ID"
+// @Success 200 {object} dto.CreateReadOnlyViewLinkResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/{documentId}/view-link [post]
+func (c *DocumentController) CreateReadOnlyViewLink(ctx *gin.Context) {
+	documentID := ctx.Param("documentId")
+
+	result, err := c.readOnlyViewUC.CreateReadOnlyViewLink(ctx.Request.Context(), documentID)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.NewCreateReadOnlyViewLinkResponse(result))
 }
 
 // GetDocument returns a single document with recipients.

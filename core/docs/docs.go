@@ -4131,6 +4131,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/documents/{documentId}/view-link": {
+            "post": {
+                "description": "Creates a fresh expiring public read-only link for the document.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Create read-only view link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace ID",
+                        "name": "X-Workspace-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/internal/documents/create": {
             "post": {
                 "description": "Creates or replays a document using the extension system (Mapper, Init, Injectors)",
@@ -9727,6 +9796,100 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/public/view/{token}": {
+            "get": {
+                "description": "Returns read-only document metadata and content/PDF mode for a VIEW_ONLY token.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Read-Only View"
+                ],
+                "summary": "Get public read-only view",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Read-only view token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/public/view/{token}/pdf": {
+            "get": {
+                "description": "Returns the document PDF for a VIEW_ONLY token when the document is in PDF mode.",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Public Read-Only View"
+                ],
+                "summary": "Get public read-only view PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Read-only view token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/webhooks/signing/{provider}": {
             "post": {
                 "consumes": [
@@ -10391,6 +10554,20 @@ const docTemplate = `{
                         "ID",
                         "CANONICAL_NAME"
                     ]
+                }
+            }
+        },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -11748,6 +11925,35 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "object"
+                },
+                "documentId": {
+                    "type": "string"
+                },
+                "documentStatus": {
+                    "type": "string"
+                },
+                "documentTitle": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "mode": {
+                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode"
+                },
+                "pdfUrl": {
+                    "type": "string"
+                },
+                "reason": {
                     "type": "string"
                 }
             }
@@ -13344,6 +13550,19 @@ const docTemplate = `{
                     "type": "boolean"
                 }
             }
+        },
+        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode": {
+            "type": "string",
+            "enum": [
+                "content",
+                "pdf",
+                "unavailable"
+            ],
+            "x-enum-varnames": [
+                "ReadOnlyViewModeContent",
+                "ReadOnlyViewModePDF",
+                "ReadOnlyViewModeUnavailable"
+            ]
         },
         "github_com_rendis_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse": {
             "type": "object",

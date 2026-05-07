@@ -340,7 +340,6 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	tenantCtrl := controller.NewTenantController(tenantSvc, workspaceSvc, tenantMemberSvc)
 	documentTypeCtrl := controller.NewDocumentTypeController(documentTypeSvc, templateSvc, templateMapper)
 	processCtrl := controller.NewProcessController(processSvc, processMapper)
-	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, eventEmitter)
 	webhookCtrl := controller.NewWebhookController(documentSvc, webhookHandlers)
 	internalDocCtrl := controller.NewInternalDocumentController(internalDocSvc, documentSvc)
 	// --- Document Access Service (email-verification gate) ---
@@ -361,8 +360,23 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		documentRepo, documentRecipientRepo, templateVersionRepo, documentAccessTokenRepo,
 		notificationSvc, publicURL, rateLimitMax, rateLimitWindowMin, tokenTTLHours,
 	)
+	readOnlyViewSvc := documentsvc.NewReadOnlyViewService(
+		documentRepo,
+		documentAccessTokenRepo,
+		documentRecipientRepo,
+		templateVersionRepo,
+		templateVersionSignerRoleRepo,
+		documentFieldResponseRepo,
+		pdfRenderer,
+		storageAdapter,
+		cfg.Storage.Enabled,
+		tokenTTLHours,
+		publicURL,
+	)
+	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
 	publicSigningCtrl := controller.NewPublicSigningController(preSigningSvc, documentAccessSvc, publicURL)
+	publicReadOnlyViewCtrl := controller.NewPublicReadOnlyViewController(readOnlyViewSvc)
 	signingSessionCtrl := controller.NewSigningSessionController(signingSessionSvc)
 	automationKeyCtrl := controller.NewAutomationKeyController(automationAPIKeyUC)
 	automationCtrl := controller.NewAutomationController(
@@ -394,6 +408,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		internalDocCtrl,
 		publicDocAccessCtrl,
 		publicSigningCtrl,
+		publicReadOnlyViewCtrl,
 		signingSessionCtrl,
 		automationKeyCtrl,
 		automationCtrl,
