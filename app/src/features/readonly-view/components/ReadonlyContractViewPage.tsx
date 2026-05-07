@@ -4,6 +4,11 @@ import { AlertCircle, Eye, Loader2 } from 'lucide-react'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { DocumentEditor } from '@/features/editor/components/DocumentEditor'
+import {
+  useDocumentHeaderStore,
+  usePaginationStore,
+  useSignerRolesStore,
+} from '@/features/editor/stores'
 import { changeLanguage } from '@/lib/i18n'
 import type { PublicSigningLanguage } from '@/features/public-signing/public-signing-language'
 import {
@@ -37,6 +42,10 @@ export function ReadonlyContractViewPage({
 
   useEffect(() => {
     let cancelled = false
+
+    usePaginationStore.getState().reset()
+    useSignerRolesStore.getState().reset()
+    useDocumentHeaderStore.getState().reset()
 
     async function load() {
       try {
