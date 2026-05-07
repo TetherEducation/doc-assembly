@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Eye, MoreHorizontal } from 'lucide-react'
+import { Ban, Eye, MoreHorizontal } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatRelativeTime } from '@/lib/utils'
+import { usePermission } from '@/features/auth/hooks/usePermission'
 import { SigningStatusBadge } from './SigningStatusBadge'
+import { SigningDocumentStatus } from '../types'
 import type { SigningDocumentListItem } from '../types'
 
 interface SigningDocumentRowProps {
@@ -19,6 +21,7 @@ interface SigningDocumentRowProps {
   onToggleSelect?: () => void
   onClick?: () => void
   onView?: () => void
+  onDeprecate?: () => void
 }
 
 export function SigningDocumentRow({
@@ -28,11 +31,16 @@ export function SigningDocumentRow({
   onToggleSelect,
   onClick,
   onView,
+  onDeprecate,
 }: SigningDocumentRowProps) {
   const { t } = useTranslation()
+  const { hasPermission, Permission } = usePermission()
 
   const shouldAnimate = index < 10
   const staggerDelay = shouldAnimate ? index * 0.05 : 0
+  const canDeprecate =
+    document.status === SigningDocumentStatus.COMPLETED &&
+    hasPermission(Permission.DOCUMENT_DEPRECATE)
 
   return (
     <motion.tr
@@ -91,6 +99,15 @@ export function SigningDocumentRow({
               <Eye className="mr-2 h-4 w-4" />
               {t('signing.actions.view', 'View details')}
             </DropdownMenuItem>
+            {canDeprecate && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDeprecate?.()}
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                {t('signing.actions.deprecate', 'Deprecate')}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </td>

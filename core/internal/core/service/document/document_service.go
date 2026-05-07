@@ -386,6 +386,93 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 	return nil
 }
 
+// DeprecateDocument invalidates a completed document and performs best-effort provider cleanup.
+func (s *DocumentService) DeprecateDocument(ctx context.Context, documentID string, reason *string) (*documentuc.DeprecateDocumentResult, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("finding document: %w", err)
+	}
+	if doc.Status != entity.DocumentStatusCompleted {
+		return nil, entity.ErrInvalidDocumentState
+	}
+
+	oldStatus := string(doc.Status)
+	cleanup := s.cleanupProviderForDeprecatedDocument(ctx, doc)
+
+	if err := doc.UpdateStatus(entity.DocumentStatusInvalidated); err != nil {
+		return nil, fmt.Errorf("marking document deprecated: %w", err)
+	}
+	doc.IsActive = false
+	now := time.Now().UTC()
+	doc.SupersededAt = &now
+	doc.SupersedeReason = reason
+	if err := s.documentRepo.Update(ctx, doc); err != nil {
+		return nil, fmt.Errorf("updating deprecated document: %w", err)
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"reason":           reasonString(reason),
+		"providerCleanup":  cleanup,
+		"deprecationState": string(entity.DocumentStatusInvalidated),
+	})
+	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentDeprecated, entity.ActorUser, "", oldStatus, string(entity.DocumentStatusInvalidated), metadata)
+
+	return &documentuc.DeprecateDocumentResult{Document: doc, ProviderCleanup: cleanup}, nil
+}
+
+func (s *DocumentService) cleanupProviderForDeprecatedDocument(ctx context.Context, doc *entity.Document) *documentuc.ProviderCleanupResult {
+	if doc.ActiveAttemptID == nil || *doc.ActiveAttemptID == "" {
+		return nil
+	}
+	attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
+	if err != nil || attempt.ProviderDocumentID == nil || *attempt.ProviderDocumentID == "" {
+		return nil
+	}
+
+	status := "UNSUPPORTED"
+	result := &documentuc.ProviderCleanupResult{Status: status, Reason: "provider cleanup is not supported"}
+	if s.signingProvider != nil && s.signingProvider.ProviderCapabilities().CanCancel {
+		providerResult, cleanupErr := s.signingProvider.CleanupProviderDocument(ctx, &port.CleanupProviderDocumentRequest{
+			ProviderDocumentID: *attempt.ProviderDocumentID,
+			Environment:        entity.EnvironmentProd,
+		})
+		if cleanupErr != nil {
+			status = "FAILED_RETRYABLE"
+			result = &documentuc.ProviderCleanupResult{Status: status, Reason: cleanupErr.Error()}
+		} else {
+			status = providerResult.Status
+			result = &documentuc.ProviderCleanupResult{
+				Action: providerResult.Action,
+				Status: providerResult.Status,
+				Reason: providerResult.Reason,
+			}
+		}
+	}
+
+	attempt.CleanupStatus = &status
+	if result.Action != "" {
+		attempt.CleanupAction = &result.Action
+	}
+	if result.Reason != "" && status != "SUCCEEDED" {
+		attempt.CleanupError = &result.Reason
+	}
+	if err := s.attemptRepo.Update(ctx, attempt); err != nil {
+		slog.WarnContext(ctx, "failed to persist deprecated document provider cleanup",
+			"document_id", doc.ID,
+			"attempt_id", attempt.ID,
+			"error", err,
+		)
+	}
+	return result
+}
+
+func reasonString(reason *string) string {
+	if reason == nil {
+		return ""
+	}
+	return *reason
+}
+
 // HandleWebhookEvent processes an incoming webhook event from the signing provider.
 //
 //nolint:gocognit,gocyclo,nestif,funlen

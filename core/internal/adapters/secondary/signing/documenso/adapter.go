@@ -1156,13 +1156,13 @@ func determineFinalStatus(envStatus string, allSigned, anyDeclined bool, recipie
 	return baseStatus
 }
 
-// CancelDocument cancels/voids a document that is pending signatures.
+// CleanupProviderDocument cancels/deprecates a provider document by deleting the Documenso envelope.
 func (a *Adapter) CleanupProviderDocument(ctx context.Context, req *port.CleanupProviderDocumentRequest) (*port.CleanupProviderDocumentResult, error) {
 	if err := a.postEnvelopeAction(
 		ctx,
 		req.ProviderDocumentID,
-		"/envelope/cancel",
-		"marshaling cancel request",
+		"/envelope/delete",
+		"marshaling delete request",
 		"creating request",
 		"executing request",
 		"documenso API error",

@@ -119,6 +119,12 @@ func (env *documentTestEnv) createDocument(t *testing.T, title string) entity.Do
 	return doc
 }
 
+func setDocumentStatusForDocumentController(t *testing.T, documentID string, status entity.DocumentStatus) {
+	t.Helper()
+	_, err := testhelper.GetTestPool(t).Exec(t.Context(), `UPDATE execution.documents SET status = $2 WHERE id = $1`, documentID, status)
+	require.NoError(t, err)
+}
+
 // --- Tests ---
 
 func TestDocumentController_CreateDocument(t *testing.T) {
@@ -338,6 +344,46 @@ func TestDocumentController_CancelDocument(t *testing.T) {
 		doc := env.createDocument(t, "Cancel Forbidden Doc")
 
 		resp, _ := env.viewerClient().POST("/api/v1/documents/"+doc.ID+"/cancel", nil)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+}
+
+func TestDocumentController_DeprecateDocument(t *testing.T) {
+	env := setupDocumentEnv(t)
+
+	t.Run("success for completed document", func(t *testing.T) {
+		doc := env.createDocument(t, "Deprecate Test Doc")
+		setDocumentStatusForDocumentController(t, doc.ID, entity.DocumentStatusCompleted)
+		reason := "replacement signed"
+
+		resp, body := env.operatorClient().POST("/api/v1/documents/"+doc.ID+"/deprecate", map[string]any{"reason": reason})
+		require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+		var result dto.InternalDeprecateDocumentResponse
+		require.NoError(t, json.Unmarshal(body, &result))
+		assert.Equal(t, doc.ID, result.ID)
+		assert.Equal(t, string(entity.DocumentStatusInvalidated), result.Status)
+
+		getResp, getBody := env.viewerClient().GET("/api/v1/documents/" + doc.ID)
+		require.Equal(t, http.StatusOK, getResp.StatusCode)
+
+		var deprecated entity.DocumentWithRecipients
+		require.NoError(t, json.Unmarshal(getBody, &deprecated))
+		assert.Equal(t, entity.DocumentStatusInvalidated, deprecated.Status)
+	})
+
+	t.Run("rejects unsigned document", func(t *testing.T) {
+		doc := env.createDocument(t, "Deprecate Unsigned Doc")
+
+		resp, _ := env.operatorClient().POST("/api/v1/documents/"+doc.ID+"/deprecate", map[string]any{"reason": "not signed"})
+		assert.Equal(t, http.StatusConflict, resp.StatusCode)
+	})
+
+	t.Run("forbidden for viewer", func(t *testing.T) {
+		doc := env.createDocument(t, "Deprecate Forbidden Doc")
+		setDocumentStatusForDocumentController(t, doc.ID, entity.DocumentStatusCompleted)
+
+		resp, _ := env.viewerClient().POST("/api/v1/documents/"+doc.ID+"/deprecate", map[string]any{"reason": "no access"})
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 }

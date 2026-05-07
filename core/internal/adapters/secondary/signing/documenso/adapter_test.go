@@ -34,6 +34,48 @@ func TestNewUsesLongDocumensoHTTPTimeout(t *testing.T) {
 	}
 }
 
+func TestCleanupProviderDocumentDeletesEnvelope(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if r.URL.Path != "/api/v2/envelope/delete" {
+			t.Fatalf("path = %s, want /api/v2/envelope/delete", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "api_test" {
+			t.Fatalf("Authorization header = %q, want api_test", got)
+		}
+
+		var body map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decoding request body: %v", err)
+		}
+		if body["envelopeId"] != "env_123" {
+			t.Fatalf("envelopeId = %q, want env_123", body["envelopeId"])
+		}
+
+		writeJSON(t, w, map[string]any{"success": true})
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got, err := adapter.CleanupProviderDocument(context.Background(), &port.CleanupProviderDocumentRequest{
+		ProviderDocumentID: "env_123",
+		Environment:        entity.EnvironmentProd,
+	})
+	if err != nil {
+		t.Fatalf("CleanupProviderDocument() error = %v", err)
+	}
+
+	if got.Action != "CANCEL" || got.Status != "SUCCEEDED" {
+		t.Fatalf("cleanup result = %+v, want CANCEL/SUCCEEDED", got)
+	}
+}
+
 func TestFindProviderDocumentByCorrelationKeyFindsUsableEnvelopeByExternalID(t *testing.T) {
 	const correlationKey = "doc-id:attempt-id"
 

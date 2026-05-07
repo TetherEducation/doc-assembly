@@ -35,4 +35,7 @@ type InternalCreateResult struct {
 type InternalDocumentUseCase interface {
 	// CreateDocument creates or replays a document using the extension system (Mapper, Init, Injectors).
 	CreateDocument(ctx context.Context, cmd InternalCreateCommand) (*InternalCreateResult, error)
+
+	// ResetUnsignedDocument recreates a logical document with force-create semantics when the active document is unsigned.
+	ResetUnsignedDocument(ctx context.Context, cmd InternalCreateCommand) (*InternalCreateResult, error)
 }

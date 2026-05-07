@@ -78,6 +78,9 @@ type DocumentRepository interface {
 	// FindInternalCreateReplay finds an already-created document for an internal-create request before expensive preparation.
 	FindInternalCreateReplay(ctx context.Context, workspaceID, documentTypeID, externalID, transactionalID string) (string, bool, error)
 
+	// FindActiveByLogicalKey finds the active logical document for workspace + document type + external ID.
+	FindActiveByLogicalKey(ctx context.Context, workspaceID, documentTypeID, externalID string) (string, bool, error)
+
 	// InternalCreateOrReplay executes transactional create/replay/supersede logic for internal create endpoint.
 	InternalCreateOrReplay(ctx context.Context, req *InternalCreateRequest) (*InternalCreateResult, error)
 }

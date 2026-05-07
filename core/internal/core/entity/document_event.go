@@ -11,6 +11,7 @@ const (
 	EventDocumentSent       = "DOCUMENT_SENT"
 	EventDocumentCancelled  = "DOCUMENT_CANCELLED"
 	EventDocumentCompleted  = "DOCUMENT_COMPLETED"
+	EventDocumentDeprecated = "DOCUMENT_DEPRECATED"
 	EventDocumentExpired    = "DOCUMENT_EXPIRED"
 	EventDocumentError      = "DOCUMENT_ERROR"
 	EventRecipientSent      = "RECIPIENT_SENT"

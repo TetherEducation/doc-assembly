@@ -590,6 +590,19 @@ func (r *Repository) findActiveByLogicalKey(ctx context.Context, workspaceID, do
 	return docID, nil
 }
 
+// FindActiveByLogicalKey finds the active logical document for workspace + document type + external ID.
+func (r *Repository) FindActiveByLogicalKey(ctx context.Context, workspaceID, documentTypeID, externalID string) (string, bool, error) {
+	var docID string
+	err := r.pool.QueryRow(ctx, queryFindActiveByLogicalKey, workspaceID, documentTypeID, externalID).Scan(&docID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("querying active document by logical key: %w", err)
+	}
+	return docID, true, nil
+}
+
 func isConstraintViolation(err error, constraint string) bool {
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) {

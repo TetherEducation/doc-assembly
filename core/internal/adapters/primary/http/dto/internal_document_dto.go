@@ -40,6 +40,25 @@ type InternalCreateDocumentWithRecipientsResponse struct {
 	Recipients []InternalDocumentRecipientResponse `json:"recipients,omitempty"`
 }
 
+// ProviderCleanupResponse describes the result of a best-effort provider cleanup/deprecation action.
+type ProviderCleanupResponse struct {
+	Action string `json:"action,omitempty"`
+	Status string `json:"status"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// InternalDeprecateDocumentRequest is the request for deprecating a completed document via internal API.
+type InternalDeprecateDocumentRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
+// InternalDeprecateDocumentResponse is returned after deprecating a completed document.
+type InternalDeprecateDocumentResponse struct {
+	ID              string                   `json:"id"`
+	Status          string                   `json:"status"`
+	ProviderCleanup *ProviderCleanupResponse `json:"providerCleanup,omitempty"`
+}
+
 // InternalErrorResponse is the error response for internal API.
 type InternalErrorResponse struct {
 	Error   string   `json:"error"`

@@ -886,6 +886,20 @@ definitions:
       workspaceId:
         type: string
     type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest:
+    properties:
+      reason:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse:
+    properties:
+      id:
+        type: string
+      providerCleanup:
+        $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse'
+      status:
+        type: string
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse:
     properties:
       email:
@@ -1279,6 +1293,15 @@ definitions:
     x-enum-varnames:
     - PromotionModeNewTemplate
     - PromotionModeNewVersion
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse:
+    properties:
+      action:
+        type: string
+      reason:
+        type: string
+      status:
+        type: string
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse:
     properties:
       createdAt:
@@ -4744,6 +4767,56 @@ paths:
       summary: Cancel document
       tags:
       - Documents
+  /api/v1/documents/{documentId}/deprecate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-ID
+        required: true
+        type: string
+      - description: Document ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: Deprecation request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      summary: Deprecate completed document
+      tags:
+      - Documents
   /api/v1/documents/{documentId}/events:
     get:
       consumes:
@@ -5061,6 +5134,58 @@ paths:
       summary: Get document statistics
       tags:
       - Documents
+  /api/v1/internal/documents/{documentId}/deprecate:
+    post:
+      consumes:
+      - application/json
+      description: Invalidates a completed document and attempts best-effort cleanup
+        in the signing provider
+      parameters:
+      - description: API Key for authentication
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      - description: Document ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: Deprecation request
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+      summary: Deprecate completed document via internal API
+      tags:
+      - Internal
   /api/v1/internal/documents/create:
     post:
       consumes:
@@ -5132,6 +5257,75 @@ paths:
           schema:
             $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
       summary: Create document via internal API
+      tags:
+      - Internal
+  /api/v1/internal/documents/reset:
+    post:
+      consumes:
+      - application/json
+      description: Recreates an unsigned logical document using force-create semantics
+        and reruns Mapper, Init, and Injectors
+      parameters:
+      - description: API Key for authentication
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      - description: Tenant business code
+        in: header
+        name: X-Tenant-Code
+        required: true
+        type: string
+      - description: Workspace business code
+        in: header
+        name: X-Workspace-Code
+        required: true
+        type: string
+      - description: Document type code
+        in: header
+        name: X-Document-Type
+        required: true
+        type: string
+      - description: External ID
+        in: header
+        name: X-External-ID
+        required: true
+        type: string
+      - description: Transactional ID
+        in: header
+        name: X-Transactional-ID
+        required: true
+        type: string
+      - description: Internal reset request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+      summary: Reset unsigned document via internal API
       tags:
       - Internal
   /api/v1/me/access:

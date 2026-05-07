@@ -38,6 +38,10 @@ func (f *fakeInternalDocumentUseCase) CreateDocument(_ context.Context, cmd docu
 	return f.results[idx], nil
 }
 
+func (f *fakeInternalDocumentUseCase) ResetUnsignedDocument(ctx context.Context, cmd documentuc.InternalCreateCommand) (*documentuc.InternalCreateResult, error) {
+	return f.CreateDocument(ctx, cmd)
+}
+
 func TestValidateAndExtractHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
