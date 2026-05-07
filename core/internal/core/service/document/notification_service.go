@@ -205,13 +205,13 @@ func (s *NotificationService) NotifyDocumentCreated(ctx context.Context, documen
 }
 
 // SendAccessLink sends an email with a signing access link to a recipient.
-func (s *NotificationService) SendAccessLink(ctx context.Context, recipient *entity.DocumentRecipient, doc *entity.Document, tokenStr string) {
+func (s *NotificationService) SendAccessLink(ctx context.Context, recipient *entity.DocumentRecipient, doc *entity.Document, tokenStr string, language string) {
 	title := "Document"
 	if doc.Title != nil {
 		title = *doc.Title
 	}
 
-	actionURL := fmt.Sprintf("%s/public/sign/%s", s.publicURL, tokenStr)
+	actionURL := appendSigningURLLanguage(fmt.Sprintf("%s/public/sign/%s", s.publicURL, tokenStr), language)
 
 	body, renderErr := renderTemplate("access_link.html", templateData{
 		RecipientName: recipient.Name,

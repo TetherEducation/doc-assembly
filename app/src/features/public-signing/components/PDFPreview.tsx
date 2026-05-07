@@ -12,6 +12,10 @@ import {
   PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  appendPublicLanguage,
+  type PublicSigningLanguage,
+} from '../public-signing-language'
 
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -22,6 +26,7 @@ interface PDFPreviewProps {
   recipientName: string
   onProceed: () => void
   isLoading: boolean
+  language?: PublicSigningLanguage
 }
 
 interface Position {
@@ -37,6 +42,7 @@ export function PDFPreview({
   recipientName,
   onProceed,
   isLoading,
+  language,
 }: PDFPreviewProps) {
   const { t } = useTranslation()
   const [loadingPdf, setLoadingPdf] = useState(true)
@@ -58,8 +64,8 @@ export function PDFPreview({
   // Build the PDF URL — react-pdf will fetch it directly.
   const basePath = (import.meta.env.VITE_BASE_PATH || '').replace(/\/$/, '')
   const pdfUrl = useMemo(
-    () => `${basePath}/public/sign/${token}/pdf`,
-    [basePath, token],
+    () => `${basePath}${appendPublicLanguage(`/public/sign/${token}/pdf`, language)}`,
+    [basePath, token, language],
   )
 
   // Measure container width for scaling.

@@ -106,7 +106,7 @@ sequenceDiagram
 - `signing_session_auth.mode=oidc`: SDK validates JWT and extracts configured email claim.
 - `signing_session_auth.mode=custom`: integrator authenticator validates and returns claims.
 
-The endpoint always returns a `/public/sign/{token}` session URL (sign/view/download behavior depends on document state).
+The endpoint always returns a `/public/sign/{token}` session URL (sign/view/download behavior depends on document state). Embedders may pass `language=en|es`; the returned session URL preserves that query value, and unsupported explicit values fall back to `language=en`.
 
 SDK setup example:
 

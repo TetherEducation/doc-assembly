@@ -18,6 +18,7 @@ import { ReactNodeViewRenderer } from '@tiptap/react'
 import axios from 'axios'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { changeLanguage } from '@/lib/i18n'
 
 import { InjectorExtension } from '@/features/editor/extensions/Injector'
 import { SignatureExtension } from '@/features/editor/extensions/Signature'
@@ -50,6 +51,10 @@ import type {
   FieldResponses,
   FieldResponsePayload,
 } from '../types'
+import {
+  publicLanguageOptions,
+  type PublicSigningLanguage,
+} from '../public-signing-language'
 
 type PageState =
   | { status: 'loading' }
@@ -60,6 +65,7 @@ type PageState =
 
 interface PublicSigningPageProps {
   token: string
+  language?: PublicSigningLanguage
 }
 
 const uuidLikePattern =
@@ -115,7 +121,7 @@ function buildSigningProgressTasks(
   ]
 }
 
-export function PublicSigningPage({ token }: PublicSigningPageProps) {
+export function PublicSigningPage({ token, language }: PublicSigningPageProps) {
   const { t } = useTranslation()
   const [pageState, setPageState] = useState<PageState>({ status: 'loading' })
   const [responses, setResponses] = useState<FieldResponses>({})
@@ -125,12 +131,20 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     new Set(),
   )
 
+  useEffect(() => {
+    if (!language) return
+    void changeLanguage(language)
+  }, [language])
+
   // Load signing page state.
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const data = await getPublicSigningPage(token)
+        const data = await getPublicSigningPage(
+          token,
+          publicLanguageOptions(language),
+        )
         if (!cancelled) {
           setPageState({ status: 'loaded', data })
         }
@@ -143,7 +157,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     return () => {
       cancelled = true
     }
-  }, [token, t])
+  }, [token, t, language])
 
   const handleProcessingUpdate = useCallback((data: PublicSigningResponse) => {
     setPageState({ status: 'loaded', data })
@@ -239,12 +253,16 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         }
       })
 
-      const result = await submitPreSigningForm(token, payload)
+      const result = await submitPreSigningForm(
+        token,
+        payload,
+        publicLanguageOptions(language),
+      )
       setPageState({ status: 'loaded', data: result })
     } catch (err) {
       handleSubmitError(err, setPageState, t)
     }
-  }, [pageState, agreed, responses, token, validate, t])
+  }, [pageState, agreed, responses, token, validate, t, language])
 
   // Handle proceed to signing (Path A).
   const handleProceed = useCallback(async () => {
@@ -253,17 +271,23 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
     setPageState({ status: 'proceeding', data: pageState.data })
 
     try {
-      const result = await proceedToSigning(token)
+      const result = await proceedToSigning(
+        token,
+        publicLanguageOptions(language),
+      )
       setPageState({ status: 'loaded', data: result })
     } catch (err) {
       handleSubmitError(err, setPageState, t)
     }
-  }, [pageState, token, t])
+  }, [pageState, token, t, language])
 
   // Handle signing completion.
   const handleSigningComplete = useCallback(async () => {
     try {
-      const refreshed = await getPublicSigningPage(token)
+      const refreshed = await getPublicSigningPage(
+        token,
+        publicLanguageOptions(language),
+      )
       setPageState({ status: 'loaded', data: refreshed })
       return
     } catch {
@@ -283,12 +307,15 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         canDownload: false,
       },
     })
-  }, [pageState, token])
+  }, [pageState, token, language])
 
   // Handle signing decline.
   const handleSigningDecline = useCallback(async () => {
     try {
-      const refreshed = await getPublicSigningPage(token)
+      const refreshed = await getPublicSigningPage(
+        token,
+        publicLanguageOptions(language),
+      )
       setPageState({ status: 'loaded', data: refreshed })
       return
     } catch {
@@ -308,7 +335,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         canDownload: false,
       },
     })
-  }, [pageState, token])
+  }, [pageState, token, language])
 
   // --- RENDER ---
 
@@ -322,6 +349,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         <PublicDocumentAccessPage
           expiredToken={token}
           expiredMessage={pageState.message}
+          language={language}
         />
       )
     }
@@ -347,6 +375,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         documentTitle={displayDocumentTitle}
         response={data}
         token={token}
+        language={language}
         onUpdate={handleProcessingUpdate}
         onError={handleProcessingError}
       />
@@ -387,6 +416,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         total={data.totalSigners ?? 0}
         waitingForPrevious={data.waitingForPrevious ?? !data.hasCurrentUserSigned}
         token={token}
+        language={language}
         onReady={(newData) => setPageState({ status: 'loaded', data: newData })}
       />
     )
@@ -403,6 +433,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
         <EmbeddedSigningFrame
           url={data.embeddedSigningUrl!}
           token={token}
+          language={language}
           onComplete={handleSigningComplete}
           onDecline={handleSigningDecline}
         />
@@ -489,6 +520,7 @@ export function PublicSigningPage({ token }: PublicSigningPageProps) {
       <div className="mx-auto max-w-4xl px-6 py-8">
         <PDFPreview
           token={token}
+          language={language}
           documentTitle={displayDocumentTitle}
           recipientName={data.recipientName}
           onProceed={handleProceed}
@@ -586,12 +618,14 @@ function ProcessingScreen({
   documentTitle,
   response,
   token,
+  language,
   onUpdate,
   onError,
 }: {
   documentTitle: string
   response: PublicSigningResponse
   token: string
+  language?: PublicSigningLanguage
   onUpdate: (data: PublicSigningResponse) => void
   onError: (err: unknown) => void
 }) {
@@ -607,7 +641,10 @@ function ProcessingScreen({
       if (cancelled || inFlight) return
       inFlight = true
       try {
-        const data = await getPublicSigningPage(token)
+        const data = await getPublicSigningPage(
+          token,
+          publicLanguageOptions(language),
+        )
         if (!cancelled) {
           onUpdate(data)
         }
@@ -626,7 +663,7 @@ function ProcessingScreen({
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [onError, onUpdate, retryAfterMs, token])
+  }, [onError, onUpdate, retryAfterMs, token, language])
 
   return (
     <PageShell documentTitle={documentTitle}>
@@ -750,6 +787,7 @@ function WaitingScreen({
   total,
   waitingForPrevious,
   token,
+  language,
   onReady,
 }: {
   documentTitle: string
@@ -758,6 +796,7 @@ function WaitingScreen({
   total: number
   waitingForPrevious: boolean
   token: string
+  language?: PublicSigningLanguage
   onReady: (data: PublicSigningResponse) => void
 }) {
   const { t } = useTranslation()
@@ -766,7 +805,10 @@ function WaitingScreen({
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await getPublicSigningPage(token)
+        const res = await getPublicSigningPage(
+          token,
+          publicLanguageOptions(language),
+        )
         if (res.step !== 'waiting') {
           onReady(res)
         }
@@ -776,7 +818,7 @@ function WaitingScreen({
     }, 30_000)
 
     return () => clearInterval(interval)
-  }, [token, onReady])
+  }, [token, onReady, language])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">

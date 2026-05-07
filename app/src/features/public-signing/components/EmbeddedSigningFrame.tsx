@@ -5,10 +5,15 @@ import {
   getPublicSigningPage,
   completeEmbeddedSigning,
 } from '../api/public-signing-api'
+import {
+  publicLanguageOptions,
+  type PublicSigningLanguage,
+} from '../public-signing-language'
 
 interface EmbeddedSigningFrameProps {
   url: string
   token: string
+  language?: PublicSigningLanguage
   onComplete: () => void
   onDecline: () => void
 }
@@ -27,6 +32,7 @@ const FINALIZING_SUCCESS_VISIBLE_MS = 700
 export function EmbeddedSigningFrame({
   url,
   token,
+  language,
   onComplete,
   onDecline,
 }: EmbeddedSigningFrameProps) {
@@ -86,11 +92,15 @@ export function EmbeddedSigningFrame({
     completionStartedRef.current = true
     startFinalizing()
     try {
-      await completeEmbeddedSigning(token)
+      if (language) {
+        await completeEmbeddedSigning(token, publicLanguageOptions(language))
+      } else {
+        await completeEmbeddedSigning(token)
+      }
     } catch {
       // Best effort — the backend may already have marked it.
     }
-  }, [startFinalizing, token])
+  }, [startFinalizing, token, language])
 
   // 1. Listen for postMessage — callback bridge (own origin) + provider native events.
   useEffect(() => {
@@ -138,7 +148,9 @@ export function EmbeddedSigningFrame({
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await getPublicSigningPage(token)
+        const res = language
+          ? await getPublicSigningPage(token, publicLanguageOptions(language))
+          : await getPublicSigningPage(token)
         if (res.step === 'completed') {
           handleComplete()
         } else if (res.step === 'declined') {
@@ -150,7 +162,7 @@ export function EmbeddedSigningFrame({
     }, 10_000)
 
     return () => clearInterval(interval)
-  }, [token, handleComplete, onDecline])
+  }, [token, handleComplete, onDecline, language])
 
   // 3. Once the provider accepts the final signature, keep the user in a clear
   // finalization state and poll faster until doc-assembly exposes the terminal
@@ -165,7 +177,9 @@ export function EmbeddedSigningFrame({
       if (cancelled || inFlight) return
       inFlight = true
       try {
-        const res = await getPublicSigningPage(token)
+        const res = language
+          ? await getPublicSigningPage(token, publicLanguageOptions(language))
+          : await getPublicSigningPage(token)
         if (cancelled) return
         if (res.step === 'completed' || (res.step === 'waiting' && res.hasCurrentUserSigned)) {
           finishFinalizing(onComplete)
@@ -186,7 +200,7 @@ export function EmbeddedSigningFrame({
       cancelled = true
       clearInterval(interval)
     }
-  }, [finalizing, finishFinalizing, onComplete, onDecline, token])
+  }, [finalizing, finishFinalizing, onComplete, onDecline, token, language])
 
   return (
     <div className="relative w-full" style={{ minHeight: 'calc(100vh - 105px)' }}>

@@ -8,6 +8,7 @@ Document the public document access and signing flow, including:
 - tokenized link access (`/public/sign/{token}`)
 - optional custom domain-auth bypass
 - expired magic link recovery
+- explicit public UI language selection via `language=en|es`
 
 ## Involved Endpoints
 
@@ -21,6 +22,8 @@ Document the public document access and signing flow, including:
 - `POST /public/sign/{token}/request-access`
 - `POST /public/sign/{token}/complete`
 - `GET /public/sign/{token}/refresh`
+
+All public access/signing endpoints accept an optional `language` query parameter for the public UI. Supported values are `en` and `es`; any other explicit value falls back to `en`. When present on `/public/doc/{documentId}` or `POST /api/v1/signing-sessions/{documentId}`, generated direct/session URLs preserve it as `/public/sign/{token}?language=...`.
 
 ## Endpoints by Flow Domain
 
@@ -74,7 +77,7 @@ Document the public document access and signing flow, including:
 
 1. User opens `/public/doc/{documentId}`.
 2. Custom middleware (`PublicDocumentAccessAuthenticator`) evaluates access in `GET /public/doc/:documentId`.
-3. If custom auth returns valid claims (with email), backend generates direct token (no email sent) and returns `303` redirect to `/public/sign/{token}`.
+3. If custom auth returns valid claims (with email), backend generates direct token (no email sent) and returns `303` redirect to `/public/sign/{token}`. If the entry URL included `language=en|es`, the redirect preserves it.
 4. User goes directly into tokenized flow (`preview/processing/signing/waiting/completed/declined/document_updated/unavailable`).
 5. If custom auth does not apply, fails, or provides no useful claims, flow falls back to standard email gate (Flow 1).
 
