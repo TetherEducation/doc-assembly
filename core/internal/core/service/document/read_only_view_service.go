@@ -1,0 +1,94 @@
+package document
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/rendis/doc-assembly/core/internal/core/port"
+	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+)
+
+var errReadOnlyViewNotImplemented = errors.New("read-only view retrieval is not implemented")
+
+// ReadOnlyViewService implements expiring public read-only document views.
+type ReadOnlyViewService struct {
+	documentRepo    port.DocumentRepository
+	accessTokenRepo port.DocumentAccessTokenRepository
+	tokenTTLHours   int
+	publicURL       string
+}
+
+var _ documentuc.ReadOnlyViewUseCase = (*ReadOnlyViewService)(nil)
+
+// NewReadOnlyViewService creates a new ReadOnlyViewService.
+func NewReadOnlyViewService(
+	documentRepo port.DocumentRepository,
+	accessTokenRepo port.DocumentAccessTokenRepository,
+	tokenTTLHours int,
+	publicURL string,
+) *ReadOnlyViewService {
+	return &ReadOnlyViewService{
+		documentRepo:    documentRepo,
+		accessTokenRepo: accessTokenRepo,
+		tokenTTLHours:   tokenTTLHours,
+		publicURL:       publicURL,
+	}
+}
+
+// CreateReadOnlyViewLink creates a fresh expiring token for a public read-only view.
+func (s *ReadOnlyViewService) CreateReadOnlyViewLink(ctx context.Context, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		return nil, err
+	}
+	if doc == nil {
+		return nil, entity.ErrDocumentNotFound
+	}
+	if doc.Status == entity.DocumentStatusInvalidated || doc.Status == entity.DocumentStatusCancelled || doc.IsExpired() {
+		return nil, entity.ErrInvalidDocumentState
+	}
+
+	tokenStr, err := generateAccessToken()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	accessToken := &entity.DocumentAccessToken{
+		DocumentID: doc.ID,
+		Token:      tokenStr,
+		TokenType:  entity.TokenTypeViewOnly,
+		ExpiresAt:  now.Add(time.Duration(s.tokenTTLHours) * time.Hour),
+		CreatedAt:  now,
+	}
+	if err := s.accessTokenRepo.Create(ctx, accessToken); err != nil {
+		return nil, err
+	}
+
+	return &documentuc.CreateReadOnlyViewLinkResult{
+		URL:       s.buildReadOnlyViewURL(tokenStr),
+		Token:     tokenStr,
+		ExpiresAt: accessToken.ExpiresAt,
+	}, nil
+}
+
+// GetReadOnlyView returns read-only metadata/content for a public token.
+func (s *ReadOnlyViewService) GetReadOnlyView(context.Context, string) (*documentuc.ReadOnlyViewResponse, error) {
+	return nil, errReadOnlyViewNotImplemented
+}
+
+// GetReadOnlyViewPDF returns the read-only PDF bytes for a public token.
+func (s *ReadOnlyViewService) GetReadOnlyViewPDF(context.Context, string) ([]byte, string, error) {
+	return nil, "", errReadOnlyViewNotImplemented
+}
+
+func (s *ReadOnlyViewService) buildReadOnlyViewURL(token string) string {
+	path := "/public/view/" + token
+	if s.publicURL == "" {
+		return path
+	}
+	return strings.TrimRight(s.publicURL, "/") + path
+}
