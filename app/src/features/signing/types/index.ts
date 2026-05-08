@@ -110,6 +110,12 @@ export interface DocumentEvent {
   createdAt: string
 }
 
+export interface CreateViewLinkResponse {
+  url: string
+  token: string
+  expiresAt: string
+}
+
 export interface SigningURLResponse {
   signingUrl: string
   expiresAt?: string

@@ -81,6 +81,7 @@ func NewHTTPServer(
 	internalDocController *controller.InternalDocumentController,
 	publicDocAccessController *controller.PublicDocumentAccessController,
 	publicSigningController *controller.PublicSigningController,
+	publicReadOnlyViewController *controller.PublicReadOnlyViewController,
 	signingSessionController *controller.SigningSessionController,
 	automationKeyController *controller.AutomationKeyController,
 	automationController *controller.AutomationController,
@@ -150,6 +151,7 @@ func NewHTTPServer(
 		base.Use(signingCSPMiddleware(cfg.Signing.SigningBaseURL, cfg.Server.PublicSigningFrameAncestors))
 	}
 	publicSigningController.RegisterRoutes(base)
+	publicReadOnlyViewController.RegisterRoutes(base)
 	automationController.RegisterRoutes(engine, middlewareProvider)
 
 	// Serve embedded SPA if frontendFS is provided, otherwise return 404 for unmatched routes.
@@ -598,7 +600,7 @@ func isPublicPageEntryPath(p string) bool {
 		return false
 	}
 
-	return parts[1] == "sign" || parts[1] == "doc"
+	return parts[1] == "sign" || parts[1] == "doc" || parts[1] == "view"
 }
 
 // stripBasePath removes the basePath prefix from reqPath.

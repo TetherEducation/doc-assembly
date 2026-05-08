@@ -840,6 +840,9 @@ func (s *PreSigningService) validateToken(ctx context.Context, token string) (*e
 	if err != nil {
 		return nil, entity.ErrInvalidToken
 	}
+	if err := s.validateSigningTokenType(accessToken); err != nil {
+		return nil, err
+	}
 
 	if accessToken.UsedAt != nil {
 		return nil, fmt.Errorf("access token has already been used")
@@ -856,6 +859,13 @@ func (s *PreSigningService) validateToken(ctx context.Context, token string) (*e
 // Returns the token and whether it was already used. Expiry is only enforced
 // for unused tokens — a used token can always proceed so GetPublicSigningPage
 // can display terminal states (completed/declined).
+func (s *PreSigningService) validateSigningTokenType(accessToken *entity.DocumentAccessToken) error {
+	if accessToken == nil || (!accessToken.IsSigning() && !accessToken.IsPreSigning()) {
+		return entity.ErrInvalidToken
+	}
+	return nil
+}
+
 func (s *PreSigningService) validateTokenAllowUsed(ctx context.Context, token string) (*entity.DocumentAccessToken, bool, error) {
 	if token == "" {
 		return nil, false, entity.ErrMissingToken
@@ -864,6 +874,9 @@ func (s *PreSigningService) validateTokenAllowUsed(ctx context.Context, token st
 	accessToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		return nil, false, entity.ErrInvalidToken
+	}
+	if err := s.validateSigningTokenType(accessToken); err != nil {
+		return nil, false, err
 	}
 
 	wasUsed := accessToken.UsedAt != nil

@@ -6,6 +6,7 @@ import type {
   DocumentStatistics,
   DocumentEvent,
   SigningURLResponse,
+  CreateViewLinkResponse,
   DocumentListFilters,
   DeprecateDocumentRequest,
   DeprecateDocumentResponse,
@@ -49,6 +50,11 @@ export const signingApi = {
       .get<SigningURLResponse>(
         `${BASE_PATH}/${docId}/recipients/${recipientId}/signing-url`
       )
+      .then((r) => r.data),
+
+  createViewLink: (docId: string) =>
+    apiClient
+      .post<CreateViewLinkResponse>(`${BASE_PATH}/${docId}/view-link`)
       .then((r) => r.data),
 
   getStatistics: () =>

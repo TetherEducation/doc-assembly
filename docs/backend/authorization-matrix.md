@@ -221,6 +221,7 @@ Gestión de documentos dentro del workspace actual.
 | GET | `/documents/{documentId}/events` | Lista eventos/auditoría del documento | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GET | `/documents/{documentId}/recipients/{recipientId}/signing-url` | Obtiene URL de firma para un recipient | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GET | `/documents/{documentId}/pdf` | Descarga PDF firmado | ✅ | ✅ | ✅ | ✅ | ✅ |
+| POST | `/documents/{documentId}/view-link` | Crea un link público read-only expirable para ver el documento | ✅ | ✅ | ✅ | ✅ | ✅ |
 | POST | `/documents/{documentId}/refresh` | Refresca estado desde proveedor | ✅ | ✅ | ✅ | ✅ | ❌ |
 | POST | `/documents/{documentId}/cancel` | Cancela un documento no completado | ✅ | ✅ | ✅ | ✅ | ❌ |
 | POST | `/documents/{documentId}/deprecate` | Depreca un documento completado/firmado y ejecuta cleanup best-effort en proveedor | ✅ | ✅ | ✅ | ✅ | ❌ |
@@ -645,3 +646,27 @@ internal_api:
 | `internal/adapters/primary/http/middleware/tenant_context.go` | Valida X-Tenant-ID y carga rol de tenant |
 | `internal/adapters/primary/http/middleware/role_authorization.go` | Autoriza acceso basado en roles de workspace |
 | `internal/adapters/primary/http/middleware/apikey_auth.go` | Valida API Key para internal API (service-to-service) |
+
+---
+
+## Tabla 4: Endpoints Públicos sin Autenticación
+
+Estos endpoints no requieren `Authorization`, `X-Tenant-ID` ni `X-Workspace-ID`. El acceso se valida mediante tokens públicos opacos cuando aplica.
+
+| Método | Endpoint | Descripción | Auth requerida | Headers tenant/workspace |
+|--------|----------|-------------|:--------------:|:------------------------:|
+| GET | `/public/doc/{documentId}` | Obtiene información mínima del documento para la puerta de email | ❌ | ❌ |
+| POST | `/public/doc/{documentId}/request-access` | Solicita link público de firma por email anti-enumeración | ❌ | ❌ |
+| GET | `/public/sign/{token}` | Obtiene estado/contenido público de firma mediante token `SIGNING` o `PRE_SIGNING` | ❌ | ❌ |
+| POST | `/public/sign/{token}` | Envía formulario pre-firma mediante token público | ❌ | ❌ |
+| POST | `/public/sign/{token}/request-access` | Recupera acceso desde token expirado/desconocido sin enumeración | ❌ | ❌ |
+| POST | `/public/sign/{token}/proceed` | Encola/consulta avance hacia firma embebida | ❌ | ❌ |
+| POST | `/public/sign/{token}/complete` | Marca completion callback de firma embebida | ❌ | ❌ |
+| GET | `/public/sign/{token}/pdf` | Renderiza PDF preview para firma pública | ❌ | ❌ |
+| GET | `/public/sign/{token}/download` | Descarga PDF completado para recipient autorizado por token | ❌ | ❌ |
+| GET | `/public/sign/{token}/refresh` | Refresca URL embebida de firma | ❌ | ❌ |
+| GET | `/public/sign/{token}/signing-callback` | Página puente para callback de proveedor | ❌ | ❌ |
+| GET | `/public/view/{token}` | Obtiene metadata y modo `content`, `pdf` o `unavailable` para token `VIEW_ONLY` | ❌ | ❌ |
+| GET | `/public/view/{token}/pdf` | Sirve PDF read-only inline para token `VIEW_ONLY` | ❌ | ❌ |
+
+**Archivos fuente**: `internal/adapters/primary/http/controller/public_document_access_controller.go`, `internal/adapters/primary/http/controller/public_signing_controller.go`, `internal/adapters/primary/http/controller/public_read_only_view_controller.go`

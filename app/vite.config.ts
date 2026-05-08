@@ -60,6 +60,15 @@ export default defineConfig(() => {
             }
           },
         },
+        [`${proxyPrefix}/public/view`]: {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          bypass(req) {
+            if (req.headers.accept?.includes('text/html')) {
+              return req.url
+            }
+          },
+        },
         [`${proxyPrefix}/health`]: {
           target: 'http://localhost:8080',
         },

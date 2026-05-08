@@ -11,6 +11,10 @@ const (
 	// TokenTypeSigning is used for documents without interactive fields (Path A).
 	// The signer sees a PDF preview, then proceeds to embedded signing.
 	TokenTypeSigning = "SIGNING"
+
+	// TokenTypeViewOnly is used for expiring read-only contract views and never
+	// grants signing or pre-signing permissions.
+	TokenTypeViewOnly = "VIEW_ONLY"
 )
 
 // DocumentAccessToken represents a time-limited access token for public signing access.
@@ -34,6 +38,11 @@ func (t *DocumentAccessToken) IsPreSigning() bool {
 // IsSigning returns true if this is a signing token (Path A, direct signing).
 func (t *DocumentAccessToken) IsSigning() bool {
 	return t.TokenType == TokenTypeSigning
+}
+
+// IsViewOnly returns true if this is a read-only view token.
+func (t *DocumentAccessToken) IsViewOnly() bool {
+	return t.TokenType == TokenTypeViewOnly
 }
 
 // IsUsed returns true if the token has already been consumed.

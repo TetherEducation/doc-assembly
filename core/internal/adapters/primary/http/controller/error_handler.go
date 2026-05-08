@@ -93,6 +93,7 @@ var badRequestErrors = []error{
 	entity.ErrInvalidWorkspaceCode,
 	entity.ErrInvalidSystemRole,
 	entity.ErrMissingTenantID,
+	entity.ErrMissingWorkspaceID,
 	entity.ErrCannotRemoveTenantOwner,
 	entity.ErrInvalidTenantRole,
 	entity.ErrVersionDoesNotBelongToTemplate,

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   DOCUMENT_EDITOR_GRID_BASE_CLASS,
   DOCUMENT_EDITOR_GRID_EDITABLE_CLASS,
+  DOCUMENT_EDITOR_GRID_EDITABLE_NO_ROLES_CLASS,
   DOCUMENT_EDITOR_GRID_READ_ONLY_CLASS,
+  DOCUMENT_EDITOR_GRID_READ_ONLY_NO_ROLES_CLASS,
   getDocumentEditorGridClass,
   getDocumentEditorGridTemplateColumns,
 } from './document-editor-grid'
@@ -33,6 +35,22 @@ describe('getDocumentEditorGridClass', () => {
     expect(className).toContain('min-w-0')
     expect(className).toContain('overflow-hidden')
     expect(className).toContain('transition-[grid-template-columns]')
+  })
+
+  it('uses a single center column for read-only mode without signer roles panel', () => {
+    const className = getDocumentEditorGridClass(false, false)
+
+    expect(className).toContain(DOCUMENT_EDITOR_GRID_BASE_CLASS)
+    expect(className).toContain(DOCUMENT_EDITOR_GRID_READ_ONLY_NO_ROLES_CLASS)
+    expect(className).not.toContain(DOCUMENT_EDITOR_GRID_READ_ONLY_CLASS)
+  })
+
+  it('uses variables and center columns for editable mode without signer roles panel', () => {
+    const className = getDocumentEditorGridClass(true, false)
+
+    expect(className).toContain(DOCUMENT_EDITOR_GRID_BASE_CLASS)
+    expect(className).toContain(DOCUMENT_EDITOR_GRID_EDITABLE_NO_ROLES_CLASS)
+    expect(className).not.toContain(DOCUMENT_EDITOR_GRID_EDITABLE_CLASS)
   })
 })
 
@@ -91,5 +109,27 @@ describe('getDocumentEditorGridTemplateColumns', () => {
     })
 
     expect(template).toBe(`minmax(0,1fr) ${PANEL_COLLAPSED_WIDTH}px`)
+  })
+
+  it('uses only the center column when read-only signer roles panel is hidden', () => {
+    const template = getDocumentEditorGridTemplateColumns({
+      editable: false,
+      variablesCollapsed: false,
+      rolesCollapsed: false,
+      showSignerRolesPanel: false,
+    })
+
+    expect(template).toBe('minmax(0,1fr)')
+  })
+
+  it('uses variables and center columns when editable signer roles panel is hidden', () => {
+    const template = getDocumentEditorGridTemplateColumns({
+      editable: true,
+      variablesCollapsed: false,
+      rolesCollapsed: false,
+      showSignerRolesPanel: false,
+    })
+
+    expect(template).toBe(`${VARIABLES_EXPANDED_WIDTH}px minmax(0,1fr)`)
   })
 })

@@ -402,6 +402,15 @@ definitions:
     - name
     - processType
     type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse:
+    properties:
+      expiresAt:
+        type: string
+      token:
+        type: string
+      url:
+        type: string
+    type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateRecipientRequest:
     properties:
       email:
@@ -1300,6 +1309,25 @@ definitions:
       reason:
         type: string
       status:
+        type: string
+    type: object
+  github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse:
+    properties:
+      content:
+        type: object
+      documentId:
+        type: string
+      documentStatus:
+        type: string
+      documentTitle:
+        type: string
+      expiresAt:
+        type: string
+      mode:
+        $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode'
+      pdfUrl:
+        type: string
+      reason:
         type: string
     type: object
   github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse:
@@ -2395,6 +2423,16 @@ definitions:
         description: WaitingForPrevious is true when waiting for earlier signers (step=waiting).
         type: boolean
     type: object
+  github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode:
+    enum:
+    - content
+    - pdf
+    - unavailable
+    type: string
+    x-enum-varnames:
+    - ReadOnlyViewModeContent
+    - ReadOnlyViewModePDF
+    - ReadOnlyViewModeUnavailable
   github_com_rendis_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse:
     properties:
       canDownload:
@@ -5074,6 +5112,52 @@ paths:
           schema:
             $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
       summary: Send document reminder
+      tags:
+      - Documents
+  /api/v1/documents/{documentId}/view-link:
+    post:
+      consumes:
+      - application/json
+      description: Creates a fresh expiring public read-only link for the document.
+      parameters:
+      - description: Workspace ID
+        in: header
+        name: X-Workspace-ID
+        required: true
+        type: string
+      - description: Document ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse'
+      summary: Create read-only view link
       tags:
       - Documents
   /api/v1/documents/batch:
@@ -8780,6 +8864,70 @@ paths:
       summary: Signing callback bridge
       tags:
       - Public Signing
+  /public/view/{token}:
+    get:
+      description: Returns read-only document metadata and content/PDF mode for a
+        VIEW_ONLY token.
+      parameters:
+      - description: Read-only view token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get public read-only view
+      tags:
+      - Public Read-Only View
+  /public/view/{token}/pdf:
+    get:
+      description: Returns the document PDF for a VIEW_ONLY token when the document
+        is in PDF mode.
+      parameters:
+      - description: Read-only view token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get public read-only view PDF
+      tags:
+      - Public Read-Only View
   /webhooks/signing/{provider}:
     post:
       consumes:

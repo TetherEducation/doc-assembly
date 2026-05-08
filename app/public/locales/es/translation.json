@@ -1746,7 +1746,10 @@
       "invalidateWarning": "Esto invalidará todos los tokens de acceso activos. Los destinatarios deberán solicitar un nuevo enlace por correo electrónico.",
       "tokensInvalidated": "Tokens invalidados exitosamente",
       "invalidateError": "Error al invalidar tokens",
-      "fieldResponses": "Respuestas de Campos"
+      "fieldResponses": "Respuestas de Campos",
+      "copyReadOnlyLink": "Copiar enlace de solo lectura",
+      "readOnlyLinkCopied": "Enlace de solo lectura copiado al portapapeles",
+      "readOnlyLinkCopyError": "No se pudo crear el enlace de solo lectura"
     },
     "cancel": {
       "title": "Cancelar Documento",
@@ -1922,6 +1925,23 @@
       "pendingOther": "{{count}} pendientes",
       "missingDescriptionOne": "Te falta {{count}} paso para habilitar la firma",
       "missingDescriptionOther": "Te faltan {{count}} pasos para habilitar la firma"
+    }
+  },
+  "readonlyView": {
+    "header": "Contrato de solo lectura",
+    "noActions": "Vista solamente — no hay acciones de destinatario disponibles.",
+    "banner": "Vista de solo lectura",
+    "viewOnly": "Solo lectura",
+    "loading": "Cargando contrato",
+    "unavailableTitle": "Contrato no disponible",
+    "unavailableDescription": "Este enlace de solo lectura no está disponible o expiró.",
+    "pdf": {
+      "title": "PDF de solo lectura",
+      "loading": "Cargando PDF",
+      "error": "No se pudo cargar este PDF",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente",
+      "pageOf": "Página {{current}} de {{total}}"
     }
   }
 }

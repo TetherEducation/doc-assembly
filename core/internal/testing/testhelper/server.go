@@ -329,7 +329,20 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	galleryController := controller.NewGalleryController(galleryService)
 
 	// Create controllers - Document & Webhook
-	documentController := controller.NewDocumentController(documentService, preSigningService, eventEmitter)
+	readOnlyViewService := documentsvc.NewReadOnlyViewService(
+		docRepo,
+		docAccessTokenRepo,
+		docRecipientRepo,
+		templateVersionRepo,
+		templateVersionSignerRoleRepo,
+		docFieldResponseRepo,
+		nil,
+		nil,
+		false,
+		48,
+		testPublicURL,
+	)
+	documentController := controller.NewDocumentController(documentService, preSigningService, readOnlyViewService, eventEmitter)
 	// Document access service (email-verification gate)
 	documentAccessService := documentsvc.NewDocumentAccessService(
 		docRepo, docRecipientRepo, templateVersionRepo, docAccessTokenRepo,
@@ -337,6 +350,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	)
 	publicDocAccessController := controller.NewPublicDocumentAccessController(documentAccessService)
 	publicSigningController := controller.NewPublicSigningController(preSigningService, documentAccessService, testPublicURL)
+	publicReadOnlyViewController := controller.NewPublicReadOnlyViewController(readOnlyViewService)
 	webhookHandlers := map[string]port.WebhookHandler{
 		"mock": mockSigningAdapter,
 	}
@@ -394,6 +408,9 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 
 	// Public signing routes (no auth, registered on engine root)
 	publicSigningController.RegisterRoutes(engine)
+
+	// Public read-only view routes (no auth, registered on engine root)
+	publicReadOnlyViewController.RegisterRoutes(engine)
 	apiKeyUseCase := automationuc.NewAPIKeyUseCase(automationKeyRepo, automationAuditRepo)
 	documentTypeService := catalogsvc.NewDocumentTypeService(documentTypeRepo, templateRepo)
 	docTypeMapper := mapper.NewDocumentTypeMapper()

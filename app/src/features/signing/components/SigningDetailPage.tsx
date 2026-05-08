@@ -46,6 +46,17 @@ const TERMINAL_STATUSES: string[] = [
   SigningDocumentStatus.ERROR,
 ]
 
+
+function toAbsoluteUrl(url: string): string {
+  try {
+    return new URL(url).toString()
+  } catch {
+    const basePath = (import.meta.env.VITE_BASE_PATH || '').replace(/\/$/, '')
+    const normalizedUrl = url.startsWith('/') ? url : `/${url}`
+    return `${window.location.origin}${basePath}${normalizedUrl}`
+  }
+}
+
 function formatDate(dateString?: string): string {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -73,6 +84,8 @@ export function SigningDetailPage() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [invalidateConfirmOpen, setInvalidateConfirmOpen] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [readOnlyLinkCopied, setReadOnlyLinkCopied] = useState(false)
+  const [isCreatingReadOnlyLink, setIsCreatingReadOnlyLink] = useState(false)
 
   const { data: document, isLoading, error } = useSigningDocument(documentId)
   const refreshMutation = useRefreshDocument()
@@ -150,6 +163,34 @@ export function SigningDetailPage() {
           'Failed to copy link',
         ),
       })
+    }
+  }
+
+
+  const handleCopyReadOnlyLink = async () => {
+    setIsCreatingReadOnlyLink(true)
+    try {
+      const viewLink = await signingApi.createViewLink(documentId)
+      await navigator.clipboard.writeText(toAbsoluteUrl(viewLink.url))
+      setReadOnlyLinkCopied(true)
+      toast({
+        title: t(
+          'signing.detail.readOnlyLinkCopied',
+          'Read-only link copied to clipboard',
+        ),
+      })
+      setTimeout(() => setReadOnlyLinkCopied(false), 2000)
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: t('common.error', 'Error'),
+        description: t(
+          'signing.detail.readOnlyLinkCopyError',
+          'Failed to create read-only link',
+        ),
+      })
+    } finally {
+      setIsCreatingReadOnlyLink(false)
     }
   }
 
@@ -258,6 +299,24 @@ export function SigningDetailPage() {
                 className={refreshMutation.isPending ? 'animate-spin' : ''}
               />
               {t('signing.detail.refresh', 'Refresh')}
+            </button>
+
+
+            <button
+              onClick={handleCopyReadOnlyLink}
+              disabled={isCreatingReadOnlyLink}
+              className="inline-flex items-center gap-2 rounded-none border border-border px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:border-foreground hover:text-foreground disabled:opacity-50"
+            >
+              {isCreatingReadOnlyLink ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : readOnlyLinkCopied ? (
+                <CheckCircle2 size={14} />
+              ) : (
+                <Copy size={14} />
+              )}
+              {readOnlyLinkCopied
+                ? t('signing.detail.copied', 'Copied')
+                : t('signing.detail.copyReadOnlyLink', 'Copy Read-only Link')}
             </button>
 
             {isCompleted && (
