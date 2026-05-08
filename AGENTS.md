@@ -8,6 +8,10 @@ This file provides guidance to AI Agents when working with code in this reposito
 
 **Stack**: Go 1.25 + React 19 + PostgreSQL 16 + Keycloak
 
+## Repository Skill Convention
+
+When the user says “la skill”, “skill del repo”, or “doc-assembly skill” without another explicit path, interpret it as the repository skill under `./skills/doc-assembly/`, not `.agents/skills/` or a personal/global Codex skill. Update that repo skill when documenting consumer-facing behavior or reusable doc-assembly workflow knowledge.
+
 ## Monorepo Structure
 
 ```plaintext

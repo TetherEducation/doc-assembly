@@ -57,6 +57,11 @@ The engine's middleware chain extracts `Authorization`, `X-Tenant-ID`, `X-Worksp
 
 If you implement a `WorkspaceInjectableProvider` AND register matching `Injector` codes, the engine fails at boot with a code-collision error. Decide per code which mechanism owns it.
 
+
+## Treating read-only view tokens as signing tokens
+
+`VIEW_ONLY` is only for contract inspection through `/public/view/{token}` and `/public/view/{token}/pdf`. Do not route it through `/public/sign/{token}`, do not use it to create embedded signing sessions, and do not add `X-Workspace-ID` requirements to the public view route. Workspace permission is checked when the authenticated API creates the link; public access is validated by the expiring token.
+
 ## Non-idempotent `SigningProvider.SubmitAttemptDocument`
 
 The engine may call `SubmitAttemptDocument` twice for the same `(DocumentID, AttemptID)` after a partial failure. If you create a brand-new provider record on every call you will end up with duplicate envelopes that the user has to clean up.
