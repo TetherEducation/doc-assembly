@@ -170,3 +170,6 @@ apps/doc-engine/tmp
 # Playwright MCP runtime artifacts
 .playwright-mcp/
 docs/superpowers/evidence/2026-05-03-signature-layouts/calibration-current.png
+
+# Local/private agent skills; repo skills live under /skills/
+.agents/skills/
