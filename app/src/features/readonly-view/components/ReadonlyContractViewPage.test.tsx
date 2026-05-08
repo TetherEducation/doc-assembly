@@ -28,8 +28,12 @@ vi.mock('@/lib/i18n', () => ({
 }))
 
 vi.mock('@/features/editor/components/DocumentEditor', () => ({
-  DocumentEditor: vi.fn(({ initialContent, editable }) => (
-    <div data-testid="document-editor" data-editable={String(editable)}>
+  DocumentEditor: vi.fn(({ initialContent, editable, showSignerRolesPanel }) => (
+    <div
+      data-testid="document-editor"
+      data-editable={String(editable)}
+      data-show-signer-roles-panel={String(showSignerRolesPanel)}
+    >
       {typeof initialContent === 'string'
         ? initialContent
         : JSON.stringify(initialContent)}
@@ -130,6 +134,7 @@ describe('ReadonlyContractViewPage', () => {
 
     const editor = screen.getByTestId('document-editor')
     expect(editor.getAttribute('data-editable')).toBe('false')
+    expect(editor.getAttribute('data-show-signer-roles-panel')).toBe('false')
     expect(editor.textContent).toContain('Hello client')
 
     await waitFor(() => {

@@ -117,6 +117,7 @@ function LoadedState({ token, data }: { token: string; data: ReadOnlyViewRespons
         <DocumentEditor
           initialContent={data.content ?? { type: 'doc', content: [] }}
           editable={false}
+          showSignerRolesPanel={false}
         />
       </div>
     </ReadonlyShell>

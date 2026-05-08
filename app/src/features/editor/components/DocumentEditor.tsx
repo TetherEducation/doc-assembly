@@ -76,6 +76,8 @@ interface DocumentEditorProps {
   versionId?: string
   /** Ensures the saved preview source is up to date before generating PDF */
   onBeforePreview?: () => Promise<void>
+  /** Whether to render the signer roles side panel */
+  showSignerRolesPanel?: boolean
 }
 
 export function DocumentEditor({
@@ -91,6 +93,7 @@ export function DocumentEditor({
   templateId,
   versionId,
   onBeforePreview,
+  showSignerRolesPanel = true,
 }: DocumentEditorProps) {
   // Get page config from store (for visual width and margins)
   const { pageSize, margins } = usePaginationStore()
@@ -165,8 +168,9 @@ export function DocumentEditor({
         editable,
         variablesCollapsed: isVariablesPanelCollapsed,
         rolesCollapsed: isRolesPanelCollapsed,
+        showSignerRolesPanel,
       }),
-    [editable, isVariablesPanelCollapsed, isRolesPanelCollapsed]
+    [editable, isVariablesPanelCollapsed, isRolesPanelCollapsed, showSignerRolesPanel]
   )
 
   const bodyTopPadding = useMemo(
@@ -673,7 +677,7 @@ export function DocumentEditor({
         onDragEnd={handleDragEnd}
       >
         <div
-          className={getDocumentEditorGridClass(editable)}
+          className={getDocumentEditorGridClass(editable, showSignerRolesPanel)}
           style={{ gridTemplateColumns }}
         >
           {/* Left: Variables Panel - only show when editable */}
@@ -758,11 +762,13 @@ export function DocumentEditor({
           </div>
 
           {/* Right: Signer Roles Panel */}
-          <SignerRolesPanel
-            variables={variables}
-            editable={editable}
-            className="row-span-2 min-w-0"
-          />
+          {showSignerRolesPanel && (
+            <SignerRolesPanel
+              variables={variables}
+              editable={editable}
+              className="row-span-2 min-w-0"
+            />
+          )}
         </div>
 
         {/* Drag Overlay - shows ghost image while dragging */}

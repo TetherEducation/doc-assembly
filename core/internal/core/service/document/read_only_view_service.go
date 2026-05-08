@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
 	"github.com/rendis/doc-assembly/core/internal/core/port"
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
@@ -221,6 +222,10 @@ func readOnlyViewMode(status entity.DocumentStatus) documentuc.ReadOnlyViewMode 
 }
 
 func (s *ReadOnlyViewService) readOnlyViewContent(ctx context.Context, doc *entity.Document) (json.RawMessage, error) {
+	if err := s.validateReadOnlyViewContentDependencies(); err != nil {
+		return nil, err
+	}
+
 	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
 	if err != nil {
 		return nil, fmt.Errorf("find template version: %w", err)
@@ -237,7 +242,12 @@ func (s *ReadOnlyViewService) readOnlyViewContent(ctx context.Context, doc *enti
 		return nil, errors.New("read-only view content is empty")
 	}
 
-	content, err := json.Marshal(portableDoc.Content)
+	resolvedContent, err := s.resolveReadOnlyViewContent(ctx, doc, portableDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := json.Marshal(resolvedContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshal read-only view content: %w", err)
 	}
@@ -246,6 +256,34 @@ func (s *ReadOnlyViewService) readOnlyViewContent(ctx context.Context, doc *enti
 	}
 
 	return content, nil
+}
+
+func (s *ReadOnlyViewService) resolveReadOnlyViewContent(
+	ctx context.Context,
+	doc *entity.Document,
+	portableDoc *portabledoc.Document,
+) (*portabledoc.ProseMirrorDoc, error) {
+	recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load recipients: %w", err)
+	}
+
+	signerRoles, err := s.signerRoleRepo.FindByVersionID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, fmt.Errorf("load signer roles: %w", err)
+	}
+
+	var injectables map[string]any
+	if doc.InjectedValuesSnapshot != nil {
+		if err := json.Unmarshal(doc.InjectedValuesSnapshot, &injectables); err != nil {
+			return nil, fmt.Errorf("parse injected values snapshot: %w", err)
+		}
+	}
+
+	return &portabledoc.ProseMirrorDoc{
+		Type:    portableDoc.Content.Type,
+		Content: resolvePreviewNodes(portableDoc.Content.Content, injectables, buildSignerRoleValues(recipients, signerRoles, portableDoc.SignerRoles)),
+	}, nil
 }
 
 func (s *ReadOnlyViewService) getCompletedReadOnlyViewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
@@ -335,6 +373,13 @@ func readOnlyViewPDFFilename(doc *entity.Document, rendererFilename string) stri
 func (s *ReadOnlyViewService) validateReadOnlyViewPreviewPDFDependencies() error {
 	if s.pdfRenderer == nil || s.versionRepo == nil || s.recipientRepo == nil || s.signerRoleRepo == nil || s.fieldResponseRepo == nil {
 		return errors.New("PDF is not available: preview PDF renderer is not configured")
+	}
+	return nil
+}
+
+func (s *ReadOnlyViewService) validateReadOnlyViewContentDependencies() error {
+	if s.versionRepo == nil || s.recipientRepo == nil || s.signerRoleRepo == nil {
+		return errors.New("read-only view content is not available: content dependencies are not configured")
 	}
 	return nil
 }

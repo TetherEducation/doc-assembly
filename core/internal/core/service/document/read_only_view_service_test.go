@@ -315,6 +315,63 @@ func TestReadOnlyViewService_GetReadOnlyView_ContentModeReturnsContentWithoutPDF
 	assert.Nil(t, result.PDFURL)
 }
 
+func TestReadOnlyViewService_GetReadOnlyView_ContentModeResolvesInjectorsAndSignerRoles(t *testing.T) {
+	ctx := context.Background()
+	docID := "doc-123"
+	versionID := "version-123"
+	title := "Draft title"
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	injectedValues := json.RawMessage(`{"student_name":"Jane Student"}`)
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{
+			ID:                     docID,
+			TemplateVersionID:      versionID,
+			Title:                  &title,
+			Status:                 entity.DocumentStatusDraft,
+			InjectedValuesSnapshot: injectedValues,
+		}},
+		&readOnlyViewAccessTokenRepoFake{found: readOnlyViewToken(docID, "view-token", expiresAt, entity.TokenTypeViewOnly)},
+		&readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{
+			ID:                    "recipient-1",
+			DocumentID:            docID,
+			TemplateVersionRoleID: "role-1",
+			Name:                  "Jane Signer",
+			Email:                 "jane.signer@example.test",
+		}}},
+		&readOnlyViewVersionRepoFake{version: &entity.TemplateVersion{
+			ID:               versionID,
+			ContentStructure: mustReadOnlyViewPortableDocWithInjectors(),
+		}},
+		&readOnlyViewSignerRoleRepoFake{roles: []*entity.TemplateVersionSignerRole{{
+			ID:           "role-1",
+			RoleName:     "Signer",
+			AnchorString: portabledoc.GenerateAnchorString("Signer"),
+			SignerOrder:  1,
+		}}},
+		nil,
+		nil,
+		nil,
+		false,
+		48,
+		"",
+	)
+
+	result, err := service.GetReadOnlyView(ctx, "view-token")
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	var content portabledoc.ProseMirrorDoc
+	require.NoError(t, json.Unmarshal(result.Content, &content))
+	require.Len(t, content.Content, 1)
+	require.Len(t, content.Content[0].Content, 4)
+	assert.Equal(t, portabledoc.NodeTypeText, content.Content[0].Content[1].Type)
+	require.NotNil(t, content.Content[0].Content[1].Text)
+	assert.Equal(t, "Jane Student", *content.Content[0].Content[1].Text)
+	assert.Equal(t, portabledoc.NodeTypeText, content.Content[0].Content[3].Type)
+	require.NotNil(t, content.Content[0].Content[3].Text)
+	assert.Equal(t, "Jane Signer", *content.Content[0].Content[3].Text)
+}
+
 func TestReadOnlyViewService_GetReadOnlyView_PDFModeReturnsPDFURLWithoutContent(t *testing.T) {
 	service := newReadOnlyViewGetServiceWithToken(entity.DocumentStatusCompleted, time.Now().UTC().Add(time.Hour), "Signed title", "token")
 
@@ -363,7 +420,7 @@ func newReadOnlyViewGetServiceWithToken(status entity.DocumentStatus, expiresAt 
 			ID:               versionID,
 			ContentStructure: mustReadOnlyViewPortableDocContent(),
 		}},
-		nil,
+		&readOnlyViewSignerRoleRepoFake{},
 		nil,
 		nil,
 		nil,
@@ -395,6 +452,49 @@ func mustReadOnlyViewPortableDocContent() json.RawMessage {
 					Type: portabledoc.NodeTypeText,
 					Text: &text,
 				}},
+			}},
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func mustReadOnlyViewPortableDocWithInjectors() json.RawMessage {
+	prefixName := "Student: "
+	separator := " Signer: "
+	data, err := json.Marshal(portabledoc.Document{
+		Version: portabledoc.CurrentVersion,
+		SignerRoles: []portabledoc.SignerRole{{
+			ID:    "portable-signer",
+			Label: "Signer",
+			Order: 1,
+		}},
+		Content: &portabledoc.ProseMirrorDoc{
+			Type: portabledoc.NodeTypeDoc,
+			Content: []portabledoc.Node{{
+				Type: portabledoc.NodeTypeParagraph,
+				Content: []portabledoc.Node{
+					{Type: portabledoc.NodeTypeText, Text: &prefixName},
+					{
+						Type: portabledoc.NodeTypeInjector,
+						Attrs: map[string]any{
+							"type":       portabledoc.InjectorTypeText,
+							"variableId": "student_name",
+						},
+					},
+					{Type: portabledoc.NodeTypeText, Text: &separator},
+					{
+						Type: portabledoc.NodeTypeInjector,
+						Attrs: map[string]any{
+							"type":           portabledoc.InjectorTypeRoleText,
+							"isRoleVariable": true,
+							"roleId":         "portable-signer",
+							"propertyKey":    portabledoc.RolePropertyName,
+						},
+					},
+				},
 			}},
 		},
 	})
