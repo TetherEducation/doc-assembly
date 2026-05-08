@@ -1,6 +1,6 @@
 ---
 name: doc-assembly
-description: Use when building or modifying a Go microservice that imports github.com/rendis/doc-assembly/core/sdk as a library — registering injectors, mappers, custom signing providers, storage adapters, notification providers, public-access authenticators, completion handlers, design tokens, or frontend overrides on the doc-assembly Engine. Covers the consumer-facing API surface only; not for working on the doc-assembly internals.
+description: Use when building or modifying a Go microservice that imports github.com/rendis/doc-assembly/core/sdk as a library — registering injectors, mappers, custom signing providers, storage adapters, notification providers, public-access authenticators, read-only view links, completion handlers, design tokens, or frontend overrides on the doc-assembly Engine. Covers the consumer-facing API surface only; not for working on the doc-assembly internals.
 ---
 
 # doc-assembly — Consumer Skill
@@ -18,7 +18,7 @@ _ = engine.Run()                   // blocks until SIGINT/SIGTERM
 
 ## When to use this skill
 
-Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/rendis/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, customizing PDF look, or handling completion events.
+Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/rendis/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, exposing public signing/read-only links, customizing PDF look, or handling completion events.
 
 **Do not use** for changes inside `github.com/rendis/doc-assembly` itself — that is a different audience.
 
@@ -31,7 +31,7 @@ Use whenever you are working in a wrapper repo whose `go.mod` requires `github.c
 | First-time wrapper scaffold, project layout, mod path, migrations, minimum to bring it up | [references/quickstart.md](references/quickstart.md) |
 | Looking up a specific `engine.Set*/Register*/Use*/On*` method (full surface in one place) | [references/engine-api.md](references/engine-api.md) |
 | Writing a custom **Injector**, **RequestMapper**, **InitFunc**, **TemplateResolver**, **ProcessResolver**, or **WorkspaceInjectableProvider** | [references/extensibility.md](references/extensibility.md) |
-| Implementing a **SigningProvider** + **WebhookHandler**, understanding the attempt model and correlation keys | [references/signing.md](references/signing.md) |
+| Implementing a **SigningProvider** + **WebhookHandler**, understanding the attempt model, public signing, read-only view links, and correlation keys | [references/signing.md](references/signing.md) |
 | Implementing **StorageAdapter** or **NotificationProvider**, or plugging **PublicDocumentAccessAuthenticator** / **SigningSessionAuthenticator** | [references/adapters.md](references/adapters.md) |
 | Full `settings/app.yaml` schema and every `DOC_ENGINE_*` env override | [references/settings.md](references/settings.md) |
 | Customizing **TypstDesignTokens**, replacing the embedded SPA, adding **middleware** or **OnStart/OnShutdown** hooks | [references/customization.md](references/customization.md) |
