@@ -14,6 +14,9 @@ describe('SigningListToolbar', () => {
   const defaultProps = {
     searchQuery: '',
     onSearchChange: vi.fn(),
+    documentTypeOptions: [] as { id: string; name: string }[],
+    selectedDocumentTypeIds: [] as string[],
+    onDocumentTypesChange: vi.fn(),
     selectedStatuses: [] as string[],
     onStatusesChange: vi.fn(),
   }
@@ -21,14 +24,16 @@ describe('SigningListToolbar', () => {
   it('renders search input with placeholder', () => {
     render(<SigningListToolbar {...defaultProps} />)
     expect(
-      screen.getByPlaceholderText('Search documents by title...'),
+      screen.getByPlaceholderText(
+        'Search by document title or signer email...',
+      ),
     ).toBeDefined()
   })
 
   it('displays current search query value', () => {
     render(<SigningListToolbar {...defaultProps} searchQuery="test query" />)
     const input = screen.getByPlaceholderText(
-      'Search documents by title...',
+      'Search by document title or signer email...',
     ) as HTMLInputElement
     expect(input.value).toBe('test query')
   })
@@ -39,7 +44,9 @@ describe('SigningListToolbar', () => {
       <SigningListToolbar {...defaultProps} onSearchChange={onSearchChange} />,
     )
 
-    const input = screen.getByPlaceholderText('Search documents by title...')
+    const input = screen.getByPlaceholderText(
+      'Search by document title or signer email...',
+    )
     await userEvent.type(input, 'hello')
 
     // Called once per character; each call receives the single char typed
@@ -131,5 +138,29 @@ describe('SigningListToolbar', () => {
     await userEvent.click(screen.getByText('Clear all'))
 
     expect(onStatusesChange).toHaveBeenCalledWith([])
+  })
+
+  it('shows All types when no document types are selected', () => {
+    render(<SigningListToolbar {...defaultProps} />)
+    expect(screen.getByText(/Template type.*All types/)).toBeDefined()
+  })
+
+  it('opens template type dropdown and toggles selection', async () => {
+    const onDocumentTypesChange = vi.fn()
+    render(
+      <SigningListToolbar
+        {...defaultProps}
+        documentTypeOptions={[
+          { id: 'dt-1', name: 'NDA' },
+          { id: 'dt-2', name: 'Employment Agreement' },
+        ]}
+        onDocumentTypesChange={onDocumentTypesChange}
+      />,
+    )
+
+    await userEvent.click(screen.getByText(/Template type.*All types/))
+    await userEvent.click(screen.getByText('NDA'))
+
+    expect(onDocumentTypesChange).toHaveBeenCalledWith(['dt-1'])
   })
 })

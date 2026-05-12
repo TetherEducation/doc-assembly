@@ -2,13 +2,20 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { signingKeys, useDeprecateDocument, useSigningDocuments, useSigningDocument } from './useSigningDocuments'
+import {
+  signingKeys,
+  useDeprecateDocument,
+  useSigningDocuments,
+  useSigningDocument,
+  useSigningDocumentTypeOptions,
+} from './useSigningDocuments'
 import type { SigningDocumentListItem, SigningDocumentDetail } from '../types'
 
 // Mock the API module
 vi.mock('../api/signing-api', () => ({
   signingApi: {
     list: vi.fn(),
+    listDocumentTypeOptions: vi.fn(),
     getById: vi.fn(),
     create: vi.fn(),
     cancel: vi.fn(),
@@ -51,6 +58,10 @@ describe('signingKeys', () => {
       'signing-documents',
       'statistics',
     ])
+    expect(signingKeys.documentTypeOptions()).toEqual([
+      'signing-documents',
+      'document-type-options',
+    ])
     expect(signingKeys.events('doc-1')).toEqual([
       'signing-documents',
       'events',
@@ -66,8 +77,12 @@ describe('useSigningDocuments', () => {
         id: 'doc-1',
         workspaceId: 'ws-1',
         templateVersionId: 'tv-1',
+        documentTypeId: 'dt-1',
+        documentTypeName: 'NDA',
+        templateName: 'Master NDA',
         title: 'Test Doc',
-        status: 'PENDING',
+        recipients: [],
+        status: 'AWAITING_INPUT',
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z',
       },
@@ -96,6 +111,32 @@ describe('useSigningDocuments', () => {
 
     expect(signingApi.list).toHaveBeenCalledWith(filters)
   })
+
+  it('includes documentTypeIds in query key', () => {
+    const filters = { documentTypeIds: ['a', 'b'] }
+    expect(signingKeys.list(filters)).toEqual([
+      'signing-documents',
+      'list',
+      filters,
+    ])
+  })
+})
+
+describe('useSigningDocumentTypeOptions', () => {
+  it('fetches document type options', async () => {
+    vi.mocked(signingApi.listDocumentTypeOptions).mockResolvedValueOnce([
+      { id: 'dt-1', name: 'NDA' },
+    ])
+
+    const { result } = renderHook(() => useSigningDocumentTypeOptions(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual([{ id: 'dt-1', name: 'NDA' }])
+    expect(signingApi.listDocumentTypeOptions).toHaveBeenCalledWith()
+  })
 })
 
 describe('useSigningDocument', () => {
@@ -105,7 +146,7 @@ describe('useSigningDocument', () => {
       workspaceId: 'ws-1',
       templateVersionId: 'tv-1',
       title: 'Test Doc',
-      status: 'PENDING',
+      status: 'AWAITING_INPUT',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
       recipients: [],

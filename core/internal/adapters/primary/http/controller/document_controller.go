@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
@@ -49,6 +51,9 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 
 		// Get document statistics
 		docs.GET("/statistics", middleware.RequireViewer(), c.GetStatistics)
+
+		// Distinct document types on workspace documents (signing filter dropdown)
+		docs.GET("/document-type-options", middleware.RequireViewer(), c.ListDocumentTypeOptions)
 
 		// Create and send document
 		docs.POST("", middleware.RequireOperator(), c.CreateDocument)
@@ -97,8 +102,9 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 // @Accept json
 // @Produce json
 // @Param X-Workspace-ID header string true "Workspace ID"
-// @Param status query string false "Filter by status"
-// @Param search query string false "Search by title"
+// @Param status query string false "Filter by document status; comma-separated for multiple (OR)"
+// @Param documentTypeIds query string false "Comma-separated document type UUIDs (multi-select filter)"
+// @Param search query string false "Search by document title or signer recipient email (substring, case-insensitive)"
 // @Param limit query int false "Limit results"
 // @Param offset query int false "Offset for pagination"
 // @Success 200 {array} dto.DocumentListResponse
@@ -110,10 +116,23 @@ func (c *DocumentController) ListDocuments(ctx *gin.Context) {
 
 	var filters port.DocumentFilters
 	if status := ctx.Query("status"); status != "" {
-		docStatus := entity.DocumentStatus(status)
-		filters.Status = &docStatus
+		statuses, err := parseCommaSeparatedDocumentStatuses(status)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, dto.NewErrorResponse(err))
+			return
+		}
+		filters.Statuses = statuses
 	}
 	filters.Search = ctx.Query("search")
+
+	if raw := ctx.Query("documentTypeIds"); raw != "" {
+		ids, err := parseCommaSeparatedUUIDs(raw)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, dto.NewErrorResponse(err))
+			return
+		}
+		filters.DocumentTypeIDs = ids
+	}
 
 	// Parse limit/offset with defaults
 	filters.Limit = 50
@@ -168,6 +187,28 @@ func (c *DocumentController) CreateReadOnlyViewLink(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.NewCreateReadOnlyViewLinkResponse(result))
+}
+
+// ListDocumentTypeOptions returns distinct document types that appear on documents in the workspace.
+// @Summary List document type filter options
+// @Tags Documents
+// @Accept json
+// @Produce json
+// @Param X-Workspace-ID header string true "Workspace ID"
+// @Success 200 {array} entity.DocumentTypeFilterOption
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/document-type-options [get]
+func (c *DocumentController) ListDocumentTypeOptions(ctx *gin.Context) {
+	workspaceID, _ := middleware.GetWorkspaceID(ctx)
+
+	opts, err := c.documentUC.ListDocumentTypeFilterOptions(ctx.Request.Context(), workspaceID)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, opts)
 }
 
 // GetDocument returns a single document with recipients.
@@ -607,4 +648,42 @@ func (c *DocumentController) InvalidateTokens(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Tokens invalidated",
 	})
+}
+
+func parseCommaSeparatedDocumentStatuses(raw string) ([]entity.DocumentStatus, error) {
+	parts := strings.Split(raw, ",")
+	var out []entity.DocumentStatus
+	seen := make(map[entity.DocumentStatus]struct{})
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		s := entity.DocumentStatus(p)
+		if !s.IsValid() {
+			return nil, fmt.Errorf("invalid document status %q", p)
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out, nil
+}
+
+func parseCommaSeparatedUUIDs(raw string) ([]string, error) {
+	parts := strings.Split(raw, ",")
+	var ids []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, err := uuid.Parse(p); err != nil {
+			return nil, fmt.Errorf("invalid document type id %q: %w", p, err)
+		}
+		ids = append(ids, p)
+	}
+	return ids, nil
 }

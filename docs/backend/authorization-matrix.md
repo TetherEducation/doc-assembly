@@ -213,6 +213,7 @@ Gestión de documentos dentro del workspace actual.
 | Método | Endpoint | Descripción | OWNER | ADMIN | EDITOR | OPERATOR | VIEWER |
 |--------|----------|-------------|:-----:|:-----:|:------:|:--------:|:------:|
 | GET | `/documents` | Lista documentos del workspace | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GET | `/documents/document-type-options` | Lista tipos de documento distintos presentes en documentos del workspace (selector de filtro) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GET | `/documents/statistics` | Obtiene estadísticas de documentos | ✅ | ✅ | ✅ | ✅ | ✅ |
 | POST | `/documents` | Crea y envía un documento | ✅ | ✅ | ✅ | ✅ | ❌ |
 | POST | `/documents/batch` | Crea documentos en batch | ✅ | ✅ | ✅ | ✅ | ❌ |
@@ -229,6 +230,10 @@ Gestión de documentos dentro del workspace actual.
 | POST | `/documents/{documentId}/invalidate-tokens` | Invalida/regenera tokens públicos de acceso/firma | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/document_controller.go`
+
+**Nota — GET `/documents`:** el query param opcional `search` filtra por subcadena (sin distinguir mayúsculas) en el **título del documento** o en el **email de cualquier recipient** asociado al documento en el workspace actual. El param opcional `documentTypeIds` (UUIDs separados por coma) restringe la lista a esos **tipos de documento** (`document_type_id`). El param opcional `status` acepta **uno o varios** valores de `document_status` separados por coma (unión OR); valores inválidos responden **400**.
+
+**Nota — GET `/documents/document-type-options`:** devuelve `{ id, name }[]` para poblar el filtro multi-select de tipo de plantilla/tipo de documento en la UI de signing, sin requerir rol de administrador de tenant.
 
 ### Endpoints de Gallery (`/api/v1/workspace/gallery`)
 

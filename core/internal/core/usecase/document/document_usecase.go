@@ -62,6 +62,9 @@ type DocumentUseCase interface {
 	// ListDocuments lists documents in a workspace with optional filters.
 	ListDocuments(ctx context.Context, workspaceID string, filters port.DocumentFilters) ([]*entity.DocumentListItem, error)
 
+	// ListDocumentTypeFilterOptions lists distinct document types present on documents in the workspace (for filter UIs).
+	ListDocumentTypeFilterOptions(ctx context.Context, workspaceID string) ([]*entity.DocumentTypeFilterOption, error)
+
 	// GetSigningURL retrieves the signing URL for a specific recipient.
 	GetSigningURL(ctx context.Context, documentID, recipientID string) (string, error)
 

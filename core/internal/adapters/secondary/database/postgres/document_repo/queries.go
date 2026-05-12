@@ -47,10 +47,60 @@ const (
 	`
 
 	queryFindByWorkspaceBase = `
-		SELECT id, workspace_id, template_version_id, title, client_external_reference_id,
-		       NULL::text AS signer_provider, status, created_at, updated_at
-		FROM execution.documents
-		WHERE workspace_id = $1
+		WITH base_documents AS (
+			SELECT
+				d.id,
+				d.workspace_id,
+				d.template_version_id,
+				d.document_type_id,
+				d.title,
+				d.client_external_reference_id,
+				d.status,
+				d.created_at,
+				d.updated_at
+			FROM execution.documents d
+			WHERE d.workspace_id = $1
+	`
+
+	queryFindByWorkspaceProjection = `
+		)
+		SELECT
+			b.id,
+			b.workspace_id,
+			b.template_version_id,
+			b.document_type_id,
+			COALESCE(dt.name->>'en', dt.name->>'es') AS document_type_name,
+			COALESCE(t.title, tv.name, '') AS template_name,
+			b.title,
+			b.client_external_reference_id,
+			NULL::text AS signer_provider,
+			COALESCE(recipients.items, '[]'::jsonb) AS recipients,
+			b.status,
+			b.created_at,
+			b.updated_at
+		FROM base_documents b
+		LEFT JOIN content.template_versions tv ON tv.id = b.template_version_id
+		LEFT JOIN content.templates t ON t.id = tv.template_id
+		LEFT JOIN content.document_types dt ON dt.id = b.document_type_id
+		LEFT JOIN LATERAL (
+			SELECT jsonb_agg(
+				jsonb_build_object(
+					'id', dr.id,
+					'documentId', dr.document_id,
+					'templateVersionRoleId', dr.template_version_role_id,
+					'name', dr.name,
+					'email', dr.email,
+					'status', dr.status,
+					'roleName', tvsr.role_name,
+					'signerOrder', tvsr.signer_order
+				)
+				ORDER BY tvsr.signer_order ASC NULLS LAST, dr.created_at ASC
+			) AS items
+			FROM execution.document_recipients dr
+			LEFT JOIN content.template_version_signer_roles tvsr ON tvsr.id = dr.template_version_role_id
+			WHERE dr.document_id = b.id
+		) recipients ON TRUE
+		ORDER BY b.created_at DESC
 	`
 
 	queryUpdate = `
@@ -75,4 +125,15 @@ const (
 	queryCountByWorkspace = `SELECT COUNT(*) FROM execution.documents WHERE workspace_id = $1`
 
 	queryCountByStatus = `SELECT COUNT(*) FROM execution.documents WHERE workspace_id = $1 AND status = $2`
+
+	queryListDistinctDocumentTypesForWorkspace = `
+		SELECT DISTINCT
+			d.document_type_id,
+			COALESCE(dt.name->>'en', dt.name->>'es', '') AS name
+		FROM execution.documents d
+		LEFT JOIN content.document_types dt ON dt.id = d.document_type_id
+		WHERE d.workspace_id = $1
+		  AND d.document_type_id IS NOT NULL
+		ORDER BY name ASC, d.document_type_id ASC
+	`
 )

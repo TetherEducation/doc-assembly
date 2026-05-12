@@ -11,6 +11,8 @@ export const signingKeys = {
   details: () => [...signingKeys.all, 'detail'] as const,
   detail: (id: string) => [...signingKeys.details(), id] as const,
   statistics: () => [...signingKeys.all, 'statistics'] as const,
+  documentTypeOptions: () =>
+    [...signingKeys.all, 'document-type-options'] as const,
   events: (docId: string) => [...signingKeys.all, 'events', docId] as const,
 }
 
@@ -18,6 +20,13 @@ export function useSigningDocuments(filters?: DocumentListFilters) {
   return useQuery({
     queryKey: signingKeys.list(filters),
     queryFn: () => signingApi.list(filters),
+  })
+}
+
+export function useSigningDocumentTypeOptions() {
+  return useQuery({
+    queryKey: signingKeys.documentTypeOptions(),
+    queryFn: () => signingApi.listDocumentTypeOptions(),
   })
 }
 

@@ -37,15 +37,31 @@ type DocumentResponse struct {
 
 // DocumentListResponse represents a document in list responses.
 type DocumentListResponse struct {
-	ID                        string  `json:"id"`
-	WorkspaceID               string  `json:"workspaceId"`
-	TemplateVersionID         string  `json:"templateVersionId"`
-	Title                     *string `json:"title,omitempty"`
-	ClientExternalReferenceID *string `json:"clientExternalReferenceId,omitempty"`
-	SignerProvider            *string `json:"signerProvider,omitempty"`
-	Status                    string  `json:"status"`
-	CreatedAt                 string  `json:"createdAt"`
-	UpdatedAt                 *string `json:"updatedAt,omitempty"`
+	ID                        string                          `json:"id"`
+	WorkspaceID               string                          `json:"workspaceId"`
+	TemplateVersionID         string                          `json:"templateVersionId"`
+	DocumentTypeID            string                          `json:"documentTypeId"`
+	DocumentTypeName          *string                         `json:"documentTypeName,omitempty"`
+	TemplateName              string                          `json:"templateName"`
+	Title                     *string                         `json:"title,omitempty"`
+	ClientExternalReferenceID *string                         `json:"clientExternalReferenceId,omitempty"`
+	SignerProvider            *string                         `json:"signerProvider,omitempty"`
+	Recipients                []DocumentListRecipientResponse `json:"recipients,omitempty"`
+	Status                    string                          `json:"status"`
+	CreatedAt                 string                          `json:"createdAt"`
+	UpdatedAt                 *string                         `json:"updatedAt,omitempty"`
+}
+
+// DocumentListRecipientResponse represents recipient data in list responses.
+type DocumentListRecipientResponse struct {
+	ID                    string `json:"id"`
+	DocumentID            string `json:"documentId"`
+	TemplateVersionRoleID string `json:"templateVersionRoleId"`
+	Name                  string `json:"name"`
+	Email                 string `json:"email"`
+	Status                string `json:"status"`
+	RoleName              string `json:"roleName,omitempty"`
+	SignerOrder           int    `json:"signerOrder,omitempty"`
 }
 
 // RecipientResponse represents a document recipient in API responses.

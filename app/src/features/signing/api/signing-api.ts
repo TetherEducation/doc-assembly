@@ -8,16 +8,38 @@ import type {
   SigningURLResponse,
   CreateViewLinkResponse,
   DocumentListFilters,
+  DocumentTypeFilterOption,
   DeprecateDocumentRequest,
   DeprecateDocumentResponse,
 } from '../types'
 
 const BASE_PATH = '/documents'
 
+function listDocumentsParams(filters?: DocumentListFilters) {
+  if (!filters) return undefined
+  return {
+    search: filters.search,
+    status: filters.status,
+    documentTypeIds:
+      filters.documentTypeIds && filters.documentTypeIds.length > 0
+        ? filters.documentTypeIds.join(',')
+        : undefined,
+    page: filters.page,
+    pageSize: filters.pageSize,
+  }
+}
+
 export const signingApi = {
   list: (filters?: DocumentListFilters) =>
     apiClient
-      .get<SigningDocumentListItem[]>(BASE_PATH, { params: filters })
+      .get<SigningDocumentListItem[]>(BASE_PATH, {
+        params: listDocumentsParams(filters),
+      })
+      .then((r) => r.data),
+
+  listDocumentTypeOptions: () =>
+    apiClient
+      .get<DocumentTypeFilterOption[]>(`${BASE_PATH}/document-type-options`)
       .then((r) => r.data),
 
   getById: (id: string) =>

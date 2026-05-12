@@ -288,6 +288,11 @@ func (s *DocumentService) ListDocuments(ctx context.Context, workspaceID string,
 	return s.documentRepo.FindByWorkspace(ctx, workspaceID, filters)
 }
 
+// ListDocumentTypeFilterOptions lists distinct document types on workspace documents.
+func (s *DocumentService) ListDocumentTypeFilterOptions(ctx context.Context, workspaceID string) ([]*entity.DocumentTypeFilterOption, error) {
+	return s.documentRepo.ListDistinctDocumentTypesForWorkspace(ctx, workspaceID)
+}
+
 // GetSigningURL retrieves the signing URL for a specific recipient.
 func (s *DocumentService) GetSigningURL(ctx context.Context, documentID, recipientID string) (string, error) {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)

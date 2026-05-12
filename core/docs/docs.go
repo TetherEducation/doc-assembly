@@ -10857,6 +10857,35 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse": {
+            "type": "object",
+            "properties": {
+                "documentId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "signerOrder": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "templateVersionRoleId": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse": {
             "type": "object",
             "properties": {
@@ -10866,13 +10895,28 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "documentTypeId": {
+                    "type": "string"
+                },
+                "documentTypeName": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "recipients": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse"
+                    }
                 },
                 "signerProvider": {
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "templateName": {
                     "type": "string"
                 },
                 "templateVersionId": {

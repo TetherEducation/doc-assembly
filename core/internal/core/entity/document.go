@@ -296,15 +296,37 @@ type DocumentWithRecipients struct {
 	Recipients []*DocumentRecipient `json:"recipients,omitempty"`
 }
 
+// DocumentListRecipient represents recipient data needed in document list views.
+type DocumentListRecipient struct {
+	ID                    string          `json:"id"`
+	DocumentID            string          `json:"documentId"`
+	TemplateVersionRoleID string          `json:"templateVersionRoleId"`
+	Name                  string          `json:"name"`
+	Email                 string          `json:"email"`
+	Status                RecipientStatus `json:"status"`
+	RoleName              *string         `json:"roleName,omitempty"`
+	SignerOrder           *int            `json:"signerOrder,omitempty"`
+}
+
+// DocumentTypeFilterOption is a distinct document type label for workspace filter UIs.
+type DocumentTypeFilterOption struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // DocumentListItem represents a document in list views (without full details).
 type DocumentListItem struct {
-	ID                        string         `json:"id"`
-	WorkspaceID               string         `json:"workspaceId"`
-	TemplateVersionID         string         `json:"templateVersionId"`
-	Title                     *string        `json:"title,omitempty"`
-	ClientExternalReferenceID *string        `json:"clientExternalReferenceId,omitempty"`
-	SignerProvider            *string        `json:"signerProvider,omitempty"`
-	Status                    DocumentStatus `json:"status"`
-	CreatedAt                 time.Time      `json:"createdAt"`
-	UpdatedAt                 *time.Time     `json:"updatedAt,omitempty"`
+	ID                        string                  `json:"id"`
+	WorkspaceID               string                  `json:"workspaceId"`
+	TemplateVersionID         string                  `json:"templateVersionId"`
+	DocumentTypeID            string                  `json:"documentTypeId"`
+	DocumentTypeName          *string                 `json:"documentTypeName,omitempty"`
+	TemplateName              string                  `json:"templateName"`
+	Title                     *string                 `json:"title,omitempty"`
+	ClientExternalReferenceID *string                 `json:"clientExternalReferenceId,omitempty"`
+	SignerProvider            *string                 `json:"signerProvider,omitempty"`
+	Recipients                []DocumentListRecipient `json:"recipients,omitempty"`
+	Status                    DocumentStatus          `json:"status"`
+	CreatedAt                 time.Time               `json:"createdAt"`
+	UpdatedAt                 *time.Time              `json:"updatedAt,omitempty"`
 }

@@ -8,11 +8,12 @@ import (
 
 // DocumentFilters contains optional filters for document queries.
 type DocumentFilters struct {
-	Status                    *entity.DocumentStatus
+	Statuses                  []entity.DocumentStatus
 	SignerProvider            *string
 	ClientExternalReferenceID *string
 	TemplateVersionID         *string
 	Search                    string
+	DocumentTypeIDs           []string
 	Limit                     int
 	Offset                    int
 }
@@ -50,6 +51,9 @@ type DocumentRepository interface {
 
 	// FindByWorkspace lists all documents in a workspace with optional filters.
 	FindByWorkspace(ctx context.Context, workspaceID string, filters DocumentFilters) ([]*entity.DocumentListItem, error)
+
+	// ListDistinctDocumentTypesForWorkspace returns document types that appear on at least one document in the workspace.
+	ListDistinctDocumentTypesForWorkspace(ctx context.Context, workspaceID string) ([]*entity.DocumentTypeFilterOption, error)
 
 	// FindByClientExternalRef finds documents by the client's external reference ID.
 	FindByClientExternalRef(ctx context.Context, workspaceID, clientExternalRef string) ([]*entity.Document, error)

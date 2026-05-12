@@ -18,7 +18,8 @@ const statusIcons: Record<string, typeof ArrowUpRight> = {
   ERROR: AlertTriangle,
 }
 
-function formatRelativeDate(dateStr: string): string {
+function formatRelativeDate(dateStr?: string): string {
+  if (!dateStr) return '—'
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -117,7 +118,7 @@ export function RecentActivity() {
               </span>
             </div>
             <div className="col-span-3 text-right font-mono text-xs text-muted-foreground transition-colors group-hover:text-foreground md:col-span-3">
-              {formatRelativeDate(doc.updatedAt)}
+              {formatRelativeDate(doc.updatedAt ?? doc.createdAt)}
             </div>
             <div className="col-span-0 flex justify-end opacity-0 transition-opacity group-hover:opacity-100 md:col-span-1">
               <Icon size={16} className="text-foreground" />

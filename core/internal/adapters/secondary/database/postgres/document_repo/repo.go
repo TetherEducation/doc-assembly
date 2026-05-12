@@ -2,6 +2,7 @@ package documentrepo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -99,6 +100,37 @@ func scanDocumentRows(rows pgx.Rows) ([]*entity.Document, error) {
 	return documents, rows.Err()
 }
 
+func scanDocumentListItem(row pgx.Row) (*entity.DocumentListItem, error) {
+	item := &entity.DocumentListItem{}
+	var recipientsJSON []byte
+
+	if err := row.Scan(
+		&item.ID,
+		&item.WorkspaceID,
+		&item.TemplateVersionID,
+		&item.DocumentTypeID,
+		&item.DocumentTypeName,
+		&item.TemplateName,
+		&item.Title,
+		&item.ClientExternalReferenceID,
+		&item.SignerProvider,
+		&recipientsJSON,
+		&item.Status,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	if len(recipientsJSON) > 0 {
+		if err := json.Unmarshal(recipientsJSON, &item.Recipients); err != nil {
+			return nil, fmt.Errorf("unmarshaling document recipients: %w", err)
+		}
+	}
+
+	return item, nil
+}
+
 // Create creates a new document.
 func (r *Repository) Create(ctx context.Context, document *entity.Document) (string, error) {
 	var id string
@@ -192,6 +224,28 @@ func (r *Repository) FindByIDWithRecipients(ctx context.Context, id string) (*en
 	return result, nil
 }
 
+// appendDocumentSearchFilter appends title/recipient-email ILIKE search to query and args.
+func appendDocumentSearchFilter(query string, args []any, argPos int, search string) (string, []any, int) {
+	if search == "" {
+		return query, args, argPos
+	}
+	query += fmt.Sprintf(
+		` AND (
+				d.title ILIKE $%[1]d
+				OR EXISTS (
+					SELECT 1
+					FROM execution.document_recipients dr
+					WHERE dr.document_id = d.id
+						AND dr.email ILIKE $%[1]d
+				)
+			)`,
+		argPos,
+	)
+	args = append(args, "%"+search+"%")
+	argPos++
+	return query, args, argPos
+}
+
 // buildDocumentFilters builds the WHERE clause and args for document filters.
 // Returns the query suffix and args to append.
 func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string, []any) {
@@ -199,9 +253,13 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 	var args []any
 	argPos := startArgPos
 
-	if filters.Status != nil {
-		query += fmt.Sprintf(" AND status = $%d", argPos)
-		args = append(args, *filters.Status)
+	if len(filters.Statuses) > 0 {
+		statusStrs := make([]string, len(filters.Statuses))
+		for i, s := range filters.Statuses {
+			statusStrs[i] = string(s)
+		}
+		query += fmt.Sprintf(" AND status = ANY($%d::document_status[])", argPos)
+		args = append(args, statusStrs)
 		argPos++
 	}
 
@@ -217,11 +275,13 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 		argPos++
 	}
 
-	if filters.Search != "" {
-		query += fmt.Sprintf(" AND title ILIKE $%d", argPos)
-		args = append(args, "%"+filters.Search+"%")
+	if len(filters.DocumentTypeIDs) > 0 {
+		query += fmt.Sprintf(" AND d.document_type_id = ANY($%d)", argPos)
+		args = append(args, filters.DocumentTypeIDs)
 		argPos++
 	}
+
+	query, args, argPos = appendDocumentSearchFilter(query, args, argPos, filters.Search)
 
 	query += " ORDER BY created_at DESC"
 
@@ -242,7 +302,7 @@ func buildDocumentFilters(filters port.DocumentFilters, startArgPos int) (string
 // FindByWorkspace lists all documents in a workspace with optional filters.
 func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, filters port.DocumentFilters) ([]*entity.DocumentListItem, error) {
 	querySuffix, filterArgs := buildDocumentFilters(filters, 2)
-	query := queryFindByWorkspaceBase + querySuffix
+	query := queryFindByWorkspaceBase + querySuffix + queryFindByWorkspaceProjection
 	args := append([]any{workspaceID}, filterArgs...)
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -253,18 +313,8 @@ func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, fi
 
 	var documents []*entity.DocumentListItem
 	for rows.Next() {
-		item := &entity.DocumentListItem{}
-		if err := rows.Scan(
-			&item.ID,
-			&item.WorkspaceID,
-			&item.TemplateVersionID,
-			&item.Title,
-			&item.ClientExternalReferenceID,
-			&item.SignerProvider,
-			&item.Status,
-			&item.CreatedAt,
-			&item.UpdatedAt,
-		); err != nil {
+		item, err := scanDocumentListItem(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scanning document: %w", err)
 		}
 		documents = append(documents, item)
@@ -275,6 +325,28 @@ func (r *Repository) FindByWorkspace(ctx context.Context, workspaceID string, fi
 	}
 
 	return documents, nil
+}
+
+// ListDistinctDocumentTypesForWorkspace returns distinct document types present on workspace documents.
+func (r *Repository) ListDistinctDocumentTypesForWorkspace(ctx context.Context, workspaceID string) ([]*entity.DocumentTypeFilterOption, error) {
+	rows, err := r.pool.Query(ctx, queryListDistinctDocumentTypesForWorkspace, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("querying document type options: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*entity.DocumentTypeFilterOption
+	for rows.Next() {
+		var opt entity.DocumentTypeFilterOption
+		if err := rows.Scan(&opt.ID, &opt.Name); err != nil {
+			return nil, fmt.Errorf("scanning document type option: %w", err)
+		}
+		out = append(out, &opt)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating document type options: %w", err)
+	}
+	return out, nil
 }
 
 // FindByClientExternalRef finds documents by the client's external reference ID.

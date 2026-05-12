@@ -40,12 +40,27 @@ export interface SigningDocumentListItem {
   id: string
   workspaceId: string
   templateVersionId: string
-  title: string
+  documentTypeId: string
+  documentTypeName?: string
+  templateName: string
+  title?: string
   clientExternalReferenceId?: string
   signerProvider?: string
+  recipients: SigningDocumentListRecipient[]
   status: SigningDocumentStatus
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
+}
+
+export interface SigningDocumentListRecipient {
+  id: string
+  documentId: string
+  templateVersionRoleId: string
+  name: string
+  email: string
+  status: RecipientStatus
+  roleName?: string
+  signerOrder?: number
 }
 
 export interface FieldResponse {
@@ -55,7 +70,16 @@ export interface FieldResponse {
   value: unknown
 }
 
-export interface SigningDocumentDetail extends SigningDocumentListItem {
+export interface SigningDocumentDetail {
+  id: string
+  workspaceId: string
+  templateVersionId: string
+  title?: string
+  clientExternalReferenceId?: string
+  signerProvider?: string
+  status: SigningDocumentStatus
+  createdAt: string
+  updatedAt?: string
   recipients: SigningRecipient[]
   fieldResponses?: FieldResponse[]
 }
@@ -121,9 +145,15 @@ export interface SigningURLResponse {
   expiresAt?: string
 }
 
+export interface DocumentTypeFilterOption {
+  id: string
+  name: string
+}
+
 export interface DocumentListFilters {
   status?: string
   search?: string
+  documentTypeIds?: string[]
   page?: number
   pageSize?: number
 }
