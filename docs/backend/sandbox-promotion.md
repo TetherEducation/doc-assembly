@@ -45,6 +45,7 @@ curl -X GET /api/v1/content/templates \
 | `/api/v1/workspace/folders/*` | Yes |
 | `/api/v1/content/templates/*` | Yes |
 | `/api/v1/content/templates/:id/versions/*` | Yes |
+| `/api/v1/documents/*` | Yes |
 | `/api/v1/workspace/tags/*` | No (shared) |
 | `/api/v1/content/injectables/*` | No (shared) |
 

@@ -106,7 +106,7 @@ export function SidebarContent({
             label: t('nav.signing'),
             icon: PenTool,
             href: `/workspace/${workspaceId}/signing`,
-            showInSandbox: false,
+            showInSandbox: true,
           },
         ]
       : []),
@@ -168,16 +168,19 @@ export function SidebarContent({
     // Invalidate queries to refetch without sandbox header
     queryClient.invalidateQueries({ queryKey: ['templates'] })
     queryClient.invalidateQueries({ queryKey: ['folders'] })
+    queryClient.invalidateQueries({ queryKey: ['signing-documents'] })
     setShowExitDialog(false)
 
     // Redirect to section root if on a detail/editor/folder route (sandbox data won't exist in production)
     const templatesBase = `/workspace/${workspaceId}/templates`
     const documentsBase = `/workspace/${workspaceId}/documents`
+    const signingBase = `/workspace/${workspaceId}/signing`
     const searchParams = location.search as Record<string, unknown>
     const hasFolder = 'folderId' in searchParams
 
     const isOnTemplatesDetail = location.pathname.startsWith(templatesBase) && location.pathname !== templatesBase
     const isOnDocumentsDetail = location.pathname.startsWith(documentsBase) && location.pathname !== documentsBase
+    const isOnSigningDetail = location.pathname.startsWith(signingBase) && location.pathname !== signingBase
     const isOnTemplates = location.pathname.startsWith(templatesBase)
     const isOnDocuments = location.pathname.startsWith(documentsBase)
 
@@ -185,6 +188,8 @@ export function SidebarContent({
       navigate({ to: templatesBase })
     } else if (isOnDocumentsDetail || (isOnDocuments && hasFolder)) {
       navigate({ to: documentsBase })
+    } else if (isOnSigningDetail) {
+      navigate({ to: signingBase })
     }
   }
 

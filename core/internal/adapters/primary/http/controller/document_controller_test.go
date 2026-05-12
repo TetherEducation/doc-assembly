@@ -3,6 +3,7 @@
 package controller_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
 	"github.com/rendis/doc-assembly/core/internal/testing/testhelper"
 )
@@ -119,10 +121,67 @@ func (env *documentTestEnv) createDocument(t *testing.T, title string) entity.Do
 	return doc
 }
 
+// setDocumentStatusForDocumentController forces the status of a document directly in the database,
+// bypassing the service-level state machine. Used by controller integration tests that need to
+// exercise endpoints whose preconditions require a specific terminal status (e.g. deprecate).
 func setDocumentStatusForDocumentController(t *testing.T, documentID string, status entity.DocumentStatus) {
 	t.Helper()
-	_, err := testhelper.GetTestPool(t).Exec(t.Context(), `UPDATE execution.documents SET status = $2 WHERE id = $1`, documentID, status)
+	_, err := testhelper.GetTestPool(t).Exec(
+		context.Background(),
+		`UPDATE execution.documents SET status = $2 WHERE id = $1`,
+		documentID,
+		status,
+	)
 	require.NoError(t, err)
+}
+
+// sandboxDocFixture holds sandbox workspace template/version/signer IDs for document API tests.
+type sandboxDocFixture struct {
+	workspaceID string
+	versionID   string
+	signerRole1 string
+	signerRole2 string
+}
+
+// setupSandboxDocFixture creates a sandbox workspace with a published template and signer roles.
+func setupSandboxDocFixture(t *testing.T, env *documentTestEnv) *sandboxDocFixture {
+	t.Helper()
+	pool := testhelper.GetTestPool(t)
+	ctx := context.Background()
+
+	sandboxID := testhelper.CreateTestSandboxWorkspace(t, pool, env.workspaceID)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, sandboxID) })
+
+	testhelper.CreateTestWorkspaceMember(t, pool, sandboxID, env.operator.ID, entity.WorkspaceRoleOperator, nil)
+	testhelper.CreateTestWorkspaceMember(t, pool, sandboxID, env.viewer.ID, entity.WorkspaceRoleViewer, nil)
+
+	var docTypeID string
+	err := pool.QueryRow(ctx,
+		`SELECT document_type_id FROM content.templates WHERE id = $1`,
+		env.templateID,
+	).Scan(&docTypeID)
+	require.NoError(t, err)
+	require.NotEmpty(t, docTypeID)
+
+	tplID := testhelper.CreateTestTemplate(t, pool, sandboxID, "Sandbox Doc Template", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, pool, tplID) })
+	testhelper.SetTemplateDocumentType(t, pool, tplID, docTypeID)
+
+	verID := testhelper.CreateTestTemplateVersion(t, pool, tplID, 1, "v1.0", entity.VersionStatusDraft)
+	t.Cleanup(func() { testhelper.CleanupTemplateVersion(t, pool, verID) })
+	testhelper.PublishTestVersion(t, pool, verID)
+
+	role1 := testhelper.CreateTestSignerRole(t, pool, verID, "Signer", "__sig_sbx_1__", 1)
+	t.Cleanup(func() { testhelper.CleanupSignerRole(t, pool, role1) })
+	role2 := testhelper.CreateTestSignerRole(t, pool, verID, "Co-Signer", "__sig_sbx_2__", 2)
+	t.Cleanup(func() { testhelper.CleanupSignerRole(t, pool, role2) })
+
+	return &sandboxDocFixture{
+		workspaceID: sandboxID,
+		versionID:   verID,
+		signerRole1: role1,
+		signerRole2: role2,
+	}
 }
 
 // --- Tests ---
@@ -474,4 +533,94 @@ func TestDocumentController_BatchCreate(t *testing.T) {
 		resp, _ := env.viewerClient().POST("/api/v1/documents/batch", req)
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
+}
+
+func TestDocumentController_Sandbox_ListAndCreateIsolation(t *testing.T) {
+	env := setupDocumentEnv(t)
+	sbx := setupSandboxDocFixture(t, env)
+
+	prodDoc := env.createDocument(t, "Prod Only Doc")
+
+	sandboxReq := dto.CreateDocumentRequest{
+		TemplateVersionID: sbx.versionID,
+		Title:             "Sandbox Only Doc",
+		Recipients: []dto.CreateRecipientRequest{
+			{RoleID: sbx.signerRole1, Name: "Alice", Email: "alice-sbx@test.com"},
+			{RoleID: sbx.signerRole2, Name: "Bob", Email: "bob-sbx@test.com"},
+		},
+	}
+
+	sandboxOperator := env.operatorClient().WithHeader(middleware.SandboxModeHeader, "true")
+	sandboxViewer := env.viewerClient().WithHeader(middleware.SandboxModeHeader, "true")
+
+	t.Run("create routed to sandbox workspace", func(t *testing.T) {
+		resp, body := sandboxOperator.POST("/api/v1/documents", sandboxReq)
+		require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+
+		var doc entity.DocumentWithRecipients
+		require.NoError(t, json.Unmarshal(body, &doc))
+		t.Cleanup(func() { testhelper.CleanupDocument(t, testhelper.GetTestPool(t), doc.ID) })
+
+		var workspaceID string
+		require.NoError(t, testhelper.GetTestPool(t).QueryRow(context.Background(),
+			`SELECT workspace_id FROM execution.documents WHERE id = $1`, doc.ID,
+		).Scan(&workspaceID))
+		assert.Equal(t, sbx.workspaceID, workspaceID)
+		assert.NotEqual(t, env.workspaceID, workspaceID)
+	})
+
+	t.Run("list in sandbox excludes prod docs", func(t *testing.T) {
+		resp, body := sandboxViewer.GET("/api/v1/documents")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var docs []*entity.DocumentListItem
+		require.NoError(t, json.Unmarshal(body, &docs))
+		for _, d := range docs {
+			assert.NotEqual(t, prodDoc.ID, d.ID, "prod doc must not appear in sandbox list")
+		}
+	})
+
+	t.Run("list in production excludes sandbox docs", func(t *testing.T) {
+		createResp, createBody := sandboxOperator.POST("/api/v1/documents", sandboxReq)
+		require.Equal(t, http.StatusCreated, createResp.StatusCode, string(createBody))
+		var sbxDoc entity.DocumentWithRecipients
+		require.NoError(t, json.Unmarshal(createBody, &sbxDoc))
+		t.Cleanup(func() { testhelper.CleanupDocument(t, testhelper.GetTestPool(t), sbxDoc.ID) })
+
+		resp, body := env.viewerClient().GET("/api/v1/documents")
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var docs []*entity.DocumentListItem
+		require.NoError(t, json.Unmarshal(body, &docs))
+		for _, d := range docs {
+			assert.NotEqual(t, sbxDoc.ID, d.ID, "sandbox doc must not appear in prod list")
+		}
+	})
+}
+
+func TestDocumentController_Sandbox_BadRequestForSystemWorkspace(t *testing.T) {
+	env := setupDocumentEnv(t)
+	pool := testhelper.GetTestPool(t)
+
+	var systemWorkspaceID string
+	err := pool.QueryRow(
+		context.Background(),
+		`SELECT id FROM tenancy.workspaces WHERE tenant_id = $1 AND type = 'SYSTEM' AND is_sandbox = FALSE LIMIT 1`,
+		env.tenantID,
+	).Scan(&systemWorkspaceID)
+	require.NoError(t, err)
+
+	testhelper.CreateTestWorkspaceMember(t, pool, systemWorkspaceID, env.viewer.ID, entity.WorkspaceRoleViewer, nil)
+
+	resp, body := env.client.
+		WithAuth(env.viewer.BearerHeader).
+		WithWorkspaceID(systemWorkspaceID).
+		WithHeader(middleware.SandboxModeHeader, "true").
+		GET("/api/v1/documents")
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode, string(body))
+
+	var errorResp map[string]string
+	require.NoError(t, json.Unmarshal(body, &errorResp))
+	assert.Equal(t, entity.ErrSandboxNotSupported.Error(), errorResp["error"])
 }

@@ -296,8 +296,8 @@ func registerPanelControllers(
 	injectableController.RegisterRoutes(v1, middlewareProvider)
 	templateController.RegisterRoutes(v1, middlewareProvider)
 
-	// Document routes (within workspace context)
-	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext())
+	// Document routes (within workspace context; sandbox via X-Sandbox-Mode)
+	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext(), middlewareProvider.SandboxContext())
 	documentController.RegisterRoutes(wsGroup)
 
 	if galleryController != nil {

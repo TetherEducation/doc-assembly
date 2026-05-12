@@ -384,7 +384,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	templateController.RegisterRoutes(v1, middlewareProvider)
 
 	// Document routes (within workspace context)
-	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext())
+	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext(), middlewareProvider.SandboxContext())
 	documentController.RegisterRoutes(wsGroup)
 	galleryController.RegisterRoutes(v1, middlewareProvider)
 
