@@ -85,13 +85,7 @@ func (r *TypstRenderer) buildArgs(rootDir string) []string {
 	args = append(args, "compile", "--format", "pdf")
 
 	if rootDir == "" {
-		if cwd, err := os.Getwd(); err == nil {
-			if abs, absErr := filepath.Abs(cwd); absErr == nil {
-				rootDir = abs
-			} else {
-				rootDir = cwd
-			}
-		}
+		rootDir = defaultRootDir()
 	}
 	if rootDir != "" {
 		args = append(args, "--root", rootDir)
@@ -104,6 +98,18 @@ func (r *TypstRenderer) buildArgs(rootDir string) []string {
 	// Read from stdin, write to stdout
 	args = append(args, "-", "-")
 	return args
+}
+
+func defaultRootDir() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	abs, err := filepath.Abs(cwd)
+	if err != nil {
+		return cwd
+	}
+	return abs
 }
 
 // Close is a no-op for Typst (no persistent processes to clean up).

@@ -80,25 +80,8 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 		return nil, fmt.Errorf("document is required")
 	}
 
-	// Resolve signer role values if not provided
-	signerRoleValues := req.SignerRoleValues
-	if signerRoleValues == nil {
-		signerRoleValues = s.resolveSignerRoleValues(req.Document.SignerRoles, req.Injectables)
-	}
+	signerRoleValues, injectableDefaults, fieldResponses := s.renderPreviewInputs(req)
 
-	// Ensure defaults map is not nil
-	injectableDefaults := req.InjectableDefaults
-	if injectableDefaults == nil {
-		injectableDefaults = make(map[string]string)
-	}
-
-	// Ensure field responses map is not nil
-	fieldResponses := req.FieldResponses
-	if fieldResponses == nil {
-		fieldResponses = make(map[string]json.RawMessage)
-	}
-
-	// Create converter for this request
 	converter := s.converterFactory(req.Injectables, injectableDefaults, signerRoleValues, req.Document.SignerRoles, fieldResponses)
 
 	// Build Typst document
@@ -144,6 +127,25 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 		PageCount:       pageCount,
 		SignatureFields: signatureFields,
 	}, nil
+}
+
+func (s *Service) renderPreviewInputs(req *port.RenderPreviewRequest) (map[string]port.SignerRoleValue, map[string]string, map[string]json.RawMessage) {
+	signerRoleValues := req.SignerRoleValues
+	if signerRoleValues == nil {
+		signerRoleValues = s.resolveSignerRoleValues(req.Document.SignerRoles, req.Injectables)
+	}
+
+	injectableDefaults := req.InjectableDefaults
+	if injectableDefaults == nil {
+		injectableDefaults = make(map[string]string)
+	}
+
+	fieldResponses := req.FieldResponses
+	if fieldResponses == nil {
+		fieldResponses = make(map[string]json.RawMessage)
+	}
+
+	return signerRoleValues, injectableDefaults, fieldResponses
 }
 
 // resolveStorageEntries converts storage:// entries in the images map to data: URIs

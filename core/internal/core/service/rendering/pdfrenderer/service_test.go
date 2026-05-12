@@ -407,7 +407,7 @@ func testSigners(count int, longText bool) []signatureFieldTestSigner {
 		label := fmt.Sprintf("Firmante %d", i+1)
 		subtitle := fmt.Sprintf("Rol %d", i+1)
 		if longText {
-			label = fmt.Sprintf("Firma del firmante responsable número %d con representación legal extendida", i+1)
+			label = fmt.Sprintf("Firma del firmante encargado número %d con representación legal extendida", i+1)
 			subtitle = fmt.Sprintf("Nombre completo y cargo institucional del firmante número %d", i+1)
 		}
 		signers[i] = signatureFieldTestSigner{roleID: roleID, label: label, subtitle: subtitle}
@@ -416,15 +416,14 @@ func testSigners(count int, longText bool) []signatureFieldTestSigner {
 }
 
 func buildSignatureFieldVariableContentDoc(paragraphRepeats int, layout string, signers []signatureFieldTestSigner) *portabledoc.Document {
-	nodes := []portabledoc.Node{
-		{
-			Type:  portabledoc.NodeTypeHeading,
-			Attrs: map[string]any{"level": float64(1)},
-			Content: []portabledoc.Node{
-				{Type: portabledoc.NodeTypeText, Text: strPtr("Contrato de prueba para ubicación de firma")},
-			},
+	nodes := make([]portabledoc.Node, 0, 1+paragraphRepeats+1+1)
+	nodes = append(nodes, portabledoc.Node{
+		Type:  portabledoc.NodeTypeHeading,
+		Attrs: map[string]any{"level": float64(1)},
+		Content: []portabledoc.Node{
+			{Type: portabledoc.NodeTypeText, Text: strPtr("Contrato de prueba para ubicación de firma")},
 		},
-	}
+	})
 	for i := range paragraphRepeats {
 		nodes = append(nodes, portabledoc.Node{
 			Type: portabledoc.NodeTypeParagraph,
