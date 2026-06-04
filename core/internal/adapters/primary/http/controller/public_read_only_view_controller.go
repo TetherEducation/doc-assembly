@@ -28,6 +28,7 @@ func (c *PublicReadOnlyViewController) RegisterRoutes(router gin.IRouter) {
 	{
 		public.GET("/:token", c.GetReadOnlyView)
 		public.GET("/:token/pdf", c.GetReadOnlyViewPDF)
+		public.HEAD("/:token/pdf", c.HeadReadOnlyViewPDF)
 	}
 }
 
@@ -72,6 +73,26 @@ func (c *PublicReadOnlyViewController) GetReadOnlyViewPDF(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+	writeReadOnlyPDFHeaders(ctx, filename, len(pdfBytes))
 	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+// HeadReadOnlyViewPDF returns PDF metadata without a body for browser/PDF.js probes.
+func (c *PublicReadOnlyViewController) HeadReadOnlyViewPDF(ctx *gin.Context) {
+	token := ctx.Param("token")
+
+	pdfBytes, filename, err := c.readOnlyViewUC.GetReadOnlyViewPDF(ctx.Request.Context(), token)
+	if err != nil {
+		handlePublicError(ctx, err)
+		return
+	}
+
+	writeReadOnlyPDFHeaders(ctx, filename, len(pdfBytes))
+	ctx.Status(http.StatusOK)
+}
+
+func writeReadOnlyPDFHeaders(ctx *gin.Context, filename string, size int) {
+	ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+	ctx.Header("Content-Length", fmt.Sprintf("%d", size))
+	ctx.Header("Content-Type", "application/pdf")
 }

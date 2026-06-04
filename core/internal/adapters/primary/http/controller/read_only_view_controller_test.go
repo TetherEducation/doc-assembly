@@ -319,4 +319,21 @@ func TestPublicReadOnlyViewController(t *testing.T) {
 		assert.Equal(t, `inline; filename="contract.pdf"`, recorder.Header().Get("Content-Disposition"))
 		assert.True(t, strings.HasPrefix(recorder.Body.String(), "%PDF"))
 	})
+
+	t.Run("serves PDF headers for HEAD requests", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{pdfBytes: []byte("%PDF-1.7"), pdfFilename: "contract.pdf"}
+		router := gin.New()
+		controller.NewPublicReadOnlyViewController(uc).RegisterRoutes(router)
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodHead, "/public/view/view-token/pdf", nil)
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		assert.Equal(t, "view-token", uc.pdfCalledWith)
+		assert.Equal(t, "application/pdf", recorder.Header().Get("Content-Type"))
+		assert.Equal(t, `inline; filename="contract.pdf"`, recorder.Header().Get("Content-Disposition"))
+		assert.Equal(t, "8", recorder.Header().Get("Content-Length"))
+		assert.Empty(t, recorder.Body.String())
+	})
 }
