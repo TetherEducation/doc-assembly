@@ -128,19 +128,23 @@ func TestLegacyDocumentController_RejectsInvalidEnvironment(t *testing.T) {
 }
 
 func TestLegacyDocumentController_RejectsEnvironmentAliases(t *testing.T) {
-	handler := &fakeLegacyDocumentHandler{}
-	router := legacyRouter(handler, 65536)
+	for _, alias := range []string{"staging", "production"} {
+		t.Run(alias, func(t *testing.T) {
+			handler := &fakeLegacyDocumentHandler{}
+			router := legacyRouter(handler, 65536)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/legacy-documents/proxy", strings.NewReader(`{}`))
-	req.Header.Set(HeaderWorkspaceCode, "CAMPUS_1")
-	req.Header.Set(HeaderEnvironment, "staging")
-	rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/legacy-documents/proxy", strings.NewReader(`{}`))
+			req.Header.Set(HeaderWorkspaceCode, "CAMPUS_1")
+			req.Header.Set(HeaderEnvironment, alias)
+			rec := httptest.NewRecorder()
 
-	router.ServeHTTP(rec, req)
+			router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"invalid X-Environment header value (must be 'dev' or 'prod')"}`, rec.Body.String())
-	assert.Nil(t, handler.req)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.JSONEq(t, `{"error":"invalid X-Environment header value (must be 'dev' or 'prod')"}`, rec.Body.String())
+			assert.Nil(t, handler.req)
+		})
+	}
 }
 
 func TestLegacyDocumentController_RejectsBodyOverLimit(t *testing.T) {

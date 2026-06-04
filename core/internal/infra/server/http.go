@@ -89,6 +89,7 @@ func NewHTTPServer(
 	publicDocAuthenticator port.PublicDocumentAccessAuthenticator,
 	signingSessionAuthenticator port.SigningSessionAuthenticator,
 	readOnlyViewLinkAuthenticator port.ReadOnlyViewLinkAuthenticator,
+	legacyDocumentHandler port.LegacyDocumentHandler,
 	keyRepo port.AutomationAPIKeyRepository,
 	frontendFS fs.FS,
 ) *HTTPServer {
@@ -136,6 +137,7 @@ func NewHTTPServer(
 	automationKeyController.RegisterRoutes(v1)
 	registerSigningSessionRoutes(base, cfg, requestTimeout, signingSessionController, signingSessionAuthenticator)
 	registerReadOnlyViewLinkRoute(base, requestTimeout, documentController, readOnlyViewLinkAuthenticator)
+	registerLegacyDocumentRoute(base, cfg, requestTimeout, legacyDocumentHandler)
 
 	webhookController.RegisterRoutes(base)
 
@@ -247,6 +249,27 @@ func registerReadOnlyViewLinkRoute(
 		middleware.ReadOnlyViewLinkCustomAuth(auth),
 		documentController.CreateReadOnlyViewLinkByWorkspaceCode,
 	)
+}
+
+func registerLegacyDocumentRoute(
+	router gin.IRouter,
+	cfg *config.Config,
+	requestTimeout time.Duration,
+	handler port.LegacyDocumentHandler,
+) {
+	if handler == nil {
+		return
+	}
+
+	v1 := router.Group("/api/v1")
+	v1.Use(noCacheAPI())
+	v1.Use(middleware.Operation())
+	v1.Use(middleware.RequestTimeout(requestTimeout))
+
+	controller.NewLegacyDocumentController(
+		handler,
+		cfg.LegacyDocuments.MaxBodyBytesOrDefault(),
+	).RegisterRoutes(v1)
 }
 
 func resolveSigningSessionOIDCProvider(cfg *config.Config) (*config.OIDCProvider, error) {
