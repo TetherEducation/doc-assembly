@@ -210,7 +210,7 @@ func (s *ReadOnlyViewService) GetReadOnlyView(ctx context.Context, token string)
 		}
 		response.Content = content
 	case documentuc.ReadOnlyViewModePDF:
-		pdfURL := "/public/view/" + token + "/pdf"
+		pdfURL := s.buildReadOnlyViewURL(token) + "/pdf"
 		response.PDFURL = &pdfURL
 	case documentuc.ReadOnlyViewModeUnavailable:
 		reason := "document_unavailable"
