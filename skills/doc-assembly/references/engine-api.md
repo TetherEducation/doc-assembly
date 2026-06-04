@@ -58,6 +58,20 @@ See [signing.md](signing.md) and [adapters.md](adapters.md).
 | `SetPublicDocumentAccessAuthenticator(auth sdk.PublicDocumentAccessAuthenticator)` | `/public/doc/:documentId` — bypass the email gate when your auth succeeds. |
 | `SetSigningSessionAuthenticator(auth sdk.SigningSessionAuthenticator)` | `/api/v1/signing-sessions/:documentId` — only used when `signing_session_auth.mode == "custom"`. |
 | `SetSigningSessionAuthMode(mode string)` | Overrides `signing_session_auth.mode` from config. |
+| `SetLegacyDocumentHandler(handler sdk.LegacyDocumentHandler)` | Mounts `POST /api/v1/legacy-documents/proxy` for host-owned legacy document access negotiation. No handler means no route. |
+
+## Legacy Document Proxy
+
+Use `SetLegacyDocumentHandler` only for documents outside the current doc-assembly document lifecycle. It is not a custom route framework and must not be used as an alternate access path for Doc Assembly Documents.
+
+The library validates only:
+
+- method is `POST`
+- `X-Workspace-Code` is present
+- `X-Environment` is present and is exactly `dev` or `prod`
+- request body is within `legacy_documents.max_body_bytes`
+
+The handler owns authentication, authorization, request parsing, legacy lookup, and JSON response semantics.
 
 ## HTTP middleware
 

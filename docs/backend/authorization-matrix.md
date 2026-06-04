@@ -17,6 +17,23 @@ El sistema tiene **3 niveles de roles** jerárquicos:
 | `X-Workspace-ID` | UUID del workspace - Requerido para rutas `/workspace/*` y `/content/*` |
 | `X-Operation-ID` | UUID de operación (opcional, se genera automáticamente) |
 
+### Endpoint de Legacy Document Proxy (`/api/v1/legacy-documents/proxy`)
+
+| Método | Endpoint | Descripción | Autorización |
+|---|---|---|---|
+| POST | `/legacy-documents/proxy` | Delega al host application la resolución de acceso para documentos legacy externos al lifecycle actual de doc-assembly. | Custom del host |
+
+**Headers requeridos por doc-assembly**:
+
+| Header | Descripción |
+|---|---|
+| `X-Workspace-Code` | Código de workspace usado como contexto mínimo de compatibilidad. |
+| `X-Environment` | Ambiente canónico (`dev` o `prod`). |
+
+**No requiere por parte de doc-assembly**: `Authorization`, `X-Tenant-ID`, `X-Workspace-ID`, body JSON, document id, tenant id, o content type específico.
+
+**Boundary**: este endpoint no debe usarse para acceder documentos creados por el lifecycle actual de doc-assembly. Los Doc Assembly Documents deben seguir usando las rutas estándar de documentos, signing o read-only view.
+
 ### Elevación Automática de Roles
 
 - `SUPERADMIN` obtiene acceso `OWNER` a cualquier workspace automáticamente

@@ -18,7 +18,7 @@ _ = engine.Run()                   // blocks until SIGINT/SIGTERM
 
 ## When to use this skill
 
-Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/rendis/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, exposing public signing/read-only links, customizing PDF look, or handling completion events.
+Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/rendis/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, exposing public signing/read-only links, implementing legacy document proxy handlers, customizing PDF look, or handling completion events.
 
 **Do not use** for changes inside `github.com/rendis/doc-assembly` itself — that is a different audience.
 

@@ -113,3 +113,46 @@ Signing providers and notifications need stable public URLs the outside world ca
 | `signing.webhook_url` | Public URL of the engine's signing webhook endpoint (`/webhooks/signing/{providerName}`). Configure the same value in the provider's webhook setup. |
 | `signing.webhook_secret` | Shared secret used to validate inbound webhook signatures in your `WebhookHandler.ParseWebhook`. |
 | `server.public_signing_frame_ancestors` | Domains allowed to embed the signing iframe via CSP `frame-ancestors`. Override via `DOC_ENGINE_SERVER_PUBLIC_SIGNING_FRAME_ANCESTORS`. |
+
+## LegacyDocumentHandler
+
+`LegacyDocumentHandler` lets a wrapper expose a compatibility JSON endpoint for legacy documents:
+
+```go
+type LegacyDocumentHandler interface {
+    HandleLegacyDocument(ctx context.Context, req *sdk.LegacyDocumentRequest) (*sdk.LegacyDocumentResponse, error)
+}
+```
+
+Register it before `Run()`:
+
+```go
+engine.SetLegacyDocumentHandler(myHandler)
+```
+
+When registered, doc-assembly mounts:
+
+```http
+POST /api/v1/legacy-documents/proxy
+X-Workspace-Code: <workspace-code>
+X-Environment: dev|prod
+```
+
+The request body is optional and passed as raw bytes. The handler may also read any request headers from `req.Headers`.
+
+Return JSON through `Body any`:
+
+```go
+return &sdk.LegacyDocumentResponse{
+    StatusCode: http.StatusOK,
+    Headers: map[string][]string{
+        "X-Legacy-Provider": {"previous-system"},
+    },
+    Body: map[string]any{
+        "url": "https://legacy.example.test/documents/abc",
+        "expiresInSeconds": 300,
+    },
+}, nil
+```
+
+Do not return PDFs, byte streams, or Doc Assembly Documents from this handler. Use standard document, signing, and read-only view flows for documents created by doc-assembly.
