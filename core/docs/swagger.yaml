@@ -8576,11 +8576,10 @@ paths:
       - Tags
   /legacy-documents/proxy:
     post:
-      consumes:
-      - application/json
       description: Delegates legacy document access to a host-registered LegacyDocumentHandler.
         This endpoint is only for documents outside the current doc-assembly document
-        lifecycle and is mounted only when a handler is registered.
+        lifecycle and is mounted only when a handler is registered. The request body
+        is optional raw data owned by the host handler.
       parameters:
       - description: Workspace business code
         in: header
@@ -8592,19 +8591,11 @@ paths:
         name: X-Environment
         required: true
         type: string
-      - description: Host-defined JSON payload
-        in: body
-        name: request
-        schema:
-          type: object
       produces:
       - application/json
       responses:
         "200":
-          description: Host-defined JSON response
-          schema:
-            additionalProperties: true
-            type: object
+          description: Host-defined JSON response (object, array, scalar, or null)
         "400":
           description: Missing or invalid required header
           schema:

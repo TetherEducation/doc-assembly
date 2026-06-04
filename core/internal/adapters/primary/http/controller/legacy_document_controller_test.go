@@ -127,15 +127,15 @@ func TestLegacyDocumentController_RejectsInvalidEnvironment(t *testing.T) {
 	assert.Nil(t, handler.req)
 }
 
-func TestLegacyDocumentController_RejectsEnvironmentAliases(t *testing.T) {
-	for _, alias := range []string{"staging", "production"} {
-		t.Run(alias, func(t *testing.T) {
+func TestLegacyDocumentController_RejectsNonCanonicalEnvironments(t *testing.T) {
+	for _, value := range []string{"staging", "production", "DEV", "Prod"} {
+		t.Run(value, func(t *testing.T) {
 			handler := &fakeLegacyDocumentHandler{}
 			router := legacyRouter(handler, 65536)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/legacy-documents/proxy", strings.NewReader(`{}`))
 			req.Header.Set(HeaderWorkspaceCode, "CAMPUS_1")
-			req.Header.Set(HeaderEnvironment, alias)
+			req.Header.Set(HeaderEnvironment, value)
 			rec := httptest.NewRecorder()
 
 			router.ServeHTTP(rec, req)

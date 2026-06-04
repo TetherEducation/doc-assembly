@@ -45,14 +45,12 @@ func (c *LegacyDocumentController) RegisterRoutes(rg *gin.RouterGroup) {
 // Proxy handles legacy document access negotiation.
 //
 // @Summary      Proxy legacy document access negotiation
-// @Description  Delegates legacy document access to a host-registered LegacyDocumentHandler. This endpoint is only for documents outside the current doc-assembly document lifecycle and is mounted only when a handler is registered.
+// @Description  Delegates legacy document access to a host-registered LegacyDocumentHandler. This endpoint is only for documents outside the current doc-assembly document lifecycle and is mounted only when a handler is registered. The request body is optional raw data owned by the host handler.
 // @Tags         legacy-documents
-// @Accept       json
 // @Produce      json
 // @Param        X-Workspace-Code header string true "Workspace business code"
 // @Param        X-Environment header string true "Runtime environment: dev or prod"
-// @Param        request body object false "Host-defined JSON payload"
-// @Success      200 {object} map[string]interface{} "Host-defined JSON response"
+// @Success      200 "Host-defined JSON response (object, array, scalar, or null)"
 // @Failure      400 {object} map[string]string "Missing or invalid required header"
 // @Failure      405 {object} map[string]string "Method not allowed"
 // @Failure      413 {object} map[string]string "Request body too large"
@@ -113,7 +111,7 @@ func parseRequiredLegacyEnvironment(ctx *gin.Context) (entity.Environment, bool)
 		return "", false
 	}
 
-	switch strings.ToLower(raw) {
+	switch raw {
 	case string(entity.EnvironmentDev):
 		return entity.EnvironmentDev, true
 	case string(entity.EnvironmentProd):

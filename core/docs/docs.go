@@ -9318,10 +9318,7 @@ const docTemplate = `{
         },
         "/legacy-documents/proxy": {
             "post": {
-                "description": "Delegates legacy document access to a host-registered LegacyDocumentHandler. This endpoint is only for documents outside the current doc-assembly document lifecycle and is mounted only when a handler is registered.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Delegates legacy document access to a host-registered LegacyDocumentHandler. This endpoint is only for documents outside the current doc-assembly document lifecycle and is mounted only when a handler is registered. The request body is optional raw data owned by the host handler.",
                 "produces": [
                     "application/json"
                 ],
@@ -9343,23 +9340,11 @@ const docTemplate = `{
                         "name": "X-Environment",
                         "in": "header",
                         "required": true
-                    },
-                    {
-                        "description": "Host-defined JSON payload",
-                        "name": "request",
-                        "in": "body",
-                        "schema": {
-                            "type": "object"
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Host-defined JSON response",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                        "description": "Host-defined JSON response (object, array, scalar, or null)"
                     },
                     "400": {
                         "description": "Missing or invalid required header",
