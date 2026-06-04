@@ -1,9 +1,12 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseCSVList_DedupesAndTrims(t *testing.T) {
@@ -98,4 +101,19 @@ func TestLegacyDocumentsConfig_NonPositiveFallsBackToDefault(t *testing.T) {
 
 		assert.Equal(t, int64(65536), cfg.MaxBodyBytesOrDefault())
 	}
+}
+
+func TestLegacyDocumentsConfig_EnvOverridesMaxBodyBytes(t *testing.T) {
+	t.Setenv("DOC_ENGINE_LEGACY_DOCUMENTS_MAX_BODY_BYTES", "4096")
+
+	configFile := filepath.Join(t.TempDir(), "app.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(`
+legacy_documents:
+  max_body_bytes: 2048
+`), 0o600))
+
+	cfg, err := LoadFromFile(configFile)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(4096), cfg.LegacyDocuments.MaxBodyBytes)
 }

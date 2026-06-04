@@ -18,7 +18,7 @@ func (testLegacyDocumentHandler) HandleLegacyDocument(
 	return &port.LegacyDocumentResponse{StatusCode: 200, Body: map[string]any{"ok": true}}, nil
 }
 
-func TestEngineLegacyDocumentHandler_SetAndGet(t *testing.T) {
+func TestEngine_SetLegacyDocumentHandler(t *testing.T) {
 	handler := &testLegacyDocumentHandler{}
 
 	engine := New().SetLegacyDocumentHandler(handler)
