@@ -60,6 +60,7 @@ func (c *LegacyDocumentController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Router       /legacy-documents/proxy [post]
 func (c *LegacyDocumentController) Proxy(ctx *gin.Context) {
 	if ctx.Request.Method != http.MethodPost {
+		ctx.Header("Allow", http.MethodPost)
 		ctx.JSON(http.StatusMethodNotAllowed, gin.H{"error": "method not allowed"})
 		return
 	}
@@ -97,7 +98,7 @@ func (c *LegacyDocumentController) Proxy(ctx *gin.Context) {
 		return
 	}
 	if resp == nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "legacy document handler failed"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "legacy document handler returned nil response"})
 		return
 	}
 
@@ -112,13 +113,15 @@ func parseRequiredLegacyEnvironment(ctx *gin.Context) (entity.Environment, bool)
 		return "", false
 	}
 
-	environment, err := entity.ParseEnvironment(raw)
-	if err != nil {
+	switch strings.ToLower(raw) {
+	case string(entity.EnvironmentDev):
+		return entity.EnvironmentDev, true
+	case string(entity.EnvironmentProd):
+		return entity.EnvironmentProd, true
+	default:
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid X-Environment header value (must be 'dev' or 'prod')"})
 		return "", false
 	}
-
-	return environment, true
 }
 
 func (c *LegacyDocumentController) readRawBody(ctx *gin.Context) ([]byte, bool) {
@@ -175,12 +178,20 @@ func isProtectedLegacyResponseHeader(key string) bool {
 
 	switch normalized {
 	case "content-type",
+		"content-length",
+		"content-encoding",
 		"x-operation-id",
 		"vary",
 		"cache-control",
 		"pragma",
 		"expires",
-		"set-cookie":
+		"set-cookie",
+		"transfer-encoding",
+		"connection",
+		"upgrade",
+		"trailer",
+		"te",
+		"keep-alive":
 		return true
 	default:
 		return false

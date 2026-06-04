@@ -127,6 +127,22 @@ func TestLegacyDocumentController_RejectsInvalidEnvironment(t *testing.T) {
 	assert.Nil(t, handler.req)
 }
 
+func TestLegacyDocumentController_RejectsEnvironmentAliases(t *testing.T) {
+	handler := &fakeLegacyDocumentHandler{}
+	router := legacyRouter(handler, 65536)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/legacy-documents/proxy", strings.NewReader(`{}`))
+	req.Header.Set(HeaderWorkspaceCode, "CAMPUS_1")
+	req.Header.Set(HeaderEnvironment, "staging")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.JSONEq(t, `{"error":"invalid X-Environment header value (must be 'dev' or 'prod')"}`, rec.Body.String())
+	assert.Nil(t, handler.req)
+}
+
 func TestLegacyDocumentController_RejectsBodyOverLimit(t *testing.T) {
 	handler := &fakeLegacyDocumentHandler{}
 	router := legacyRouter(handler, 8)
@@ -178,6 +194,7 @@ func TestLegacyDocumentController_MethodNotAllowed(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
+	assert.Equal(t, http.MethodPost, rec.Header().Get("Allow"))
 	assert.JSONEq(t, `{"error":"method not allowed"}`, rec.Body.String())
 	assert.Nil(t, handler.req)
 }
@@ -190,6 +207,9 @@ func TestLegacyDocumentController_SerializesJSONBodyVariants(t *testing.T) {
 	}{
 		{name: "object", body: map[string]any{"url": "https://example.test/doc"}, want: `{"url":"https://example.test/doc"}`},
 		{name: "struct", body: struct {
+			Token string `json:"token"`
+		}{Token: "abc"}, want: `{"token":"abc"}`},
+		{name: "pointer", body: &struct {
 			Token string `json:"token"`
 		}{Token: "abc"}, want: `{"token":"abc"}`},
 		{name: "string", body: "ready", want: `"ready"`},
@@ -268,6 +288,8 @@ func TestLegacyDocumentController_DoesNotOverwriteSystemHeaders(t *testing.T) {
 			StatusCode: http.StatusOK,
 			Headers: map[string][]string{
 				"Content-Type":                {"text/plain"},
+				"Content-Length":              {"999"},
+				"Content-Encoding":            {"gzip"},
 				"X-Operation-ID":              {"malicious"},
 				"Access-Control-Allow-Origin": {"https://evil.test"},
 				"Vary":                        {"SomethingElse"},
@@ -275,6 +297,12 @@ func TestLegacyDocumentController_DoesNotOverwriteSystemHeaders(t *testing.T) {
 				"Pragma":                      {"cache"},
 				"Expires":                     {"tomorrow"},
 				"Set-Cookie":                  {"session=evil"},
+				"Transfer-Encoding":           {"chunked"},
+				"Connection":                  {"upgrade"},
+				"Upgrade":                     {"websocket"},
+				"Trailer":                     {"X-Trailer"},
+				"TE":                          {"trailers"},
+				"Keep-Alive":                  {"timeout=5"},
 			},
 			Body: map[string]any{"ok": true},
 		},
@@ -296,6 +324,14 @@ func TestLegacyDocumentController_DoesNotOverwriteSystemHeaders(t *testing.T) {
 	assert.Empty(t, rec.Header().Get("Cache-Control"))
 	assert.Empty(t, rec.Header().Get("Pragma"))
 	assert.Empty(t, rec.Header().Get("Expires"))
+	assert.Empty(t, rec.Header().Get("Content-Length"))
+	assert.Empty(t, rec.Header().Get("Content-Encoding"))
+	assert.Empty(t, rec.Header().Get("Transfer-Encoding"))
+	assert.Empty(t, rec.Header().Get("Connection"))
+	assert.Empty(t, rec.Header().Get("Upgrade"))
+	assert.Empty(t, rec.Header().Get("Trailer"))
+	assert.Empty(t, rec.Header().Get("TE"))
+	assert.Empty(t, rec.Header().Get("Keep-Alive"))
 }
 
 func TestLegacyDocumentController_HandlerErrorReturnsInternalServerError(t *testing.T) {
@@ -311,6 +347,21 @@ func TestLegacyDocumentController_HandlerErrorReturnsInternalServerError(t *test
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.JSONEq(t, `{"error":"legacy document handler failed"}`, rec.Body.String())
+}
+
+func TestLegacyDocumentController_NilHandlerResponseReturnsInternalServerError(t *testing.T) {
+	handler := &fakeLegacyDocumentHandler{}
+	router := legacyRouter(handler, 65536)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/legacy-documents/proxy", nil)
+	req.Header.Set(HeaderWorkspaceCode, "CAMPUS_1")
+	req.Header.Set(HeaderEnvironment, "prod")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.JSONEq(t, `{"error":"legacy document handler returned nil response"}`, rec.Body.String())
 }
 
 func TestLegacyDocumentController_UnserializableBodyReturnsInternalServerError(t *testing.T) {
