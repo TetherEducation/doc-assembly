@@ -25,4 +25,8 @@ type ReadOnlyViewLinkAuthClaims struct {
 	Email    string
 	Subject  string
 	Provider string
+
+	// AuthorizedWorkspaceCodes contains additional workspace business codes that
+	// the authenticated request may use for read-only document ownership checks.
+	AuthorizedWorkspaceCodes []string
 }

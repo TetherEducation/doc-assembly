@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/controller"
+	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
 	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/rendis/doc-assembly/core/internal/core/port"
 	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
 )
 
@@ -31,6 +33,9 @@ type readOnlyViewUCStub struct {
 	pdfBytes     []byte
 	pdfFilename  string
 	err          error
+
+	createCodeCalls    []string
+	errByWorkspaceCode map[string]error
 }
 
 func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, workspaceID, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
@@ -45,6 +50,12 @@ func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, workspace
 func (s *readOnlyViewUCStub) CreateReadOnlyViewLinkByWorkspaceCode(_ context.Context, workspaceCode, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
 	s.createWorkspaceCode = workspaceCode
 	s.createCodeCalledWith = documentID
+	s.createCodeCalls = append(s.createCodeCalls, workspaceCode)
+	if s.errByWorkspaceCode != nil {
+		if err, ok := s.errByWorkspaceCode[workspaceCode]; ok {
+			return nil, err
+		}
+	}
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -65,6 +76,18 @@ func (s *readOnlyViewUCStub) GetReadOnlyViewPDF(_ context.Context, token string)
 		return nil, "", s.err
 	}
 	return s.pdfBytes, s.pdfFilename, nil
+}
+
+type readOnlyViewLinkAuthStub struct {
+	claims *port.ReadOnlyViewLinkAuthClaims
+	err    error
+}
+
+func (s *readOnlyViewLinkAuthStub) Authenticate(_ *gin.Context, _ *port.ReadOnlyViewLinkAuthenticateRequest) (*port.ReadOnlyViewLinkAuthClaims, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.claims, nil
 }
 
 func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
@@ -154,6 +177,74 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 		assert.Equal(t, "workspace-code-from-header", uc.createWorkspaceCode)
 		assert.Empty(t, uc.createCalledWith)
 		assert.Empty(t, uc.createWorkspace)
+	})
+
+	t.Run("external auth route uses authorized workspace codes after header mismatch", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{
+			createResult: &documentuc.CreateReadOnlyViewLinkResult{
+				URL:       "https://example.test/public/view/view-token",
+				Token:     "view-token",
+				ExpiresAt: expiresAt,
+			},
+			errByWorkspaceCode: map[string]error{
+				"2518500001": entity.ErrForbidden,
+			},
+		}
+		auth := &readOnlyViewLinkAuthStub{
+			claims: &port.ReadOnlyViewLinkAuthClaims{
+				Email:                    "admin@example.test",
+				Subject:                  "subject-1",
+				Provider:                 "test",
+				AuthorizedWorkspaceCodes: []string{"SAN_VICENTE_DE_PAUL", "DEFAULT"},
+			},
+		}
+		router := gin.New()
+		router.POST(
+			"/api/v1/documents/:documentId/view-link",
+			middleware.ReadOnlyViewLinkCustomAuth(auth),
+			controller.NewDocumentController(nil, nil, uc, nil).CreateReadOnlyViewLinkByWorkspaceCode,
+		)
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		req.Header.Set("X-Workspace-Code", "2518500001")
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		assert.Equal(t, []string{"2518500001", "SAN_VICENTE_DE_PAUL"}, uc.createCodeCalls)
+		assert.Equal(t, "SAN_VICENTE_DE_PAUL", uc.createWorkspaceCode)
+	})
+
+	t.Run("external auth route returns forbidden when authorized workspace codes do not match", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{
+			createResult: &documentuc.CreateReadOnlyViewLinkResult{},
+			errByWorkspaceCode: map[string]error{
+				"2518500001":          entity.ErrForbidden,
+				"SAN_VICENTE_DE_PAUL": entity.ErrForbidden,
+			},
+		}
+		auth := &readOnlyViewLinkAuthStub{
+			claims: &port.ReadOnlyViewLinkAuthClaims{
+				Email:                    "admin@example.test",
+				Subject:                  "subject-1",
+				Provider:                 "test",
+				AuthorizedWorkspaceCodes: []string{"SAN_VICENTE_DE_PAUL"},
+			},
+		}
+		router := gin.New()
+		router.POST(
+			"/api/v1/documents/:documentId/view-link",
+			middleware.ReadOnlyViewLinkCustomAuth(auth),
+			controller.NewDocumentController(nil, nil, uc, nil).CreateReadOnlyViewLinkByWorkspaceCode,
+		)
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		req.Header.Set("X-Workspace-Code", "2518500001")
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusForbidden, recorder.Code, recorder.Body.String())
+		assert.Equal(t, []string{"2518500001", "SAN_VICENTE_DE_PAUL"}, uc.createCodeCalls)
 	})
 
 	t.Run("external auth route rejects missing workspace code header", func(t *testing.T) {
