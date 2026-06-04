@@ -371,7 +371,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		storageAdapter,
 		cfg.Storage.Enabled,
 		tokenTTLHours,
-		publicURL,
+		readOnlyViewPublicURL(cfg.Server),
 	).SetWorkspaceRepository(workspaceRepo)
 	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
@@ -651,6 +651,13 @@ func (e *Engine) resolveFrontendFS() fs.FS {
 	}
 	slog.Info("serving embedded frontend")
 	return sub
+}
+
+func readOnlyViewPublicURL(serverCfg config.ServerConfig) string {
+	if publicURL := strings.TrimSpace(serverCfg.PublicURL); publicURL != "" {
+		return publicURL
+	}
+	return serverCfg.NormalizedBasePath()
 }
 
 // registerSchedulerJobs registers background polling jobs.
