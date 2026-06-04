@@ -79,3 +79,23 @@ func TestApplyStorageEnvOverrides(t *testing.T) {
 	assert.Equal(t, "us-central1", cfg.Region)
 	assert.Equal(t, "https://storage.googleapis.com", cfg.Endpoint)
 }
+
+func TestLegacyDocumentsConfig_DefaultMaxBodyBytes(t *testing.T) {
+	cfg := LegacyDocumentsConfig{}
+
+	assert.Equal(t, int64(65536), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestLegacyDocumentsConfig_UsesConfiguredMaxBodyBytes(t *testing.T) {
+	cfg := LegacyDocumentsConfig{MaxBodyBytes: 4096}
+
+	assert.Equal(t, int64(4096), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestLegacyDocumentsConfig_NonPositiveFallsBackToDefault(t *testing.T) {
+	for _, value := range []int64{0, -1} {
+		cfg := LegacyDocumentsConfig{MaxBodyBytes: value}
+
+		assert.Equal(t, int64(65536), cfg.MaxBodyBytesOrDefault())
+	}
+}

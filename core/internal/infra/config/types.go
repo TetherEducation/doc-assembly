@@ -23,6 +23,7 @@ type Config struct {
 	Scheduler          SchedulerConfig          `mapstructure:"scheduler"`
 	Notification       NotificationConfig       `mapstructure:"notification"`
 	PublicAccess       PublicAccessConfig       `mapstructure:"public_access"`
+	LegacyDocuments    LegacyDocumentsConfig    `mapstructure:"legacy_documents"`
 	Worker             WorkerConfig             `mapstructure:"worker"`
 	InjectableSources  InjectableSourcesConfig  `mapstructure:"injectable_sources"`
 
@@ -294,6 +295,23 @@ type PublicAccessConfig struct {
 	RateLimitMax       int `mapstructure:"rate_limit_max"`        // Max access requests per recipient per window
 	RateLimitWindowMin int `mapstructure:"rate_limit_window_min"` // Rate limit window in minutes
 	TokenTTLHours      int `mapstructure:"token_ttl_hours"`       // Access token TTL in hours
+}
+
+const defaultLegacyDocumentMaxBodyBytes int64 = 64 * 1024
+
+// LegacyDocumentsConfig configures compatibility access for documents outside
+// the current doc-assembly document lifecycle.
+type LegacyDocumentsConfig struct {
+	MaxBodyBytes int64 `mapstructure:"max_body_bytes"`
+}
+
+// MaxBodyBytesOrDefault returns the configured request body limit, falling
+// back to 64 KiB for missing or invalid values.
+func (c LegacyDocumentsConfig) MaxBodyBytesOrDefault() int64 {
+	if c.MaxBodyBytes > 0 {
+		return c.MaxBodyBytes
+	}
+	return defaultLegacyDocumentMaxBodyBytes
 }
 
 // WorkerConfig holds River job queue worker configuration.

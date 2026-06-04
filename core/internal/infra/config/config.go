@@ -133,6 +133,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("internal_api.enabled", true)
 	v.SetDefault("internal_api.api_key_auth_mode", InternalAPIKeyAuthModeMemory)
 
+	// Legacy Document Proxy defaults
+	v.SetDefault("legacy_documents.max_body_bytes", 64*1024)
+
 	// Worker defaults
 	v.SetDefault("worker.enabled", false)
 	v.SetDefault("worker.max_workers", 10)
