@@ -372,7 +372,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		cfg.Storage.Enabled,
 		tokenTTLHours,
 		publicURL,
-	)
+	).SetWorkspaceRepository(workspaceRepo)
 	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
 	publicSigningCtrl := controller.NewPublicSigningController(preSigningSvc, documentAccessSvc, publicURL)
@@ -415,6 +415,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		galleryCtrl,
 		publicDocAuth,
 		e.signingSessionAuth,
+		e.readOnlyViewAuth,
 		automationAPIKeyRepo,
 		frontendFS,
 	)

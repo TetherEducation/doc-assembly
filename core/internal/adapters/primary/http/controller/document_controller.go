@@ -27,6 +27,20 @@ type DocumentController struct {
 	eventEmitter   *documentsvc.EventEmitter
 }
 
+type documentRouteOptions struct {
+	skipReadOnlyViewLink bool
+}
+
+// DocumentRouteOption configures document route registration.
+type DocumentRouteOption func(*documentRouteOptions)
+
+// WithoutReadOnlyViewLinkRoute skips the authenticated panel read-only link route.
+func WithoutReadOnlyViewLinkRoute() DocumentRouteOption {
+	return func(opts *documentRouteOptions) {
+		opts.skipReadOnlyViewLink = true
+	}
+}
+
 // NewDocumentController creates a new document controller.
 func NewDocumentController(
 	documentUC documentuc.DocumentUseCase,
@@ -43,7 +57,14 @@ func NewDocumentController(
 }
 
 // RegisterRoutes registers all document routes.
-func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
+func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...DocumentRouteOption) {
+	routeOptions := documentRouteOptions{}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&routeOptions)
+		}
+	}
+
 	docs := api.Group("/documents")
 	{
 		// List documents in workspace
@@ -76,8 +97,10 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup) {
 		// Download signed PDF
 		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.GetDocumentPDF)
 
-		// Create public read-only view link
-		docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.CreateReadOnlyViewLink)
+		if !routeOptions.skipReadOnlyViewLink {
+			// Create public read-only view link
+			docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.CreateReadOnlyViewLink)
+		}
 
 		// Refresh document status from provider
 		docs.POST("/:documentId/refresh", middleware.RequireOperator(), c.RefreshStatus)
@@ -157,13 +180,32 @@ func (c *DocumentController) ListDocuments(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, docs)
 }
 
-// CreateReadOnlyViewLink creates a public read-only view link for a document.
+// CreateReadOnlyViewLink creates a public read-only view link for a document from panel workspace context.
+func (c *DocumentController) CreateReadOnlyViewLink(ctx *gin.Context) {
+	documentID := ctx.Param("documentId")
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok || strings.TrimSpace(workspaceID) == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		return
+	}
+
+	result, err := c.readOnlyViewUC.CreateReadOnlyViewLink(ctx.Request.Context(), workspaceID, documentID)
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.NewCreateReadOnlyViewLinkResponse(result))
+}
+
+// CreateReadOnlyViewLinkByWorkspaceCode creates a public read-only view link for
+// external callers that identify the workspace by business code.
 // @Summary Create read-only view link
 // @Description Creates a fresh expiring public read-only link for the document.
 // @Tags Documents
 // @Accept json
 // @Produce json
-// @Param X-Workspace-ID header string true "Workspace ID"
+// @Param X-Workspace-Code header string true "Workspace business code"
 // @Param documentId path string true "Document ID"
 // @Success 200 {object} dto.CreateReadOnlyViewLinkResponse
 // @Failure 400 {object} dto.ErrorResponse
@@ -172,15 +214,15 @@ func (c *DocumentController) ListDocuments(ctx *gin.Context) {
 // @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/documents/{documentId}/view-link [post]
-func (c *DocumentController) CreateReadOnlyViewLink(ctx *gin.Context) {
+func (c *DocumentController) CreateReadOnlyViewLinkByWorkspaceCode(ctx *gin.Context) {
 	documentID := ctx.Param("documentId")
-	workspaceID, ok := middleware.GetWorkspaceID(ctx)
-	if !ok {
+	workspaceCode := strings.TrimSpace(ctx.GetHeader(middleware.ReadOnlyViewLinkWorkspaceCodeHeader))
+	if workspaceCode == "" {
 		HandleError(ctx, entity.ErrMissingWorkspaceID)
 		return
 	}
 
-	result, err := c.readOnlyViewUC.CreateReadOnlyViewLink(ctx.Request.Context(), workspaceID, documentID)
+	result, err := c.readOnlyViewUC.CreateReadOnlyViewLinkByWorkspaceCode(ctx.Request.Context(), workspaceCode, documentID)
 	if err != nil {
 		HandleError(ctx, err)
 		return

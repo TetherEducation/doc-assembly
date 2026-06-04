@@ -53,6 +53,84 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_CreatesFreshViewOnlyToken(t 
 	assert.WithinDuration(t, before, accessTokenRepo.created.CreatedAt, after.Sub(before)+time.Second)
 }
 
+func TestReadOnlyViewService_CreateReadOnlyViewLink_AcceptsDocumentWorkspaceCode(t *testing.T) {
+	ctx := context.Background()
+	docID := "doc-123"
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	recipientRepo := &readOnlyViewRecipientRepoFake{
+		recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: docID}},
+	}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{
+			ID:          docID,
+			WorkspaceID: "workspace-uuid",
+			Status:      entity.DocumentStatusReadyToSign,
+		}},
+		accessTokenRepo,
+		recipientRepo,
+		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
+		48,
+		"https://public.example.test/",
+	).SetWorkspaceRepository(&readOnlyViewWorkspaceRepoFake{
+		byID: map[string]*entity.Workspace{
+			"workspace-uuid": {ID: "workspace-uuid", Code: "2518500001"},
+		},
+	})
+
+	result, err := service.CreateReadOnlyViewLinkByWorkspaceCode(ctx, "2518500001", docID)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, accessTokenRepo.created)
+	assert.Equal(t, docID, accessTokenRepo.created.DocumentID)
+	assert.Equal(t, docID, recipientRepo.findByDocumentID)
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLink_AcceptsParentWorkspaceCodeForSandboxDocument(t *testing.T) {
+	ctx := context.Background()
+	docID := "doc-123"
+	parentID := "workspace-parent"
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	recipientRepo := &readOnlyViewRecipientRepoFake{
+		recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: docID}},
+	}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{
+			ID:          docID,
+			WorkspaceID: "workspace-sandbox",
+			Status:      entity.DocumentStatusReadyToSign,
+		}},
+		accessTokenRepo,
+		recipientRepo,
+		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
+		48,
+		"https://public.example.test/",
+	).SetWorkspaceRepository(&readOnlyViewWorkspaceRepoFake{
+		byID: map[string]*entity.Workspace{
+			"workspace-sandbox": {ID: "workspace-sandbox", Code: "SBX_2518500001", IsSandbox: true, SandboxOfID: &parentID},
+			parentID:            {ID: parentID, Code: "2518500001"},
+		},
+	})
+
+	result, err := service.CreateReadOnlyViewLinkByWorkspaceCode(ctx, "2518500001", docID)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, accessTokenRepo.created)
+	assert.Equal(t, docID, accessTokenRepo.created.DocumentID)
+	assert.Equal(t, docID, recipientRepo.findByDocumentID)
+}
+
 func TestReadOnlyViewService_CreateReadOnlyViewLink_DocumentNotFound(t *testing.T) {
 	documentRepo := &readOnlyViewDocumentRepoFake{err: entity.ErrDocumentNotFound}
 	service := NewReadOnlyViewService(documentRepo, &readOnlyViewAccessTokenRepoFake{}, &readOnlyViewRecipientRepoFake{}, &readOnlyViewVersionRepoFake{}, nil, nil, nil, nil, false, 48, "")
@@ -87,6 +165,74 @@ func TestReadOnlyViewService_CreateReadOnlyViewLink_WorkspaceMismatchDoesNotPers
 	)
 
 	result, err := service.CreateReadOnlyViewLink(context.Background(), "workspace-1", "doc-123")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, entity.ErrForbidden)
+	assert.Nil(t, accessTokenRepo.created)
+	assert.Empty(t, recipientRepo.findByDocumentID)
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLinkByWorkspaceCode_MismatchDoesNotPersistToken(t *testing.T) {
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	recipientRepo := &readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: "doc-123"}}}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{
+			ID:          "doc-123",
+			WorkspaceID: "workspace-uuid",
+			Status:      entity.DocumentStatusReadyToSign,
+		}},
+		accessTokenRepo,
+		recipientRepo,
+		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
+		48,
+		"",
+	).SetWorkspaceRepository(&readOnlyViewWorkspaceRepoFake{
+		byID: map[string]*entity.Workspace{
+			"workspace-uuid": {ID: "workspace-uuid", Code: "2518500001"},
+		},
+	})
+
+	result, err := service.CreateReadOnlyViewLinkByWorkspaceCode(context.Background(), "9999999999", "doc-123")
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, entity.ErrForbidden)
+	assert.Nil(t, accessTokenRepo.created)
+	assert.Empty(t, recipientRepo.findByDocumentID)
+}
+
+func TestReadOnlyViewService_CreateReadOnlyViewLinkByWorkspaceCode_DoesNotTreatWorkspaceIDAsCode(t *testing.T) {
+	accessTokenRepo := &readOnlyViewAccessTokenRepoFake{}
+	recipientRepo := &readOnlyViewRecipientRepoFake{recipients: []*entity.DocumentRecipient{{ID: "recipient-1", DocumentID: "doc-123"}}}
+	service := NewReadOnlyViewService(
+		&readOnlyViewDocumentRepoFake{doc: &entity.Document{
+			ID:          "doc-123",
+			WorkspaceID: "workspace-uuid",
+			Status:      entity.DocumentStatusReadyToSign,
+		}},
+		accessTokenRepo,
+		recipientRepo,
+		&readOnlyViewVersionRepoFake{},
+		nil,
+		nil,
+		nil,
+		nil,
+		false,
+		48,
+		"",
+	).SetWorkspaceRepository(&readOnlyViewWorkspaceRepoFake{
+		byID: map[string]*entity.Workspace{
+			"workspace-uuid": {ID: "workspace-uuid", Code: "2518500001"},
+		},
+	})
+
+	result, err := service.CreateReadOnlyViewLinkByWorkspaceCode(context.Background(), "workspace-uuid", "doc-123")
 
 	require.Error(t, err)
 	assert.Nil(t, result)
@@ -514,6 +660,23 @@ type readOnlyViewDocumentRepoFake struct {
 func (f *readOnlyViewDocumentRepoFake) FindByID(_ context.Context, id string) (*entity.Document, error) {
 	f.findByID = id
 	return f.doc, f.err
+}
+
+type readOnlyViewWorkspaceRepoFake struct {
+	port.WorkspaceRepository
+	byID map[string]*entity.Workspace
+	err  error
+}
+
+func (f *readOnlyViewWorkspaceRepoFake) FindByID(_ context.Context, id string) (*entity.Workspace, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	workspace := f.byID[id]
+	if workspace == nil {
+		return nil, entity.ErrWorkspaceNotFound
+	}
+	return workspace, nil
 }
 
 type readOnlyViewAccessTokenRepoFake struct {

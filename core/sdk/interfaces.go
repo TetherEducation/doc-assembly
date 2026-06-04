@@ -64,6 +64,10 @@ type PublicDocumentAccessAuthenticator = port.PublicDocumentAccessAuthenticator
 // /api/v1/signing-sessions/:documentId.
 type SigningSessionAuthenticator = port.SigningSessionAuthenticator
 
+// ReadOnlyViewLinkAuthenticator provides custom auth for
+// /api/v1/documents/:documentId/view-link.
+type ReadOnlyViewLinkAuthenticator = port.ReadOnlyViewLinkAuthenticator
+
 // SigningProvider handles document signing via an external provider.
 type SigningProvider = port.SigningProvider
 
@@ -101,6 +105,9 @@ type PublicDocumentAccessClaims = port.PublicDocumentAccessClaims
 
 // SigningSessionAuthenticator types
 type SigningSessionAuthClaims = port.SigningSessionAuthClaims
+
+// ReadOnlyViewLinkAuthenticator types
+type ReadOnlyViewLinkAuthClaims = port.ReadOnlyViewLinkAuthClaims
 
 // SigningProvider types
 type (
@@ -163,3 +170,6 @@ type AuthenticateRequest = port.AuthenticateRequest
 
 // SigningSessionAuthenticator request type
 type SigningSessionAuthenticateRequest = port.SigningSessionAuthenticateRequest
+
+// ReadOnlyViewLinkAuthenticator request type
+type ReadOnlyViewLinkAuthenticateRequest = port.ReadOnlyViewLinkAuthenticateRequest

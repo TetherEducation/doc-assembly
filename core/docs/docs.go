@@ -3369,13 +3369,19 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status",
+                        "description": "Filter by document status; comma-separated for multiple (OR)",
                         "name": "status",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Search by title",
+                        "description": "Comma-separated document type UUIDs (multi-select filter)",
+                        "name": "documentTypeIds",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by document title or signer recipient email (substring, case-insensitive)",
                         "name": "search",
                         "in": "query"
                     },
@@ -3502,6 +3508,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/documents/document-type-options": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "List document type filter options",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace ID",
+                        "name": "X-Workspace-ID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption"
+                            }
                         }
                     },
                     "400": {
@@ -4147,8 +4199,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Workspace ID",
-                        "name": "X-Workspace-ID",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
                         "in": "header",
                         "required": true
                     },
@@ -13265,6 +13317,17 @@ const docTemplate = `{
                 "DocumentStatusInvalidated",
                 "DocumentStatusError"
             ]
+        },
+        "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         },
         "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentWithRecipients": {
             "type": "object",

@@ -34,6 +34,7 @@ type Engine struct {
 	workspaceProvider  port.WorkspaceInjectableProvider
 	publicDocAuth      port.PublicDocumentAccessAuthenticator
 	signingSessionAuth port.SigningSessionAuthenticator
+	readOnlyViewAuth   port.ReadOnlyViewLinkAuthenticator
 	signingSessionMode string
 	designTokens       *pdfrenderer.TypstDesignTokens
 	frontendFS         fs.FS // Embedded SPA filesystem; nil = no frontend served
@@ -161,6 +162,19 @@ func (e *Engine) SetSigningSessionAuthenticator(auth port.SigningSessionAuthenti
 // authenticator, or nil if not set.
 func (e *Engine) GetSigningSessionAuthenticator() port.SigningSessionAuthenticator {
 	return e.signingSessionAuth
+}
+
+// SetReadOnlyViewLinkAuthenticator sets custom authentication for
+// /api/v1/documents/:documentId/view-link.
+func (e *Engine) SetReadOnlyViewLinkAuthenticator(auth port.ReadOnlyViewLinkAuthenticator) *Engine {
+	e.readOnlyViewAuth = auth
+	return e
+}
+
+// GetReadOnlyViewLinkAuthenticator returns the registered read-only view link
+// authenticator, or nil if not set.
+func (e *Engine) GetReadOnlyViewLinkAuthenticator() port.ReadOnlyViewLinkAuthenticator {
+	return e.readOnlyViewAuth
 }
 
 // SetSigningSessionAuthMode overrides signing session auth mode configured via

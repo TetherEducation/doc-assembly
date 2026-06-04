@@ -19,10 +19,12 @@ import (
 )
 
 type readOnlyViewUCStub struct {
-	createCalledWith string
-	createWorkspace  string
-	viewCalledWith   string
-	pdfCalledWith    string
+	createCalledWith     string
+	createWorkspace      string
+	createCodeCalledWith string
+	createWorkspaceCode  string
+	viewCalledWith       string
+	pdfCalledWith        string
 
 	createResult *documentuc.CreateReadOnlyViewLinkResult
 	viewResult   *documentuc.ReadOnlyViewResponse
@@ -34,6 +36,15 @@ type readOnlyViewUCStub struct {
 func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, workspaceID, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
 	s.createWorkspace = workspaceID
 	s.createCalledWith = documentID
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.createResult, nil
+}
+
+func (s *readOnlyViewUCStub) CreateReadOnlyViewLinkByWorkspaceCode(_ context.Context, workspaceCode, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+	s.createWorkspaceCode = workspaceCode
+	s.createCodeCalledWith = documentID
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -122,6 +133,42 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
 		assert.Empty(t, uc.createCalledWith)
 		assert.Empty(t, uc.createWorkspace)
+	})
+
+	t.Run("external auth route uses workspace code header", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{createResult: &documentuc.CreateReadOnlyViewLinkResult{
+			URL:       "https://example.test/public/view/view-token",
+			Token:     "view-token",
+			ExpiresAt: expiresAt,
+		}}
+		router := gin.New()
+		router.POST("/api/v1/documents/:documentId/view-link", controller.NewDocumentController(nil, nil, uc, nil).CreateReadOnlyViewLinkByWorkspaceCode)
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		req.Header.Set("X-Workspace-Code", "workspace-code-from-header")
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		assert.Equal(t, "doc-1", uc.createCodeCalledWith)
+		assert.Equal(t, "workspace-code-from-header", uc.createWorkspaceCode)
+		assert.Empty(t, uc.createCalledWith)
+		assert.Empty(t, uc.createWorkspace)
+	})
+
+	t.Run("external auth route rejects missing workspace code header", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{createResult: &documentuc.CreateReadOnlyViewLinkResult{}}
+		router := gin.New()
+		router.POST("/api/v1/documents/:documentId/view-link", controller.NewDocumentController(nil, nil, uc, nil).CreateReadOnlyViewLinkByWorkspaceCode)
+
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		req.Header.Set("X-Workspace-ID", "workspace-id-must-not-be-used")
+		router.ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.createCodeCalledWith)
+		assert.Empty(t, uc.createWorkspaceCode)
 	})
 }
 

@@ -88,6 +88,7 @@ func NewHTTPServer(
 	galleryController *controller.GalleryController,
 	publicDocAuthenticator port.PublicDocumentAccessAuthenticator,
 	signingSessionAuthenticator port.SigningSessionAuthenticator,
+	readOnlyViewLinkAuthenticator port.ReadOnlyViewLinkAuthenticator,
 	keyRepo port.AutomationAPIKeyRepository,
 	frontendFS fs.FS,
 ) *HTTPServer {
@@ -130,9 +131,11 @@ func NewHTTPServer(
 	v1 := setupPanelRoutes(base, cfg, middlewareProvider, requestTimeout)
 	registerPanelControllers(v1, middlewareProvider, adminController, meController,
 		tenantController, documentTypeController, processController, workspaceController,
-		injectableController, templateController, documentController, galleryController)
+		injectableController, templateController, documentController, galleryController,
+		readOnlyViewLinkAuthenticator != nil)
 	automationKeyController.RegisterRoutes(v1)
 	registerSigningSessionRoutes(base, cfg, requestTimeout, signingSessionController, signingSessionAuthenticator)
+	registerReadOnlyViewLinkRoute(base, requestTimeout, documentController, readOnlyViewLinkAuthenticator)
 
 	webhookController.RegisterRoutes(base)
 
@@ -225,6 +228,27 @@ func registerSigningSessionRoutes(
 	signingSessionController.RegisterRoutes(v1)
 }
 
+func registerReadOnlyViewLinkRoute(
+	router gin.IRouter,
+	requestTimeout time.Duration,
+	documentController *controller.DocumentController,
+	auth port.ReadOnlyViewLinkAuthenticator,
+) {
+	if documentController == nil || auth == nil {
+		return
+	}
+
+	v1 := router.Group("/api/v1")
+	v1.Use(noCacheAPI())
+	v1.Use(middleware.Operation())
+	v1.Use(middleware.RequestTimeout(requestTimeout))
+	v1.POST(
+		"/documents/:documentId/view-link",
+		middleware.ReadOnlyViewLinkCustomAuth(auth),
+		documentController.CreateReadOnlyViewLinkByWorkspaceCode,
+	)
+}
+
 func resolveSigningSessionOIDCProvider(cfg *config.Config) (*config.OIDCProvider, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("missing config")
@@ -282,6 +306,7 @@ func registerPanelControllers(
 	templateController *controller.ContentTemplateController,
 	documentController *controller.DocumentController,
 	galleryController *controller.GalleryController,
+	skipReadOnlyViewLinkRoute bool,
 ) {
 	v1.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "pong"})
@@ -298,7 +323,11 @@ func registerPanelControllers(
 
 	// Document routes (within workspace context; sandbox via X-Sandbox-Mode)
 	wsGroup := v1.Group("", middlewareProvider.WorkspaceContext(), middlewareProvider.SandboxContext())
-	documentController.RegisterRoutes(wsGroup)
+	if skipReadOnlyViewLinkRoute {
+		documentController.RegisterRoutes(wsGroup, controller.WithoutReadOnlyViewLinkRoute())
+	} else {
+		documentController.RegisterRoutes(wsGroup)
+	}
 
 	if galleryController != nil {
 		galleryController.RegisterRoutes(v1, middlewareProvider)
