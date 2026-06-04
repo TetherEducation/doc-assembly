@@ -64,6 +64,13 @@ internal_api:
   enabled: true
   api_key_auth_mode: memory # DOC_ENGINE_INTERNAL_API_API_KEY_AUTH_MODE - "memory" preloads keys at startup, "db" validates on each request
 
+# Legacy Document Proxy compatibility endpoint.
+# The endpoint is mounted only when a host application registers
+# SetLegacyDocumentHandler. This setting only controls the maximum request body
+# size passed to that handler.
+legacy_documents:
+  max_body_bytes: 65536 # DOC_ENGINE_LEGACY_DOCUMENTS_MAX_BODY_BYTES - Default 64 KiB
+
 # Signing provider configuration (Documenso self-hosted)
 signing:
   provider: documenso         # DOC_ENGINE_SIGNING_PROVIDER

@@ -9316,6 +9316,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/legacy-documents/proxy": {
+            "post": {
+                "description": "Delegates legacy document access to a host-registered LegacyDocumentHandler. This endpoint is only for documents outside the current doc-assembly document lifecycle and is mounted only when a handler is registered. The request body is optional raw data owned by the host handler.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "legacy-documents"
+                ],
+                "summary": "Proxy legacy document access negotiation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Runtime environment: dev or prod",
+                        "name": "X-Environment",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Host-defined JSON response (object, array, scalar, or null)"
+                    },
+                    "400": {
+                        "description": "Missing or invalid required header",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request body too large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Handler or JSON serialization failure",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/public/doc/{documentId}": {
             "get": {
                 "description": "Returns document title and status for the public access page.",

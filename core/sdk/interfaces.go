@@ -68,6 +68,17 @@ type SigningSessionAuthenticator = port.SigningSessionAuthenticator
 // /api/v1/documents/:documentId/view-link.
 type ReadOnlyViewLinkAuthenticator = port.ReadOnlyViewLinkAuthenticator
 
+// LegacyDocumentHandler provides host-defined access negotiation for documents
+// outside the current doc-assembly document lifecycle.
+type LegacyDocumentHandler = port.LegacyDocumentHandler
+
+// LegacyDocumentRequest is passed to a LegacyDocumentHandler.
+type LegacyDocumentRequest = port.LegacyDocumentRequest
+
+// LegacyDocumentResponse is returned by a LegacyDocumentHandler and serialized
+// as JSON by doc-assembly.
+type LegacyDocumentResponse = port.LegacyDocumentResponse
+
 // SigningProvider handles document signing via an external provider.
 type SigningProvider = port.SigningProvider
 

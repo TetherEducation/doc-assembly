@@ -8574,6 +8574,55 @@ paths:
       summary: Update tag
       tags:
       - Tags
+  /legacy-documents/proxy:
+    post:
+      description: Delegates legacy document access to a host-registered LegacyDocumentHandler.
+        This endpoint is only for documents outside the current doc-assembly document
+        lifecycle and is mounted only when a handler is registered. The request body
+        is optional raw data owned by the host handler.
+      parameters:
+      - description: Workspace business code
+        in: header
+        name: X-Workspace-Code
+        required: true
+        type: string
+      - description: 'Runtime environment: dev or prod'
+        in: header
+        name: X-Environment
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Host-defined JSON response (object, array, scalar, or null)
+        "400":
+          description: Missing or invalid required header
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "405":
+          description: Method not allowed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Request body too large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Handler or JSON serialization failure
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Proxy legacy document access negotiation
+      tags:
+      - legacy-documents
   /public/doc/{documentId}:
     get:
       description: Returns document title and status for the public access page.

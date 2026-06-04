@@ -1,9 +1,12 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseCSVList_DedupesAndTrims(t *testing.T) {
@@ -78,4 +81,39 @@ func TestApplyStorageEnvOverrides(t *testing.T) {
 	assert.Equal(t, "bucket-name", cfg.Bucket)
 	assert.Equal(t, "us-central1", cfg.Region)
 	assert.Equal(t, "https://storage.googleapis.com", cfg.Endpoint)
+}
+
+func TestLegacyDocumentsConfig_DefaultMaxBodyBytes(t *testing.T) {
+	cfg := LegacyDocumentsConfig{}
+
+	assert.Equal(t, int64(65536), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestLegacyDocumentsConfig_UsesConfiguredMaxBodyBytes(t *testing.T) {
+	cfg := LegacyDocumentsConfig{MaxBodyBytes: 4096}
+
+	assert.Equal(t, int64(4096), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestLegacyDocumentsConfig_NonPositiveFallsBackToDefault(t *testing.T) {
+	for _, value := range []int64{0, -1} {
+		cfg := LegacyDocumentsConfig{MaxBodyBytes: value}
+
+		assert.Equal(t, int64(65536), cfg.MaxBodyBytesOrDefault())
+	}
+}
+
+func TestLegacyDocumentsConfig_EnvOverridesMaxBodyBytes(t *testing.T) {
+	t.Setenv("DOC_ENGINE_LEGACY_DOCUMENTS_MAX_BODY_BYTES", "4096")
+
+	configFile := filepath.Join(t.TempDir(), "app.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(`
+legacy_documents:
+  max_body_bytes: 2048
+`), 0o600))
+
+	cfg, err := LoadFromFile(configFile)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(4096), cfg.LegacyDocuments.MaxBodyBytes)
 }
