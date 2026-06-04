@@ -531,6 +531,23 @@ func TestReadOnlyViewService_GetReadOnlyView_PDFModeReturnsPDFURLWithoutContent(
 	assert.Empty(t, result.Content)
 }
 
+func TestReadOnlyViewService_GetReadOnlyView_PDFModeUsesPublicURLForPDFURL(t *testing.T) {
+	service := newReadOnlyViewGetServiceWithPublicURL(
+		entity.DocumentStatusCompleted,
+		time.Now().UTC().Add(time.Hour),
+		"Signed title",
+		"token",
+		"https://public.example.test/doc-assembly/",
+	)
+
+	result, err := service.GetReadOnlyView(context.Background(), "token")
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.PDFURL)
+	assert.Equal(t, "https://public.example.test/doc-assembly/public/view/token/pdf", *result.PDFURL)
+}
+
 func TestReadOnlyViewService_GetReadOnlyView_UnavailableModeReturnsReason(t *testing.T) {
 	service := newReadOnlyViewGetService(entity.DocumentStatusCancelled, time.Now().UTC().Add(time.Hour), "Cancelled title")
 
@@ -550,6 +567,16 @@ func newReadOnlyViewGetService(status entity.DocumentStatus, expiresAt time.Time
 }
 
 func newReadOnlyViewGetServiceWithToken(status entity.DocumentStatus, expiresAt time.Time, title string, token string) *ReadOnlyViewService {
+	return newReadOnlyViewGetServiceWithPublicURL(status, expiresAt, title, token, "")
+}
+
+func newReadOnlyViewGetServiceWithPublicURL(
+	status entity.DocumentStatus,
+	expiresAt time.Time,
+	title string,
+	token string,
+	publicURL string,
+) *ReadOnlyViewService {
 	const docID = "doc-123"
 	const versionID = "version-123"
 
@@ -572,7 +599,7 @@ func newReadOnlyViewGetServiceWithToken(status entity.DocumentStatus, expiresAt 
 		nil,
 		false,
 		48,
-		"",
+		publicURL,
 	)
 }
 

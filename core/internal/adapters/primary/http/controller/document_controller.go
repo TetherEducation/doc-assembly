@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -222,13 +223,43 @@ func (c *DocumentController) CreateReadOnlyViewLinkByWorkspaceCode(ctx *gin.Cont
 		return
 	}
 
-	result, err := c.readOnlyViewUC.CreateReadOnlyViewLinkByWorkspaceCode(ctx.Request.Context(), workspaceCode, documentID)
-	if err != nil {
+	for _, candidateCode := range readOnlyViewWorkspaceCodeCandidates(ctx, workspaceCode) {
+		result, err := c.readOnlyViewUC.CreateReadOnlyViewLinkByWorkspaceCode(ctx.Request.Context(), candidateCode, documentID)
+		if err == nil {
+			ctx.JSON(http.StatusOK, dto.NewCreateReadOnlyViewLinkResponse(result))
+			return
+		}
+		if errors.Is(err, entity.ErrForbidden) {
+			continue
+		}
 		HandleError(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.NewCreateReadOnlyViewLinkResponse(result))
+	HandleError(ctx, entity.ErrForbidden)
+}
+
+func readOnlyViewWorkspaceCodeCandidates(ctx *gin.Context, headerWorkspaceCode string) []string {
+	codes := []string{headerWorkspaceCode}
+	if claims, ok := middleware.GetReadOnlyViewLinkAuthClaims(ctx); ok {
+		codes = append(codes, claims.AuthorizedWorkspaceCodes...)
+	}
+
+	seen := make(map[string]struct{}, len(codes))
+	out := make([]string, 0, len(codes))
+	for _, code := range codes {
+		code = strings.TrimSpace(code)
+		if code == "" {
+			continue
+		}
+		key := strings.ToUpper(code)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, code)
+	}
+	return out
 }
 
 // ListDocumentTypeOptions returns distinct document types that appear on documents in the workspace.
