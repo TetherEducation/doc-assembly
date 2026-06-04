@@ -27,18 +27,19 @@ type Engine struct {
 	config         *config.Config
 	i18nFilePath   string
 
-	injectors          []port.Injector
-	mapper             port.RequestMapper
-	templateResolver   port.TemplateResolver
-	initFunc           port.InitFunc
-	workspaceProvider  port.WorkspaceInjectableProvider
-	publicDocAuth      port.PublicDocumentAccessAuthenticator
-	signingSessionAuth port.SigningSessionAuthenticator
-	readOnlyViewAuth   port.ReadOnlyViewLinkAuthenticator
-	signingSessionMode string
-	designTokens       *pdfrenderer.TypstDesignTokens
-	frontendFS         fs.FS // Embedded SPA filesystem; nil = no frontend served
-	frontendOverridden bool  // True if SetFrontendFS was called (even with nil)
+	injectors             []port.Injector
+	mapper                port.RequestMapper
+	templateResolver      port.TemplateResolver
+	initFunc              port.InitFunc
+	workspaceProvider     port.WorkspaceInjectableProvider
+	publicDocAuth         port.PublicDocumentAccessAuthenticator
+	signingSessionAuth    port.SigningSessionAuthenticator
+	readOnlyViewAuth      port.ReadOnlyViewLinkAuthenticator
+	legacyDocumentHandler port.LegacyDocumentHandler
+	signingSessionMode    string
+	designTokens          *pdfrenderer.TypstDesignTokens
+	frontendFS            fs.FS // Embedded SPA filesystem; nil = no frontend served
+	frontendOverridden    bool  // True if SetFrontendFS was called (even with nil)
 
 	// Process resolver (optional)
 	processResolver port.ProcessResolver
@@ -175,6 +176,19 @@ func (e *Engine) SetReadOnlyViewLinkAuthenticator(auth port.ReadOnlyViewLinkAuth
 // authenticator, or nil if not set.
 func (e *Engine) GetReadOnlyViewLinkAuthenticator() port.ReadOnlyViewLinkAuthenticator {
 	return e.readOnlyViewAuth
+}
+
+// SetLegacyDocumentHandler sets the host-defined handler for
+// /api/v1/legacy-documents/proxy.
+func (e *Engine) SetLegacyDocumentHandler(handler port.LegacyDocumentHandler) *Engine {
+	e.legacyDocumentHandler = handler
+	return e
+}
+
+// GetLegacyDocumentHandler returns the registered legacy document handler, or
+// nil if not set.
+func (e *Engine) GetLegacyDocumentHandler() port.LegacyDocumentHandler {
+	return e.legacyDocumentHandler
 }
 
 // SetSigningSessionAuthMode overrides signing session auth mode configured via
