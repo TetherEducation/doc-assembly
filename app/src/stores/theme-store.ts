@@ -38,6 +38,10 @@ function applyTheme(theme: 'light' | 'dark') {
 
   const root = document.documentElement
 
+  // Embedded public pages pin their theme (data-theme-lock) so the host
+  // application keeps visual control; ignore store/system updates meanwhile.
+  if (root.dataset.themeLock) return
+
   if (theme === 'dark') {
     root.classList.add('dark')
   } else {

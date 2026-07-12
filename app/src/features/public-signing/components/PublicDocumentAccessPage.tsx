@@ -21,6 +21,7 @@ import {
   publicLanguageOptions,
   type PublicSigningLanguage,
 } from '../public-signing-language'
+import { useEmbeddedMode } from '../public-signing-embed'
 
 type AccessStatus = 'active' | 'completed' | 'expired'
 
@@ -282,24 +283,30 @@ function PageLayout({
   title: string
   children: React.ReactNode
 }) {
+  // Embedded hosts (e.g. the expired-token path reached from an embedded
+  // signing page) own all chrome; render content only.
+  const embedded = useEmbeddedMode()
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center border-2 border-foreground text-foreground">
-              <Box size={14} fill="currentColor" />
+      {!embedded && (
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-7 w-7 items-center justify-center border-2 border-foreground text-foreground">
+                <Box size={14} fill="currentColor" />
+              </div>
+              <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
+                Doc-Assembly
+              </span>
             </div>
-            <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
-              Doc-Assembly
-            </span>
+            <div className="flex items-center gap-2">
+              <LanguageSelector />
+              <ThemeToggle />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <LanguageSelector />
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
       <div className="mx-auto max-w-4xl px-6 py-4">
         <h1 className="text-lg font-semibold text-foreground">{title}</h1>
       </div>

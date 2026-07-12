@@ -55,6 +55,12 @@ import {
   publicLanguageOptions,
   type PublicSigningLanguage,
 } from '../public-signing-language'
+import {
+  EmbeddedModeContext,
+  notifyParentSigningEvent,
+  useEmbeddedMode,
+  useEmbeddedThemeLock,
+} from '../public-signing-embed'
 
 type PageState =
   | { status: 'loading' }
@@ -66,6 +72,8 @@ type PageState =
 interface PublicSigningPageProps {
   token: string
   language?: PublicSigningLanguage
+  /** Render chrome-less for host applications embedding this page. */
+  embedded?: boolean
 }
 
 const uuidLikePattern =
@@ -121,7 +129,17 @@ function buildSigningProgressTasks(
   ]
 }
 
-export function PublicSigningPage({ token, language }: PublicSigningPageProps) {
+export function PublicSigningPage({ token, language, embedded = false }: PublicSigningPageProps) {
+  useEmbeddedThemeLock(embedded)
+
+  return (
+    <EmbeddedModeContext.Provider value={embedded}>
+      <PublicSigningPageContent token={token} language={language} embedded={embedded} />
+    </EmbeddedModeContext.Provider>
+  )
+}
+
+function PublicSigningPageContent({ token, language, embedded }: PublicSigningPageProps) {
   const { t } = useTranslation()
   const [pageState, setPageState] = useState<PageState>({ status: 'loading' })
   const [responses, setResponses] = useState<FieldResponses>({})
@@ -337,6 +355,26 @@ export function PublicSigningPage({ token, language }: PublicSigningPageProps) {
     })
   }, [pageState, token, language])
 
+  // Embedded hosts need to know when the signing reaches a terminal state
+  // (to refresh requirement status and dismiss their modal). Notify once.
+  const parentNotifiedRef = useRef(false)
+  useEffect(() => {
+    if (!embedded || parentNotifiedRef.current) return
+    if (pageState.status !== 'loaded') return
+
+    const { step, hasCurrentUserSigned } = pageState.data
+    // 'waiting' + hasCurrentUserSigned means THIS signer is done and only
+    // other recipients remain — per-recipient completion for the host,
+    // matching the semantics hosts expect from provider embeds.
+    if (step === 'completed' || (step === 'waiting' && hasCurrentUserSigned)) {
+      parentNotifiedRef.current = true
+      notifyParentSigningEvent('embed.form.completed')
+    } else if (step === 'declined') {
+      parentNotifiedRef.current = true
+      notifyParentSigningEvent('embed.form.exception', { reason: 'declined' })
+    }
+  }, [embedded, pageState])
+
   // --- RENDER ---
 
   if (pageState.status === 'loading') {
@@ -542,6 +580,14 @@ function PageShell({
   documentTitle?: string
   children: React.ReactNode
 }) {
+  const embedded = useEmbeddedMode()
+
+  // Embedded: the host application owns all chrome (title, close button,
+  // language). Render only the content on the page background.
+  if (embedded) {
+    return <div className="min-h-screen bg-background">{children}</div>
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -572,6 +618,10 @@ function PageShell({
   )
 }
 
+// Known limitation: navigating to the provider's standalone page unloads this
+// document and with it the embedded-host bridge — the host receives no
+// completion event for sessions that fall back. Hosts relying on the bridge
+// should also poll their own backend state.
 function FallbackRedirect({ url }: { url: string }) {
   useEffect(() => {
     window.location.href = url
