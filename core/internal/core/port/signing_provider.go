@@ -212,6 +212,10 @@ type GetAttemptRecipientEmbeddedURLRequest struct {
 	ProviderRecipientID string
 	CallbackURL         string
 	Environment         entity.Environment
+
+	// RecipientName is the signer's display name, when known. Providers may
+	// use it to prefill identity in their embedded signing UI. Optional.
+	RecipientName string
 }
 
 // GetAttemptRecipientEmbeddedURLResult contains the embedded URL and CSP data.

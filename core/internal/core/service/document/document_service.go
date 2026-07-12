@@ -295,12 +295,20 @@ func (s *DocumentService) ListDocumentTypeFilterOptions(ctx context.Context, wor
 
 // GetSigningURL retrieves the signing URL for a specific recipient.
 func (s *DocumentService) GetSigningURL(ctx context.Context, documentID, recipientID string) (string, error) {
-	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	doc, err := s.documentRepo.FindByIDWithRecipients(ctx, documentID)
 	if err != nil {
 		return "", fmt.Errorf("finding document: %w", err)
 	}
 	if doc.ActiveAttemptID == nil || *doc.ActiveAttemptID == "" {
 		return "", entity.ErrSigningAttemptNotFound
+	}
+	// Keep embed prefill consistent with the public signing path.
+	recipientName := ""
+	for _, rec := range doc.Recipients {
+		if rec != nil && rec.ID == recipientID {
+			recipientName = rec.Name
+			break
+		}
 	}
 	attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
 	if err != nil {
@@ -321,6 +329,7 @@ func (s *DocumentService) GetSigningURL(ctx context.Context, documentID, recipie
 			ProviderDocumentID:  *attempt.ProviderDocumentID,
 			ProviderRecipientID: *r.ProviderRecipientID,
 			Environment:         entity.EnvironmentProd,
+			RecipientName:       recipientName,
 		})
 		if err != nil {
 			return "", fmt.Errorf("getting attempt signing URL: %w", err)

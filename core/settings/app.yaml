@@ -79,6 +79,16 @@ signing:
   signing_base_url: ""        # DOC_ENGINE_SIGNING_SIGNING_BASE_URL (base URL for signing links, without /api/v2)
   webhook_secret: ""          # DOC_ENGINE_SIGNING_WEBHOOK_SECRET
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
+  # Embedded signing widget options (Documenso). Appended to /embed/sign/{token}
+  # as a URL fragment; unknown keys are ignored by the provider. Off by default.
+  embed:
+    enabled: false             # DOC_ENGINE_SIGNING_EMBED_ENABLED
+    dark_mode_disabled: false  # DOC_ENGINE_SIGNING_EMBED_DARK_MODE_DISABLED
+    # lock_name: true          # DOC_ENGINE_SIGNING_EMBED_LOCK_NAME (prefill+lock signer name)
+    # allow_document_rejection: false # DOC_ENGINE_SIGNING_EMBED_ALLOW_DOCUMENT_REJECTION
+    language: ""               # DOC_ENGINE_SIGNING_EMBED_LANGUAGE (e.g. "es")
+    css: ""                    # DOC_ENGINE_SIGNING_EMBED_CSS
+    css_vars: {}               # DOC_ENGINE_SIGNING_EMBED_CSS_VARS (JSON object)
 
 storage:
   enabled: true               # DOC_ENGINE_STORAGE_ENABLED

@@ -184,12 +184,37 @@ func (c InternalAPIConfig) NormalizedAPIKeyAuthMode() string {
 
 // SigningConfig holds signing provider configuration.
 type SigningConfig struct {
-	Provider       string `mapstructure:"provider"` // documenso
-	APIKey         string `mapstructure:"api_key"`  //nolint:gosec
-	BaseURL        string `mapstructure:"base_url"`
-	SigningBaseURL string `mapstructure:"signing_base_url"` // Base URL for signing links (without /api/v2)
-	WebhookSecret  string `mapstructure:"webhook_secret"`
-	WebhookURL     string `mapstructure:"webhook_url"` // Public URL for webhook endpoint
+	Provider       string             `mapstructure:"provider"` // documenso
+	APIKey         string             `mapstructure:"api_key"`  //nolint:gosec
+	BaseURL        string             `mapstructure:"base_url"`
+	SigningBaseURL string             `mapstructure:"signing_base_url"` // Base URL for signing links (without /api/v2)
+	WebhookSecret  string             `mapstructure:"webhook_secret"`
+	WebhookURL     string             `mapstructure:"webhook_url"` // Public URL for webhook endpoint
+	Embed          SigningEmbedConfig `mapstructure:"embed"`
+}
+
+// SigningEmbedConfig customizes the provider's embedded signing widget so it
+// can blend into a host application (theme, language, brand variables).
+// All fields are optional; an empty block leaves provider URLs unchanged.
+type SigningEmbedConfig struct {
+	// Enabled turns the embed options fragment on. Off by default so
+	// existing deployments keep byte-identical provider URLs.
+	Enabled bool `mapstructure:"enabled"`
+	// DarkModeDisabled pins the widget to light mode.
+	DarkModeDisabled bool `mapstructure:"dark_mode_disabled"`
+	// LockName pre-fills and locks the signer name when known.
+	// Defaults to true; set to false to let signers edit their name.
+	LockName *bool `mapstructure:"lock_name"`
+	// AllowDocumentRejection toggles the widget's reject affordance.
+	// Unset keeps the provider default.
+	AllowDocumentRejection *bool `mapstructure:"allow_document_rejection"`
+	// Language selects the widget UI language (e.g. "es").
+	Language string `mapstructure:"language"`
+	// CSS is raw CSS injected into the widget (whitelabel plans only).
+	CSS string `mapstructure:"css"`
+	// CSSVars maps provider theme variables (primary, radius, fieldCard…)
+	// to brand values.
+	CSSVars map[string]string `mapstructure:"css_vars"`
 }
 
 // StorageConfig holds object storage configuration.

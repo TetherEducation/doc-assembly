@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"context"
 	"fmt"
 	"log/slog"
@@ -216,6 +217,47 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
+	}
+	applySigningEmbedEnvOverrides(&cfg.Embed)
+}
+
+// applySigningEmbedEnvOverrides reads DOC_ENGINE_SIGNING_EMBED_* env vars into
+// SigningEmbedConfig. Follows the same explicit-override pattern as the rest
+// of the signing block (Viper's AutomaticEnv does not reach nested keys).
+func applySigningEmbedEnvOverrides(cfg *SigningEmbedConfig) {
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_ENABLED"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.Enabled = parsed
+		}
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_DARK_MODE_DISABLED"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.DarkModeDisabled = parsed
+		}
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_LOCK_NAME"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.LockName = &parsed
+		}
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_ALLOW_DOCUMENT_REJECTION"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.AllowDocumentRejection = &parsed
+		}
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_LANGUAGE"); v != "" {
+		cfg.Language = v
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_CSS"); v != "" {
+		cfg.CSS = v
+	}
+	// JSON object, e.g. {"primary":"#5627FF","radius":"12px"}. Ignored when
+	// malformed: embed options are cosmetic and must not block startup.
+	if v := os.Getenv("DOC_ENGINE_SIGNING_EMBED_CSS_VARS"); v != "" {
+		var vars map[string]string
+		if err := json.Unmarshal([]byte(v), &vars); err == nil && len(vars) > 0 {
+			cfg.CSSVars = vars
+		}
 	}
 }
 

@@ -613,6 +613,12 @@ func (a *Adapter) GetAttemptRecipientEmbeddedURL(ctx context.Context, req *port.
 	// Replace /sign/ with /embed/sign/ for iframe embedding
 	embeddedURL := strings.Replace(signingResult.SigningURL, "/sign/", "/embed/sign/", 1)
 
+	// Documenso reads widget options (theme, prefilled signer name, language,
+	// branding) from the URL fragment; the fragment never reaches the server.
+	if fragment, ok := a.config.Embed.fragment(req.RecipientName); ok {
+		embeddedURL += "#" + fragment
+	}
+
 	return &port.GetAttemptRecipientEmbeddedURLResult{
 		EmbeddedURL:    embeddedURL,
 		FrameSrcDomain: a.config.SigningBaseURL,
