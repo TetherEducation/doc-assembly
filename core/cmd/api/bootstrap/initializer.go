@@ -372,7 +372,8 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		cfg.Storage.Enabled,
 		tokenTTLHours,
 		readOnlyViewPublicURL(cfg.Server),
-	).SetWorkspaceRepository(workspaceRepo)
+	).SetWorkspaceRepository(workspaceRepo).
+		SetCompletedPDFProvider(signingProvider, signingAttemptRepo)
 	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
 	publicSigningCtrl := controller.NewPublicSigningController(preSigningSvc, documentAccessSvc, publicURL)
