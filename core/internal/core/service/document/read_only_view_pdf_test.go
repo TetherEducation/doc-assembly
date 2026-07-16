@@ -55,6 +55,74 @@ func TestReadOnlyViewService_GetReadOnlyViewPDF_ReturnsCompletedPDFFromStorage(t
 	assert.Equal(t, completedPDFURL, storage.downloadKey)
 }
 
+func TestReadOnlyViewService_GetReadOnlyViewPDF_DownloadsCompletedPDFFromProviderWhenDocumentStoresProviderURL(t *testing.T) {
+	completedPDFURL := "https://provider.example/documents/provider-doc-123.pdf"
+	activeAttemptID := "attempt-123"
+	providerDocumentID := "provider-doc-123"
+	provider := &readOnlyViewSigningProviderFake{
+		capabilities: port.ProviderCapabilities{CanDownloadCompletedPDF: true},
+		result: &port.DownloadCompletedPDFResult{
+			PDF:      []byte("%PDF-signed-from-provider"),
+			Filename: "provider-signed-contract.pdf",
+		},
+	}
+	attemptRepo := &readOnlyViewAttemptRepoFake{
+		attempt: &entity.SigningAttempt{
+			ID:                 activeAttemptID,
+			ProviderDocumentID: &providerDocumentID,
+		},
+	}
+	service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
+		doc: &entity.Document{
+			ID:              "doc-123",
+			Status:          entity.DocumentStatusCompleted,
+			ActiveAttemptID: &activeAttemptID,
+			CompletedPDFURL: &completedPDFURL,
+		},
+		storageEnabled: false,
+	}).SetCompletedPDFProvider(provider, attemptRepo)
+
+	pdf, filename, err := service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+	require.NoError(t, err)
+	assert.Equal(t, []byte("%PDF-signed-from-provider"), pdf)
+	assert.Equal(t, "provider-signed-contract.pdf", filename)
+	assert.Equal(t, activeAttemptID, attemptRepo.findByID)
+	require.NotNil(t, provider.request)
+	assert.Equal(t, providerDocumentID, provider.request.ProviderDocumentID)
+	assert.Equal(t, entity.EnvironmentProd, provider.request.Environment)
+}
+
+func TestReadOnlyViewService_GetReadOnlyViewPDF_ReturnsPublicErrorWhenProviderReturnsNoPDF(t *testing.T) {
+	completedPDFURL := "https://provider.example/documents/provider-doc-123.pdf"
+	activeAttemptID := "attempt-123"
+	providerDocumentID := "provider-doc-123"
+	provider := &readOnlyViewSigningProviderFake{
+		capabilities: port.ProviderCapabilities{CanDownloadCompletedPDF: true},
+	}
+	attemptRepo := &readOnlyViewAttemptRepoFake{
+		attempt: &entity.SigningAttempt{
+			ID:                 activeAttemptID,
+			ProviderDocumentID: &providerDocumentID,
+		},
+	}
+	service := newReadOnlyViewPDFService(readOnlyViewPDFServiceDeps{
+		doc: &entity.Document{
+			ID:              "doc-123",
+			Status:          entity.DocumentStatusCompleted,
+			ActiveAttemptID: &activeAttemptID,
+			CompletedPDFURL: &completedPDFURL,
+		},
+	}).SetCompletedPDFProvider(provider, attemptRepo)
+
+	pdf, filename, err := service.GetReadOnlyViewPDF(context.Background(), "view-token")
+
+	require.Error(t, err)
+	assert.Nil(t, pdf)
+	assert.Empty(t, filename)
+	assert.ErrorContains(t, err, "signed PDF not available for this document")
+}
+
 func TestReadOnlyViewService_GetReadOnlyViewPDF_RendersPreviewPDFForSigningState(t *testing.T) {
 	renderer := &readOnlyViewPDFRendererFake{
 		result: &port.RenderPreviewResult{
@@ -449,4 +517,33 @@ func (f *readOnlyViewStorageFake) Download(_ context.Context, req *port.StorageR
 	}
 	f.downloadKey = req.Key
 	return f.data, nil
+}
+
+type readOnlyViewSigningProviderFake struct {
+	port.SigningProvider
+	capabilities port.ProviderCapabilities
+	result       *port.DownloadCompletedPDFResult
+	err          error
+	request      *port.DownloadCompletedPDFRequest
+}
+
+func (f *readOnlyViewSigningProviderFake) DownloadCompletedPDF(_ context.Context, req *port.DownloadCompletedPDFRequest) (*port.DownloadCompletedPDFResult, error) {
+	f.request = req
+	return f.result, f.err
+}
+
+func (f *readOnlyViewSigningProviderFake) ProviderCapabilities() port.ProviderCapabilities {
+	return f.capabilities
+}
+
+type readOnlyViewAttemptRepoFake struct {
+	port.SigningAttemptRepository
+	attempt  *entity.SigningAttempt
+	err      error
+	findByID string
+}
+
+func (f *readOnlyViewAttemptRepoFake) FindByID(_ context.Context, attemptID string) (*entity.SigningAttempt, error) {
+	f.findByID = attemptID
+	return f.attempt, f.err
 }

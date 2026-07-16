@@ -438,7 +438,7 @@ func (s *ReadOnlyViewService) downloadCompletedPDFFromProvider(ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("downloading completed PDF from provider: %w", err)
 	}
-	if len(result.PDF) == 0 {
+	if result == nil || len(result.PDF) == 0 {
 		return nil, errors.New("signed PDF not available for this document")
 	}
 	return result, nil
