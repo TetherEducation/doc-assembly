@@ -26,6 +26,11 @@ type Config struct {
 	// WebhookURL is the URL where Documenso should send webhook events.
 	// This is the public URL of your application's webhook endpoint.
 	WebhookURL string
+
+	// Embed customizes the embedded signing widget (theme, language,
+	// branding, signer-name prefill). Zero value keeps embedded URLs
+	// byte-identical to previous releases.
+	Embed EmbedOptions
 }
 
 // Validate checks if the configuration is valid.

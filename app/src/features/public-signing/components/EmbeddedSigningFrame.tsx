@@ -9,6 +9,7 @@ import {
   publicLanguageOptions,
   type PublicSigningLanguage,
 } from '../public-signing-language'
+import { useEmbeddedMode } from '../public-signing-embed'
 
 interface EmbeddedSigningFrameProps {
   url: string
@@ -202,8 +203,14 @@ export function EmbeddedSigningFrame({
     }
   }, [finalizing, finishFinalizing, onComplete, onDecline, token, language])
 
+  // Chrome-less embedded mode: the page has no header/footer, so the frame
+  // owns the full viewport of the host-sized iframe. The default reserves
+  // room for the standalone page's own chrome.
+  const embedded = useEmbeddedMode()
+  const frameHeight = embedded ? '100dvh' : 'calc(100vh - 105px)'
+
   return (
-    <div className="relative w-full" style={{ minHeight: 'calc(100vh - 105px)' }}>
+    <div className="relative w-full" style={{ minHeight: frameHeight }}>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
           <div className="flex flex-col items-center gap-3">
@@ -262,7 +269,7 @@ export function EmbeddedSigningFrame({
         src={url}
         title="Document Signing"
         className="w-full border-0"
-        style={{ height: 'calc(100vh - 105px)' }}
+        style={{ height: frameHeight }}
         sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation"
         onLoad={() => setLoading(false)}
         onError={() => {

@@ -514,7 +514,27 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 			SigningBaseURL: cfg.Signing.SigningBaseURL,
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
+			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
 		})
+	}
+}
+
+// documensoEmbedOptions maps the engine embed config onto the adapter's
+// options. LockName defaults to true: when the recipient name is known it is
+// authoritative, so signers should not retype it.
+func documensoEmbedOptions(c config.SigningEmbedConfig) documenso.EmbedOptions {
+	lockName := true
+	if c.LockName != nil {
+		lockName = *c.LockName
+	}
+	return documenso.EmbedOptions{
+		Enabled:                c.Enabled,
+		DarkModeDisabled:       c.DarkModeDisabled,
+		LockName:               lockName,
+		AllowDocumentRejection: c.AllowDocumentRejection,
+		Language:               c.Language,
+		CSS:                    c.CSS,
+		CSSVars:                c.CSSVars,
 	}
 }
 
@@ -579,6 +599,7 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 			SigningBaseURL: cfg.Signing.SigningBaseURL,
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
+			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
 		})
 		if err != nil {
 			return nil, err

@@ -668,6 +668,7 @@ func (s *PreSigningService) buildAttemptSigningResponse(
 		ProviderDocumentID:  *attempt.ProviderDocumentID,
 		ProviderRecipientID: *attemptRecipient.ProviderRecipientID,
 		CallbackURL:         s.buildCallbackURL(accessToken.Token),
+		RecipientName:       recipient.Name,
 	})
 	if err != nil {
 		if attemptRecipient.SigningURL != nil {

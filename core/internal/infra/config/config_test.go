@@ -117,3 +117,39 @@ legacy_documents:
 	require.NoError(t, err)
 	assert.Equal(t, int64(4096), cfg.LegacyDocuments.MaxBodyBytes)
 }
+
+func TestApplySigningEmbedEnvOverrides(t *testing.T) {
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_ENABLED", "true")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_DARK_MODE_DISABLED", "true")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_LOCK_NAME", "false")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_ALLOW_DOCUMENT_REJECTION", "false")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_LANGUAGE", "es")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_CSS", ".embed--Root{padding:12px}")
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_CSS_VARS", `{"primary":"#5627FF","primaryForeground":"#FFFFFF"}`)
+
+	cfg := SigningConfig{}
+	applySigningEnvOverrides(&cfg)
+
+	if !cfg.Embed.Enabled || !cfg.Embed.DarkModeDisabled {
+		t.Errorf("bool overrides not applied: %+v", cfg.Embed)
+	}
+	if cfg.Embed.LockName == nil || *cfg.Embed.LockName != false {
+		t.Errorf("lock_name override not applied: %v", cfg.Embed.LockName)
+	}
+	if cfg.Embed.AllowDocumentRejection == nil || *cfg.Embed.AllowDocumentRejection != false {
+		t.Errorf("allow_document_rejection override not applied: %v", cfg.Embed.AllowDocumentRejection)
+	}
+	if cfg.Embed.Language != "es" || cfg.Embed.CSS == "" {
+		t.Errorf("string overrides not applied: %+v", cfg.Embed)
+	}
+	if cfg.Embed.CSSVars["primaryForeground"] != "#FFFFFF" {
+		t.Errorf("css_vars JSON override not applied (case must be preserved): %v", cfg.Embed.CSSVars)
+	}
+
+	t.Setenv("DOC_ENGINE_SIGNING_EMBED_CSS_VARS", "not-json")
+	cfg2 := SigningConfig{}
+	applySigningEnvOverrides(&cfg2)
+	if cfg2.Embed.CSSVars != nil {
+		t.Errorf("malformed css_vars JSON must be ignored, got %v", cfg2.Embed.CSSVars)
+	}
+}
