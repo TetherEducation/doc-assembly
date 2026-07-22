@@ -350,5 +350,6 @@ func isPublicUserError(err error) bool {
 		strings.HasPrefix(msg, "document is not pending signing") ||
 		strings.HasPrefix(msg, "document is not in a valid state") ||
 		strings.HasPrefix(msg, "document is not completed") ||
-		strings.HasPrefix(msg, "completed PDF is not available")
+		strings.HasPrefix(msg, "completed PDF is not available") ||
+		strings.HasPrefix(msg, "signed PDF not available for this document")
 }

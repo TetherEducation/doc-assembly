@@ -25,6 +25,8 @@ type ReadOnlyViewService struct {
 	fieldResponseRepo port.DocumentFieldResponseRepository
 	pdfRenderer       port.PDFRenderer
 	storageAdapter    port.StorageAdapter
+	signingProvider   port.SigningProvider
+	attemptRepo       port.SigningAttemptRepository
 	storageEnabled    bool
 	tokenTTLHours     int
 	publicURL         string
@@ -64,6 +66,16 @@ func NewReadOnlyViewService(
 // SetWorkspaceRepository enables workspace-code validation for external read-only link creation.
 func (s *ReadOnlyViewService) SetWorkspaceRepository(workspaceRepo port.WorkspaceRepository) *ReadOnlyViewService {
 	s.workspaceRepo = workspaceRepo
+	return s
+}
+
+// SetCompletedPDFProvider wires the signing provider + attempt repository so a
+// completed document whose signed PDF was not persisted to storage (the provider
+// recorded a URL instead of a storage key) can still be served by downloading it
+// from the provider, mirroring the public download endpoint.
+func (s *ReadOnlyViewService) SetCompletedPDFProvider(signingProvider port.SigningProvider, attemptRepo port.SigningAttemptRepository) *ReadOnlyViewService {
+	s.signingProvider = signingProvider
+	s.attemptRepo = attemptRepo
 	return s
 }
 
@@ -354,21 +366,199 @@ func (s *ReadOnlyViewService) resolveReadOnlyViewContent(
 }
 
 func (s *ReadOnlyViewService) getCompletedReadOnlyViewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
-	if !s.storageEnabled || s.storageAdapter == nil {
-		return nil, "", errors.New("signed PDF storage is disabled")
+	// A persisted (GCS) copy is preferred when CompletedPDFURL holds a storage key.
+	storageKey := completedPDFStorageKey(doc.CompletedPDFURL)
+	if storageKey != "" {
+		return s.downloadCompletedReadOnlyViewPDFFromStorage(ctx, storageKey, doc)
 	}
 
-	storageKey := completedPDFStorageKey(doc.CompletedPDFURL)
-	if storageKey == "" {
+	return s.getCompletedReadOnlyViewPDFFromProvider(ctx, doc)
+}
+
+func (s *ReadOnlyViewService) getCompletedReadOnlyViewPDFFromProvider(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	// The signing provider records CompletedPDFURL as a URL (not a storage key) and
+	// no step persists the sealed PDF to storage, so completedPDFStorageKey is empty
+	// for provider-completed documents. Fall back to downloading the signed PDF from
+	// the provider — the same path the public /download endpoint uses — instead of
+	// failing with a 500. (Persisting the sealed PDF to storage on completion would
+	// let this serve from GCS and avoid a provider round-trip per view.)
+	attempt, err := s.completedSigningAttempt(ctx, doc)
+	if err != nil {
+		return nil, "", err
+	}
+	if attempt == nil {
 		return nil, "", errors.New("signed PDF not available for this document")
 	}
 
+	storageKey := completedPDFStorageKey(stringValueFromJSON(attempt.ProviderUploadPayload, "completedPdfUrl"))
+	if storageKey != "" {
+		return s.downloadCompletedReadOnlyViewPDFFromStorage(ctx, storageKey, doc)
+	}
+
+	result, err := s.downloadCompletedPDFFromProvider(ctx, attempt)
+	if err != nil {
+		return nil, "", err
+	}
+	return result.PDF, providerCompletedPDFFilename(result.Filename, doc), nil
+}
+
+func (s *ReadOnlyViewService) downloadCompletedReadOnlyViewPDFFromStorage(ctx context.Context, storageKey string, doc *entity.Document) ([]byte, string, error) {
+	if !s.storageEnabled || s.storageAdapter == nil {
+		return nil, "", errors.New("signed PDF storage is disabled")
+	}
 	pdfData, err := s.storageAdapter.Download(ctx, &port.StorageRequest{Key: storageKey})
 	if err != nil {
 		return nil, "", fmt.Errorf("download signed PDF: %w", err)
 	}
 
 	return pdfData, signedDocumentFilename(doc), nil
+}
+
+// completedSigningAttempt loads the document's active signing attempt when the
+// provider-download fallback is wired; returns (nil, nil) when it is not, so the
+// caller degrades to the existing "not available" behavior instead of panicking.
+func (s *ReadOnlyViewService) completedSigningAttempt(ctx context.Context, doc *entity.Document) (*entity.SigningAttempt, error) {
+	if s.attemptRepo == nil || doc.ActiveAttemptID == nil || strings.TrimSpace(*doc.ActiveAttemptID) == "" {
+		return nil, nil
+	}
+	attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
+	if err != nil {
+		return nil, fmt.Errorf("finding completed signing attempt: %w", err)
+	}
+	return attempt, nil
+}
+
+// downloadCompletedPDFFromProvider fetches the sealed PDF bytes from the signing
+// provider, mirroring PreSigningService.downloadCompletedPDFFromProvider.
+func (s *ReadOnlyViewService) downloadCompletedPDFFromProvider(ctx context.Context, attempt *entity.SigningAttempt) (*port.DownloadCompletedPDFResult, error) {
+	if s.signingProvider == nil || !s.signingProvider.ProviderCapabilities().CanDownloadCompletedPDF {
+		return nil, errors.New("signed PDF not available for this document")
+	}
+	if attempt == nil || attempt.ProviderDocumentID == nil || strings.TrimSpace(*attempt.ProviderDocumentID) == "" {
+		return nil, errors.New("signed PDF not available for this document")
+	}
+	result, err := s.signingProvider.DownloadCompletedPDF(ctx, &port.DownloadCompletedPDFRequest{
+		ProviderDocumentID: *attempt.ProviderDocumentID,
+		Environment:        entity.EnvironmentProd,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("downloading completed PDF from provider: %w", err)
+	}
+	if result == nil || len(result.PDF) == 0 {
+		return nil, errors.New("signed PDF not available for this document")
+	}
+	return result, nil
+}
+
+// GetPrintPDF renders the current unsigned PDF (filled or blank) for printing,
+// authorized by the internal workspace ID from authenticated panel context.
+func (s *ReadOnlyViewService) GetPrintPDF(ctx context.Context, workspaceID, documentID string, blank bool) ([]byte, string, error) {
+	return s.getPrintPDF(ctx, documentID, blank, func(doc *entity.Document) (bool, error) {
+		return doc.WorkspaceID == strings.TrimSpace(workspaceID), nil
+	})
+}
+
+// GetPrintPDFByWorkspaceCode renders the current unsigned PDF (filled or blank)
+// for printing, authorized by the workspace business code from external callers.
+func (s *ReadOnlyViewService) GetPrintPDFByWorkspaceCode(ctx context.Context, workspaceCode, documentID string, blank bool) ([]byte, string, error) {
+	return s.getPrintPDF(ctx, documentID, blank, func(doc *entity.Document) (bool, error) {
+		return s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+	})
+}
+
+// getPrintPDF serves the in-person signing flow: campuses print the unsigned
+// document (or a blank template) and collect signatures on paper. Unlike the
+// token-based read-only view, document expiry does not block printing — paper
+// signing is precisely the fallback once the digital flow has stalled.
+func (s *ReadOnlyViewService) getPrintPDF(
+	ctx context.Context,
+	documentID string,
+	blank bool,
+	matchesWorkspace func(*entity.Document) (bool, error),
+) ([]byte, string, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, "", entity.ErrDocumentNotFound
+	}
+	matches, err := matchesWorkspace(doc)
+	if err != nil {
+		return nil, "", err
+	}
+	if !matches {
+		return nil, "", entity.ErrForbidden
+	}
+	if doc.Status == entity.DocumentStatusInvalidated || doc.Status == entity.DocumentStatusCancelled {
+		return nil, "", entity.ErrInvalidDocumentState
+	}
+	// A completed or declined document must not be reprinted with values: the
+	// signed artifact (or the decline record) is canonical. Blank reprints of
+	// the underlying template remain allowed.
+	if !blank && (doc.IsCompleted() || doc.IsDeclined()) {
+		return nil, "", entity.ErrInvalidDocumentState
+	}
+
+	if blank {
+		return s.renderBlankPrintPDF(ctx, doc)
+	}
+
+	pdf, _, err := s.renderReadOnlyViewPreviewPDF(ctx, doc)
+	if err != nil {
+		return nil, "", err
+	}
+	return pdf, printPDFFilename(doc, false), nil
+}
+
+// renderBlankPrintPDF renders the document's template version with no injected
+// values, signer values, or field responses: an empty form for hand completion.
+func (s *ReadOnlyViewService) renderBlankPrintPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
+		return nil, "", err
+	}
+
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find template version: %w", err)
+	}
+	if version == nil {
+		return nil, "", fmt.Errorf("find template version: %w", entity.ErrVersionNotFound)
+	}
+
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse portable document: %w", err)
+	}
+	if portableDoc == nil {
+		return nil, "", errors.New("document has no content")
+	}
+
+	renderResult, err := s.pdfRenderer.RenderPreview(ctx, &port.RenderPreviewRequest{
+		Document: portableDoc,
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("render blank PDF: %w", err)
+	}
+	if renderResult == nil || len(renderResult.PDF) == 0 {
+		return nil, "", errors.New("PDF is not available")
+	}
+
+	return renderResult.PDF, printPDFFilename(doc, true), nil
+}
+
+func printPDFFilename(doc *entity.Document, blank bool) string {
+	suffix := "print"
+	if blank {
+		suffix = "blank"
+	}
+	if doc != nil && doc.Title != nil && strings.TrimSpace(*doc.Title) != "" {
+		return fmt.Sprintf("%s-%s.pdf", *doc.Title, suffix)
+	}
+	if doc != nil {
+		return fmt.Sprintf("document-%s-%s.pdf", doc.ID, suffix)
+	}
+	return fmt.Sprintf("document-%s.pdf", suffix)
 }
 
 func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {

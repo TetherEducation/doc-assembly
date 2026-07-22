@@ -42,4 +42,10 @@ type ReadOnlyViewUseCase interface {
 	CreateReadOnlyViewLinkByWorkspaceCode(ctx context.Context, workspaceCode, documentID string) (*CreateReadOnlyViewLinkResult, error)
 	GetReadOnlyView(ctx context.Context, token string) (*ReadOnlyViewResponse, error)
 	GetReadOnlyViewPDF(ctx context.Context, token string) ([]byte, string, error)
+	// GetPrintPDF renders the current unsigned PDF (or a blank template when
+	// blank is true) for in-person signing, authorized by internal workspace ID.
+	GetPrintPDF(ctx context.Context, workspaceID, documentID string, blank bool) ([]byte, string, error)
+	// GetPrintPDFByWorkspaceCode is the external-caller flavor of GetPrintPDF,
+	// authorized by workspace business code.
+	GetPrintPDFByWorkspaceCode(ctx context.Context, workspaceCode, documentID string, blank bool) ([]byte, string, error)
 }

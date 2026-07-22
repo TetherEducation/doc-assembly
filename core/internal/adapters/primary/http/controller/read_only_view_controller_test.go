@@ -78,6 +78,30 @@ func (s *readOnlyViewUCStub) GetReadOnlyViewPDF(_ context.Context, token string)
 	return s.pdfBytes, s.pdfFilename, nil
 }
 
+func (s *readOnlyViewUCStub) GetPrintPDF(_ context.Context, workspaceID, documentID string, _ bool) ([]byte, string, error) {
+	s.createWorkspace = workspaceID
+	s.createCalledWith = documentID
+	if s.err != nil {
+		return nil, "", s.err
+	}
+	return s.pdfBytes, s.pdfFilename, nil
+}
+
+func (s *readOnlyViewUCStub) GetPrintPDFByWorkspaceCode(_ context.Context, workspaceCode, documentID string, _ bool) ([]byte, string, error) {
+	s.createWorkspaceCode = workspaceCode
+	s.createCodeCalledWith = documentID
+	s.createCodeCalls = append(s.createCodeCalls, workspaceCode)
+	if s.errByWorkspaceCode != nil {
+		if err, ok := s.errByWorkspaceCode[workspaceCode]; ok {
+			return nil, "", err
+		}
+	}
+	if s.err != nil {
+		return nil, "", s.err
+	}
+	return s.pdfBytes, s.pdfFilename, nil
+}
+
 type readOnlyViewLinkAuthStub struct {
 	claims *port.ReadOnlyViewLinkAuthClaims
 	err    error
