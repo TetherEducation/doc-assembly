@@ -249,6 +249,11 @@ func registerReadOnlyViewLinkRoute(
 		middleware.ReadOnlyViewLinkCustomAuth(auth),
 		documentController.CreateReadOnlyViewLinkByWorkspaceCode,
 	)
+	v1.GET(
+		"/documents/:documentId/print-pdf",
+		middleware.ReadOnlyViewLinkCustomAuth(auth),
+		documentController.GetDocumentPrintPDFByWorkspaceCode,
+	)
 }
 
 func registerLegacyDocumentRoute(

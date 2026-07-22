@@ -450,6 +450,117 @@ func (s *ReadOnlyViewService) downloadCompletedPDFFromProvider(ctx context.Conte
 	return result, nil
 }
 
+// GetPrintPDF renders the current unsigned PDF (filled or blank) for printing,
+// authorized by the internal workspace ID from authenticated panel context.
+func (s *ReadOnlyViewService) GetPrintPDF(ctx context.Context, workspaceID, documentID string, blank bool) ([]byte, string, error) {
+	return s.getPrintPDF(ctx, documentID, blank, func(doc *entity.Document) (bool, error) {
+		return doc.WorkspaceID == strings.TrimSpace(workspaceID), nil
+	})
+}
+
+// GetPrintPDFByWorkspaceCode renders the current unsigned PDF (filled or blank)
+// for printing, authorized by the workspace business code from external callers.
+func (s *ReadOnlyViewService) GetPrintPDFByWorkspaceCode(ctx context.Context, workspaceCode, documentID string, blank bool) ([]byte, string, error) {
+	return s.getPrintPDF(ctx, documentID, blank, func(doc *entity.Document) (bool, error) {
+		return s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+	})
+}
+
+// getPrintPDF serves the in-person signing flow: campuses print the unsigned
+// document (or a blank template) and collect signatures on paper. Unlike the
+// token-based read-only view, document expiry does not block printing — paper
+// signing is precisely the fallback once the digital flow has stalled.
+func (s *ReadOnlyViewService) getPrintPDF(
+	ctx context.Context,
+	documentID string,
+	blank bool,
+	matchesWorkspace func(*entity.Document) (bool, error),
+) ([]byte, string, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, "", entity.ErrDocumentNotFound
+	}
+	matches, err := matchesWorkspace(doc)
+	if err != nil {
+		return nil, "", err
+	}
+	if !matches {
+		return nil, "", entity.ErrForbidden
+	}
+	if doc.Status == entity.DocumentStatusInvalidated || doc.Status == entity.DocumentStatusCancelled {
+		return nil, "", entity.ErrInvalidDocumentState
+	}
+	// A completed or declined document must not be reprinted with values: the
+	// signed artifact (or the decline record) is canonical. Blank reprints of
+	// the underlying template remain allowed.
+	if !blank && (doc.IsCompleted() || doc.IsDeclined()) {
+		return nil, "", entity.ErrInvalidDocumentState
+	}
+
+	if blank {
+		return s.renderBlankPrintPDF(ctx, doc)
+	}
+
+	pdf, _, err := s.renderReadOnlyViewPreviewPDF(ctx, doc)
+	if err != nil {
+		return nil, "", err
+	}
+	return pdf, printPDFFilename(doc, false), nil
+}
+
+// renderBlankPrintPDF renders the document's template version with no injected
+// values, signer values, or field responses: an empty form for hand completion.
+func (s *ReadOnlyViewService) renderBlankPrintPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
+		return nil, "", err
+	}
+
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", fmt.Errorf("find template version: %w", err)
+	}
+	if version == nil {
+		return nil, "", fmt.Errorf("find template version: %w", entity.ErrVersionNotFound)
+	}
+
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse portable document: %w", err)
+	}
+	if portableDoc == nil {
+		return nil, "", errors.New("document has no content")
+	}
+
+	renderResult, err := s.pdfRenderer.RenderPreview(ctx, &port.RenderPreviewRequest{
+		Document: portableDoc,
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("render blank PDF: %w", err)
+	}
+	if renderResult == nil || len(renderResult.PDF) == 0 {
+		return nil, "", errors.New("PDF is not available")
+	}
+
+	return renderResult.PDF, printPDFFilename(doc, true), nil
+}
+
+func printPDFFilename(doc *entity.Document, blank bool) string {
+	suffix := "print"
+	if blank {
+		suffix = "blank"
+	}
+	if doc != nil && doc.Title != nil && strings.TrimSpace(*doc.Title) != "" {
+		return fmt.Sprintf("%s-%s.pdf", *doc.Title, suffix)
+	}
+	if doc != nil {
+		return fmt.Sprintf("document-%s-%s.pdf", doc.ID, suffix)
+	}
+	return fmt.Sprintf("document-%s.pdf", suffix)
+}
+
 func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
 	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
 		return nil, "", err

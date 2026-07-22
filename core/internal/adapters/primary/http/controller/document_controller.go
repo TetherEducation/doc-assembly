@@ -101,6 +101,11 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 		if !routeOptions.skipReadOnlyViewLink {
 			// Create public read-only view link
 			docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.CreateReadOnlyViewLink)
+
+			// Render the unsigned (or blank) PDF for in-person signing.
+			// Registered externally with custom auth when the read-only view
+			// link authenticator is set, mirroring view-link.
+			docs.GET("/:documentId/print-pdf", middleware.RequireViewer(), c.GetDocumentPrintPDF)
 		}
 
 		// Refresh document status from provider
@@ -237,6 +242,90 @@ func (c *DocumentController) CreateReadOnlyViewLinkByWorkspaceCode(ctx *gin.Cont
 	}
 
 	HandleError(ctx, entity.ErrForbidden)
+}
+
+// GetDocumentPrintPDF renders the unsigned (or blank) document PDF for
+// in-person signing, for authenticated panel users.
+// @Summary Download unsigned document PDF for printing
+// @Description Renders the document's current unsigned PDF, or the blank template when blank=true, so campuses can print it for in-person signing.
+// @Tags Documents
+// @Produce application/pdf
+// @Param X-Workspace-ID header string true "Workspace ID"
+// @Param documentId path string true "Document ID"
+// @Param blank query boolean false "Render the blank template without injected values"
+// @Success 200 {file} application/pdf
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/{documentId}/print-pdf [get]
+func (c *DocumentController) GetDocumentPrintPDF(ctx *gin.Context) {
+	documentID := ctx.Param("documentId")
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok || strings.TrimSpace(workspaceID) == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		return
+	}
+
+	pdf, filename, err := c.readOnlyViewUC.GetPrintPDF(ctx.Request.Context(), workspaceID, documentID, printPDFBlankParam(ctx))
+	if err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	writePrintPDF(ctx, pdf, filename)
+}
+
+// GetDocumentPrintPDFByWorkspaceCode renders the unsigned (or blank) document
+// PDF for external callers that identify the workspace by business code.
+// @Summary Download unsigned document PDF for printing
+// @Description Renders the document's current unsigned PDF, or the blank template when blank=true, so campuses can print it for in-person signing.
+// @Tags Documents
+// @Produce application/pdf
+// @Param X-Workspace-Code header string true "Workspace business code"
+// @Param documentId path string true "Document ID"
+// @Param blank query boolean false "Render the blank template without injected values"
+// @Success 200 {file} application/pdf
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/{documentId}/print-pdf [get]
+func (c *DocumentController) GetDocumentPrintPDFByWorkspaceCode(ctx *gin.Context) {
+	documentID := ctx.Param("documentId")
+	workspaceCode := strings.TrimSpace(ctx.GetHeader(middleware.ReadOnlyViewLinkWorkspaceCodeHeader))
+	if workspaceCode == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		return
+	}
+	blank := printPDFBlankParam(ctx)
+
+	for _, candidateCode := range readOnlyViewWorkspaceCodeCandidates(ctx, workspaceCode) {
+		pdf, filename, err := c.readOnlyViewUC.GetPrintPDFByWorkspaceCode(ctx.Request.Context(), candidateCode, documentID, blank)
+		if err == nil {
+			writePrintPDF(ctx, pdf, filename)
+			return
+		}
+		if errors.Is(err, entity.ErrForbidden) {
+			continue
+		}
+		HandleError(ctx, err)
+		return
+	}
+
+	HandleError(ctx, entity.ErrForbidden)
+}
+
+func printPDFBlankParam(ctx *gin.Context) bool {
+	value := strings.ToLower(strings.TrimSpace(ctx.Query("blank")))
+	return value == "1" || value == "true"
+}
+
+func writePrintPDF(ctx *gin.Context, pdf []byte, filename string) {
+	ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	ctx.Data(http.StatusOK, "application/pdf", pdf)
 }
 
 func readOnlyViewWorkspaceCodeCandidates(ctx *gin.Context, headerWorkspaceCode string) []string {
