@@ -867,8 +867,8 @@ func TestSigningAttemptExecutor_RecoversPartialProviderEnvelopeWithoutInfinitePr
 Adjust imports in `river_integration_test.go`:
 
 ```go
-mocksigning "github.com/rendis/doc-assembly/core/internal/adapters/secondary/signing/mock"
-documentrecipientrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_recipient_repo"
+mocksigning "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/signing/mock"
+documentrecipientrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_recipient_repo"
 ```
 
 - [ ] **Step 2: Run failing integration test**

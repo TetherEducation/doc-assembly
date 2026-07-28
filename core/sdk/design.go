@@ -1,6 +1,6 @@
 package sdk
 
-import "github.com/rendis/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
+import "github.com/TetherEducation/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
 
 // TypstDesignTokens controls fonts, colors, spacing, and heading styles in Typst PDF output.
 type TypstDesignTokens = pdfrenderer.TypstDesignTokens

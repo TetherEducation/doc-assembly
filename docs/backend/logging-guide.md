@@ -58,7 +58,7 @@ slog.DebugContext(ctx, "processing item", "item_id", itemID)
 Use `logging.WithAttrs()` to add attributes that will be included in all subsequent logs within that context:
 
 ```go
-import "github.com/rendis/doc-assembly/core/internal/infra/logging"
+import "github.com/TetherEducation/doc-assembly/core/internal/infra/logging"
 
 // Add attributes to context
 ctx = logging.WithAttrs(ctx,

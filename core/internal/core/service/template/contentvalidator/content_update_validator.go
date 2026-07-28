@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // validateContentUpdate validates format and injectable accessibility for saving draft content.

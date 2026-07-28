@@ -3,7 +3,7 @@ package injectable
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // CreateWorkspaceInjectableCommand represents the command to create a workspace injectable.

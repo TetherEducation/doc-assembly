@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 const signingSessionClaimsKey = "signing_session_auth_claims"

@@ -1,9 +1,9 @@
 package mapper
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	accessuc "github.com/rendis/doc-assembly/core/internal/core/usecase/access"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	accessuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/access"
 )
 
 // SystemRoleToResponse converts a SystemRoleAssignment entity to a response DTO.

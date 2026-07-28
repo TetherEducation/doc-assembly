@@ -3,8 +3,8 @@ package catalog
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // CreateDocumentTypeCommand represents the command to create a document type.

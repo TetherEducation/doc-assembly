@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // CreateDocumentCommand represents the command to create and send a document for signing.

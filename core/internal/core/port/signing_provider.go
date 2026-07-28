@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // ErrEmbeddingNotSupported is returned when a provider does not support embedded signing URLs.

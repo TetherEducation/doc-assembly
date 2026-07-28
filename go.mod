@@ -1,4 +1,4 @@
-module github.com/rendis/doc-assembly
+module github.com/TetherEducation/doc-assembly
 
 go 1.25.1
 

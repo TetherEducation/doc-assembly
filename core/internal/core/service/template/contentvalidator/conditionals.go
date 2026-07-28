@@ -5,7 +5,7 @@ import (
 
 	"github.com/expr-lang/expr"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
 )
 
 // validateConditionals validates all conditional blocks in the document.

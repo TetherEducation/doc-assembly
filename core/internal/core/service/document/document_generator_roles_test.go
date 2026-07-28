@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	portable_doc "github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	portable_doc "github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
 )
 
 func TestUnresolvedInjectableRefs_EmptyStringIsUnresolved(t *testing.T) {

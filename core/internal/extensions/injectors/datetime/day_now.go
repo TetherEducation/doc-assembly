@@ -3,7 +3,7 @@ package datetime
 import (
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // DayNowInjector returns the current day of the month.

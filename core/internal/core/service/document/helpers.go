@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // loadFieldResponseMap loads saved field responses as a map for PDF rendering.

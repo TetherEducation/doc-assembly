@@ -3,7 +3,7 @@
 The `Engine` is the only object you talk to. Construct → configure (fluent) → `Run()`.
 
 ```go
-import "github.com/rendis/doc-assembly/core/sdk"
+import "github.com/TetherEducation/doc-assembly/core/sdk"
 
 engine := sdk.New()                           // default config search
 engine := sdk.NewWithConfig("settings/app.yaml") // explicit path

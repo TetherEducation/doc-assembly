@@ -1,6 +1,6 @@
 package sdk
 
-import "github.com/rendis/doc-assembly/core/internal/core/entity"
+import "github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 
 // --- Core Context & Results ---
 

@@ -5,12 +5,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/mapper"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	cataloguc "github.com/rendis/doc-assembly/core/internal/core/usecase/catalog"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
 )
 
 // WorkspaceController handles workspace-related HTTP requests.

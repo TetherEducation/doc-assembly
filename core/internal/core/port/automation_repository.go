@@ -3,7 +3,7 @@ package port
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // AutomationAPIKeyRepository defines the interface for automation API key data access.

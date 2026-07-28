@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // Invariant: the field rect sits ENTIRELY ABOVE the signature line so the line

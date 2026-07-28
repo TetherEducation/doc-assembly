@@ -5,11 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/mapper"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
 )
 
 // TenantController handles tenant-scoped HTTP requests.

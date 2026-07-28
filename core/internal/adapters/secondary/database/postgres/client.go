@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 // NewPool creates a new PostgreSQL connection pool.

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 // injectorRegistry implements port.injectorRegistry with thread-safe support.

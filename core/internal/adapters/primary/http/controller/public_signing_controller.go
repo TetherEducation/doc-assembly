@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // signingCallbackTmpl is a minimal HTML page that posts a message to the parent window.

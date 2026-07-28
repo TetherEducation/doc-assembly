@@ -45,7 +45,7 @@ func main() {
 	}
 
 	if len(positional) != 1 {
-		fmt.Fprintln(os.Stderr, "Usage: go run github.com/rendis/doc-assembly/cmd/init@latest <project-name> --module <module-path> [--force]")
+		fmt.Fprintln(os.Stderr, "Usage: go run github.com/TetherEducation/doc-assembly/cmd/init@latest <project-name> --module <module-path> [--force]")
 		os.Exit(1)
 	}
 

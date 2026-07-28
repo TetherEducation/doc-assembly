@@ -9,7 +9,7 @@ import (
     "context"
     "log/slog"
 
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
 )
 
 engine.OnDocumentCompleted(func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {

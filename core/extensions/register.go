@@ -1,10 +1,10 @@
 package extensions
 
 import (
-	"github.com/rendis/doc-assembly/core/cmd/api/bootstrap"
-	internalext "github.com/rendis/doc-assembly/core/internal/extensions"
-	"github.com/rendis/doc-assembly/core/internal/extensions/injectors"
-	"github.com/rendis/doc-assembly/core/internal/extensions/mappers"
+	"github.com/TetherEducation/doc-assembly/core/cmd/api/bootstrap"
+	internalext "github.com/TetherEducation/doc-assembly/core/internal/extensions"
+	"github.com/TetherEducation/doc-assembly/core/internal/extensions/injectors"
+	"github.com/TetherEducation/doc-assembly/core/internal/extensions/mappers"
 )
 
 // Register configures all user-defined extensions on the engine.

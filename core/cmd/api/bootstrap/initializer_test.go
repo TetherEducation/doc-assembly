@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"testing"
 
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 func TestReadOnlyViewPublicURLFallsBackToServerBasePath(t *testing.T) {

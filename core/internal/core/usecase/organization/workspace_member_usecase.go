@@ -3,7 +3,7 @@ package organization
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // InviteMemberCommand contains data for inviting a user to a workspace.

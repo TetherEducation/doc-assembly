@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
 )
 
 // evaluateCondition evaluates a conditional node's conditions against injected values.

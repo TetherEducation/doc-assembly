@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	documentrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/testing/testhelper"
+	documentrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/testing/testhelper"
 )
 
 func TestRepository_FindByWorkspace_EnrichedFields(t *testing.T) {

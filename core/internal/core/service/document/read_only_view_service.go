@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // ReadOnlyViewService implements expiring public read-only document views.

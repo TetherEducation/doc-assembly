@@ -3,7 +3,7 @@ package contentvalidator
 import (
 	"fmt"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
 )
 
 // validateWorkflow validates the signing workflow configuration.

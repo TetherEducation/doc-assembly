@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
 )
 
 func TestTenantMemberService_LastOwnerProtectionFailsClosed(t *testing.T) {

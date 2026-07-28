@@ -1,10 +1,10 @@
 package mapper
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
 )
 
 // TenantMapper handles mapping between tenant entities and DTOs.

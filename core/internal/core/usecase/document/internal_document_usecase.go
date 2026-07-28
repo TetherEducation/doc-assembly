@@ -3,7 +3,7 @@ package document
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // InternalCreateCommand contains the data for creating a document via internal API.

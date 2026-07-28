@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	accessuc "github.com/rendis/doc-assembly/core/internal/core/usecase/access"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	accessuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/access"
 )
 
 // NewSystemRoleService creates a new system role service.

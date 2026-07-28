@@ -1,8 +1,8 @@
 package gmail
 
 import (
-	smtpnotification "github.com/rendis/doc-assembly/core/internal/adapters/secondary/notification/smtp"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	smtpnotification "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/notification/smtp"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 const (

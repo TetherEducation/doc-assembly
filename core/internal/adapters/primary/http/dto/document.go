@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/rendis/doc-assembly/core/internal/core/entity"
+import "github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 
 // CreateDocumentRequest is the request body for creating a document.
 type CreateDocumentRequest struct {

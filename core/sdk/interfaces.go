@@ -1,8 +1,8 @@
 package sdk
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // SystemWorkspaceCode is the canonical code for the tenant/system administration workspace.

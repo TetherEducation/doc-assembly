@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	cataloguc "github.com/rendis/doc-assembly/core/internal/core/usecase/catalog"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
 )
 
 // NewDocumentTypeService creates a new document type service.

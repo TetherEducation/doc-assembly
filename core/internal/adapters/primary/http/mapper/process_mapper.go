@@ -1,10 +1,10 @@
 package mapper
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	cataloguc "github.com/rendis/doc-assembly/core/internal/core/usecase/catalog"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
 )
 
 // ProcessMapper handles mapping between process entities and DTOs.

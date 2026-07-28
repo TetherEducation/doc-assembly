@@ -4,7 +4,7 @@ package common
 import (
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // SafeString returns the string value or empty string if nil.

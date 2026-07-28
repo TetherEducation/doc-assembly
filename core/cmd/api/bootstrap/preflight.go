@@ -10,8 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 // preflightChecks runs all startup validations.

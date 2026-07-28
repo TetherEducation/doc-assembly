@@ -12,12 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	documentsvc "github.com/rendis/doc-assembly/core/internal/core/service/document"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentsvc "github.com/TetherEducation/doc-assembly/core/internal/core/service/document"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // DocumentController handles document HTTP requests.

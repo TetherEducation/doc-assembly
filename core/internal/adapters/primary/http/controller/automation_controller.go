@@ -9,15 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/mapper"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	cataloguc "github.com/rendis/doc-assembly/core/internal/core/usecase/catalog"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
-	templateuc "github.com/rendis/doc-assembly/core/internal/core/usecase/template"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
+	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
 // nonAlphanumericRe matches any character that is not uppercase A-Z or 0-9.

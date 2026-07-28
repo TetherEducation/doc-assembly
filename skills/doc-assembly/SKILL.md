@@ -1,14 +1,14 @@
 ---
 name: doc-assembly
-description: Use when building or modifying a Go microservice that imports github.com/rendis/doc-assembly/core/sdk as a library — registering injectors, mappers, custom signing providers, storage adapters, notification providers, public-access authenticators, read-only view links, completion handlers, design tokens, or frontend overrides on the doc-assembly Engine. Covers the consumer-facing API surface only; not for working on the doc-assembly internals.
+description: Use when building or modifying a Go microservice that imports github.com/TetherEducation/doc-assembly/core/sdk as a library — registering injectors, mappers, custom signing providers, storage adapters, notification providers, public-access authenticators, read-only view links, completion handlers, design tokens, or frontend overrides on the doc-assembly Engine. Covers the consumer-facing API surface only; not for working on the doc-assembly internals.
 ---
 
 # doc-assembly — Consumer Skill
 
-You are integrating **doc-assembly** as a library into a wrapper Go microservice. The wrapper provides a `main.go`, registers extensions, and runs the embedded engine. Everything inside `core/internal/...` is private to the lib; only `github.com/rendis/doc-assembly/core/sdk` is your public API.
+You are integrating **doc-assembly** as a library into a wrapper Go microservice. The wrapper provides a `main.go`, registers extensions, and runs the embedded engine. Everything inside `core/internal/...` is private to the lib; only `github.com/TetherEducation/doc-assembly/core/sdk` is your public API.
 
 ```go
-import "github.com/rendis/doc-assembly/core/sdk"
+import "github.com/TetherEducation/doc-assembly/core/sdk"
 
 engine := sdk.New()
 extensions.Register(engine)        // your injectors, mappers, providers
@@ -18,9 +18,9 @@ _ = engine.Run()                   // blocks until SIGINT/SIGTERM
 
 ## When to use this skill
 
-Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/rendis/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, exposing public signing/read-only links, implementing legacy document proxy handlers, customizing PDF look, or handling completion events.
+Use whenever you are working in a wrapper repo whose `go.mod` requires `github.com/TetherEducation/doc-assembly` and whose `main.go` calls `sdk.New()`. Triggers include: writing or reviewing custom injectors, plugging a custom signing provider, replacing storage/notification adapters, configuring `settings/app.yaml`, wiring auth, exposing public signing/read-only links, implementing legacy document proxy handlers, customizing PDF look, or handling completion events.
 
-**Do not use** for changes inside `github.com/rendis/doc-assembly` itself — that is a different audience.
+**Do not use** for changes inside `github.com/TetherEducation/doc-assembly` itself — that is a different audience.
 
 ## How to read this skill
 

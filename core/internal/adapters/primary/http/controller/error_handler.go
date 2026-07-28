@@ -7,9 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	galleryuc "github.com/rendis/doc-assembly/core/internal/core/usecase/gallery"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	galleryuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/gallery"
 )
 
 var notFoundErrors = []error{

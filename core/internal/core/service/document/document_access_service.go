@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // DocumentAccessService handles email-verified access to public documents.

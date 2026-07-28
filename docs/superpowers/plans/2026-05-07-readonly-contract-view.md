@@ -262,7 +262,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 func TestDocumentAccessToken_ViewOnlyType(t *testing.T) {
@@ -362,7 +362,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 ```
 
@@ -448,9 +448,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // ReadonlyViewService handles expiring read-only contract links.
@@ -1006,8 +1006,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // PublicReadonlyViewController handles tokenized read-only contract views.

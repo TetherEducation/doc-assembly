@@ -1,6 +1,6 @@
 package sdk
 
-import "github.com/rendis/doc-assembly/core/cmd/api/bootstrap"
+import "github.com/TetherEducation/doc-assembly/core/cmd/api/bootstrap"
 
 // Engine is the main entry point for doc-assembly.
 // Create with New(), register extensions, then call Run().

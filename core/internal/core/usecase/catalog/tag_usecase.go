@@ -3,7 +3,7 @@ package catalog
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // CreateTagCommand represents the command to create a tag.

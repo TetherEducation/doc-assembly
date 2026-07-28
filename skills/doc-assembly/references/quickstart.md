@@ -1,13 +1,13 @@
 # Quickstart — building a doc-assembly wrapper
 
-Goal: a Go binary that imports `github.com/rendis/doc-assembly/core/sdk`, registers your extensions, and serves the engine.
+Goal: a Go binary that imports `github.com/TetherEducation/doc-assembly/core/sdk`, registers your extensions, and serves the engine.
 
 ## 1. Scaffold
 
 There is a generator embedded in the lib that produces a complete wrapper:
 
 ```bash
-go run github.com/rendis/doc-assembly/cmd/init@latest my-wrapper \
+go run github.com/TetherEducation/doc-assembly/cmd/init@latest my-wrapper \
   --module github.com/myorg/my-wrapper
 ```
 
@@ -24,7 +24,7 @@ It writes (skipping any pre-existing file unless `--force`):
 | `Dockerfile` | multi-stage build with Typst preinstalled |
 | `docker-compose.yaml` | local Postgres for dev |
 | `.env.example` | `DOC_ENGINE_*` overrides |
-| `go.mod` | requires `github.com/rendis/doc-assembly` |
+| `go.mod` | requires `github.com/TetherEducation/doc-assembly` |
 
 After scaffolding:
 
@@ -49,7 +49,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
 )
 
 func main() {
@@ -125,7 +125,7 @@ For other providers (PandaDoc, DocuSign, your own): implement [`sdk.SigningProvi
 In your wrapper's `go.mod`:
 
 ```go
-replace github.com/rendis/doc-assembly => ../doc-assembly
+replace github.com/TetherEducation/doc-assembly => ../doc-assembly
 ```
 
 Run `go mod tidy` to refresh. Remember to remove the replace before publishing.

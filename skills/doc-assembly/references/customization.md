@@ -7,7 +7,7 @@ These do not change *what* the engine does, only *how it looks* and *how it boot
 The engine renders PDFs with Typst. `TypstDesignTokens` controls fonts, colors, spacing, and heading styles applied to every rendered template:
 
 ```go
-import "github.com/rendis/doc-assembly/core/sdk"
+import "github.com/TetherEducation/doc-assembly/core/sdk"
 
 tokens := sdk.DefaultDesignTokens()
 tokens.BodyFont = "Inter"
@@ -111,7 +111,7 @@ Do **not** call `slog.Info`/`Warn`/`Error` (no context — you lose `tenant_id`,
 If you need to attach extra attributes for the rest of a request, use the lib's helper:
 
 ```go
-import "github.com/rendis/doc-assembly/core/internal/infra/logging"
+import "github.com/TetherEducation/doc-assembly/core/internal/infra/logging"
 // NOTE: logging is private; if you need WithAttrs in your wrapper,
 // either request it be exposed via SDK or use slog.With locally.
 ctx = logging.WithAttrs(ctx, slog.String("request_id", id))

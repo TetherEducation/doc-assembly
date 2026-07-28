@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	_ "github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto" // for swagger
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/mapper"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
+	_ "github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto" // for swagger
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
 )
 
 // ContentInjectableController handles injectable-related HTTP requests.

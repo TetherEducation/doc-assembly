@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rendis/doc-assembly/core/cmd/api/bootstrap"
-	"github.com/rendis/doc-assembly/core/extensions"
+	"github.com/TetherEducation/doc-assembly/core/cmd/api/bootstrap"
+	"github.com/TetherEducation/doc-assembly/core/extensions"
 )
 
 func main() {

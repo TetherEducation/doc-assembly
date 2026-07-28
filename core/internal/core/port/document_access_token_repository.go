@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // DocumentAccessTokenRepository defines the interface for document access token data access.
