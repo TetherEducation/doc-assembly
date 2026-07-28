@@ -405,6 +405,14 @@ func (s *InternalDocumentService) buildInternalDocument(
 	doc.SetExternalReference(cmd.ExternalID)
 	doc.SetTransactionalID(cmd.TransactionalID)
 
+	// Without a title, documentTitle() falls back to the document ID and a
+	// raw UUID leaks into the provider envelope, signer emails, the public
+	// page and the signed-PDF filename. The template's display title is the
+	// human name for every document created through the internal API.
+	if title := strings.TrimSpace(resolved.template.Title); title != "" {
+		doc.SetTitle(title)
+	}
+
 	if len(cmd.Metadata) > 0 {
 		if err := doc.SetMetadata(cmd.Metadata); err != nil {
 			return nil, fmt.Errorf("setting metadata: %w", err)
