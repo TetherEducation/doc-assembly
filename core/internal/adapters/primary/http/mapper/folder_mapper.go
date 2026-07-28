@@ -1,9 +1,9 @@
 package mapper
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	cataloguc "github.com/rendis/doc-assembly/core/internal/core/usecase/catalog"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
 )
 
 // FolderMapper handles mapping between folder entities and DTOs.

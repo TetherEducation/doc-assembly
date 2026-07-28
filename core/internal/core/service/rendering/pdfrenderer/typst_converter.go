@@ -1,8 +1,8 @@
 package pdfrenderer
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // TypstConverter defines the interface for converting portable document nodes to Typst markup.

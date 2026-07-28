@@ -14,8 +14,8 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 // RiverService manages the River client lifecycle and exposes signing attempt UoW.

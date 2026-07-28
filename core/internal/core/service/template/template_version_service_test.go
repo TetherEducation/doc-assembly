@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 func TestReplaceInjectables_EnsuresSystemDefinitionBeforeInsert(t *testing.T) {

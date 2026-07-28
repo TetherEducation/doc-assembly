@@ -12,12 +12,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
-	"github.com/rendis/doc-assembly/core/internal/infra/logging"
-	"github.com/rendis/doc-assembly/core/internal/migrations"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/logging"
+	"github.com/TetherEducation/doc-assembly/core/internal/migrations"
 )
 
 // Engine is the main entry point for doc-assembly.

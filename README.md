@@ -288,7 +288,7 @@ Provider webhook
 ### SDK Usage
 
 ```go
-import "github.com/rendis/doc-assembly/core/sdk"
+import "github.com/TetherEducation/doc-assembly/core/sdk"
 
 handler := func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {
     log.Printf("Document %s completed in tenant %s", ev.DocumentID, ev.TenantCode)

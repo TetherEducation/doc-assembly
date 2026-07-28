@@ -5,13 +5,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/mapper"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	accessuc "github.com/rendis/doc-assembly/core/internal/core/usecase/access"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
-	organizationuc "github.com/rendis/doc-assembly/core/internal/core/usecase/organization"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	accessuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/access"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
+	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
 )
 
 // NewAdminController creates a new admin controller.

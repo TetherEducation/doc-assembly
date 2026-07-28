@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 // mapperRegistry implements port.MapperRegistry with thread-safe support.

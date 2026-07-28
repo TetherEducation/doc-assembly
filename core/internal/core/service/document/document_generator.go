@@ -10,12 +10,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	portable_doc "github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	injectable_svc "github.com/rendis/doc-assembly/core/internal/core/service/injectable"
-	injectable_uc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
-	"github.com/rendis/doc-assembly/core/internal/core/validation"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	portable_doc "github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	injectable_svc "github.com/TetherEducation/doc-assembly/core/internal/core/service/injectable"
+	injectable_uc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/validation"
 )
 
 // DocumentGenerationResult contains the result of document generation.

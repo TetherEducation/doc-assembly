@@ -4,7 +4,7 @@ These are real ways doc-assembly wrappers go wrong. Cross-check before declaring
 
 ## Importing private packages
 
-`github.com/rendis/doc-assembly/core/internal/...` and `core/cmd/...` are **private**. Only `core/sdk` is stable. Importing anything else means your wrapper will break on lib upgrades. Quick audit:
+`github.com/TetherEducation/doc-assembly/core/internal/...` and `core/cmd/...` are **private**. Only `core/sdk` is stable. Importing anything else means your wrapper will break on lib upgrades. Quick audit:
 
 ```bash
 grep -RE 'doc-assembly/core/(internal|cmd)' .

@@ -3,7 +3,7 @@ package access
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // AssignSystemRoleCommand represents the command to assign a system role.

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
 )
 
 // NewWorkspaceInjectableService creates a new workspace injectable service.

@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	galleryuc "github.com/rendis/doc-assembly/core/internal/core/usecase/gallery"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	galleryuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/gallery"
 )
 
 const galleryKeyPrefix = "gallery"

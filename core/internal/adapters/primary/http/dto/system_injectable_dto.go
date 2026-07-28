@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // SystemInjectableResponse represents a system injectable in API responses.

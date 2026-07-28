@@ -10,7 +10,7 @@ By convention everything goes through `extensions/register.go`:
 package extensions
 
 import (
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
     "github.com/myorg/my-wrapper/extensions/injectors"
 )
 
@@ -36,7 +36,7 @@ import (
     "context"
     "time"
 
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
 )
 
 type Greeting struct{}

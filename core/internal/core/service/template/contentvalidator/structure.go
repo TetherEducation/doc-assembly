@@ -3,7 +3,7 @@ package contentvalidator
 import (
 	"regexp"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity/portabledoc"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity/portabledoc"
 )
 
 // versionRegex validates semantic version format.

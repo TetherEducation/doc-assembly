@@ -12,8 +12,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // Register pgx driver with database/sql for Snapshot/Restore
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
-	"github.com/rendis/doc-assembly/core/internal/migrations"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/migrations"
 )
 
 var (

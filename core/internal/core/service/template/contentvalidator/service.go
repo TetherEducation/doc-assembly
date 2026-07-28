@@ -3,8 +3,8 @@ package contentvalidator
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	injectableuc "github.com/rendis/doc-assembly/core/internal/core/usecase/injectable"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
 )
 
 // Service implements the ContentValidator interface.

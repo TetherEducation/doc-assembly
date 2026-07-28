@@ -85,7 +85,7 @@ package port
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // LegacyDocumentRequest contains the minimum doc-assembly context plus the
@@ -140,8 +140,8 @@ go test -C core ./internal/core/port ./sdk
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/internal/core/port
-ok  	github.com/rendis/doc-assembly/core/sdk
+ok  	github.com/TetherEducation/doc-assembly/core/internal/core/port
+ok  	github.com/TetherEducation/doc-assembly/core/sdk
 ```
 
 - [ ] **Step 4: Commit**
@@ -264,7 +264,7 @@ go test -C core ./internal/infra/config -run TestLegacyDocumentsConfig -count=1
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/internal/infra/config
+ok  	github.com/TetherEducation/doc-assembly/core/internal/infra/config
 ```
 
 - [ ] **Step 7: Commit**
@@ -294,7 +294,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 type testLegacyDocumentHandler struct{}
@@ -365,7 +365,7 @@ go test -C core ./cmd/api/bootstrap -run TestEngine_SetLegacyDocumentHandler -co
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/cmd/api/bootstrap
+ok  	github.com/TetherEducation/doc-assembly/core/cmd/api/bootstrap
 ```
 
 - [ ] **Step 5: Commit**
@@ -402,9 +402,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 type fakeLegacyDocumentHandler struct {
@@ -694,9 +694,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 )
 
 const legacyDocumentsProxyPath = "/legacy-documents/proxy"
@@ -907,7 +907,7 @@ go test -C core ./internal/adapters/primary/http/controller -run TestLegacyDocum
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/internal/adapters/primary/http/controller
+ok  	github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/controller
 ```
 
 - [ ] **Step 5: Commit**
@@ -944,8 +944,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 )
 
 type serverLegacyHandler struct {
@@ -1088,7 +1088,7 @@ go test -C core ./internal/infra/server -run TestHTTPServer_.*LegacyDocument -co
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/internal/infra/server
+ok  	github.com/TetherEducation/doc-assembly/core/internal/infra/server
 ```
 
 - [ ] **Step 6: Run bootstrap compile tests**
@@ -1102,7 +1102,7 @@ go test -C core ./cmd/api/bootstrap
 Expected:
 
 ```text
-ok  	github.com/rendis/doc-assembly/core/cmd/api/bootstrap
+ok  	github.com/TetherEducation/doc-assembly/core/cmd/api/bootstrap
 ```
 
 - [ ] **Step 7: Commit**

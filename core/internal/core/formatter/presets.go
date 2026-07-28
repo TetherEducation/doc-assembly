@@ -1,6 +1,6 @@
 package formatter
 
-import "github.com/rendis/doc-assembly/core/internal/core/entity"
+import "github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 
 // DateFormats provides common date format options.
 var DateFormats = &entity.FormatConfig{

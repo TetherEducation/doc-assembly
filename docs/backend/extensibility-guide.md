@@ -56,7 +56,7 @@ Injectors resolve dynamic values inserted into document templates. Each injector
 All types are available via the `sdk` package:
 
 ```go
-import "github.com/rendis/doc-assembly/core/sdk"
+import "github.com/TetherEducation/doc-assembly/core/sdk"
 
 type Injector interface {
     Code() string                              // Unique identifier
@@ -78,7 +78,7 @@ import (
     "context"
     "time"
 
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
 )
 
 type ClientNameInjector struct{}
@@ -114,7 +114,7 @@ In `extensions/register.go`:
 package extensions
 
 import (
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
     "github.com/myorg/my-project/extensions/injectors"
 )
 
@@ -221,7 +221,7 @@ import (
     "context"
     "encoding/json"
 
-    "github.com/rendis/doc-assembly/core/sdk"
+    "github.com/TetherEducation/doc-assembly/core/sdk"
 )
 
 type ContractPayload struct {

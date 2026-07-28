@@ -17,12 +17,12 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/controller"
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/middleware"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/controller"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 
-	_ "github.com/rendis/doc-assembly/core/docs" // swagger generated docs
+	_ "github.com/TetherEducation/doc-assembly/core/docs" // swagger generated docs
 )
 
 func init() {

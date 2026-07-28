@@ -3,7 +3,7 @@ package injectable
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // SystemInjectableUseCase defines the input port for system injectable management operations.

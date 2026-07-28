@@ -3,7 +3,7 @@ package dto
 import (
 	"encoding/json"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // InternalCreateDocumentRequest is the new contract for internal create.

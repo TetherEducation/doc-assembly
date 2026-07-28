@@ -20,15 +20,15 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
-	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
-	signingmock "github.com/rendis/doc-assembly/core/internal/adapters/secondary/signing/mock"
-	"github.com/rendis/doc-assembly/core/internal/adapters/secondary/storage/local"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	"github.com/rendis/doc-assembly/core/internal/infra/config"
-	"github.com/rendis/doc-assembly/core/internal/infra/riverqueue"
-	"github.com/rendis/doc-assembly/core/internal/testing/testhelper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
+	signingmock "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/signing/mock"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/storage/local"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/riverqueue"
+	"github.com/TetherEducation/doc-assembly/core/internal/testing/testhelper"
 )
 
 func TestSigningAttemptUOW_CreateAttemptEnqueuesRenderAtomically(t *testing.T) {

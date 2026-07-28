@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	tenantrepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_repo"
-	workspacerepo "github.com/rendis/doc-assembly/core/internal/adapters/secondary/database/postgres/workspace_repo"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/testing/testhelper"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	tenantrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_repo"
+	workspacerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/workspace_repo"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/testing/testhelper"
 )
 
 // =============================================================================

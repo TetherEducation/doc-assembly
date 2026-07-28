@@ -7,10 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	_ "github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	_ "github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // WebhookController handles incoming webhooks from signing providers.

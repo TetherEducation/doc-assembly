@@ -3,7 +3,7 @@ package access
 import (
 	"context"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
 
 // RecordAccessCommand contains data for recording a resource access.

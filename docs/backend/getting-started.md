@@ -12,7 +12,7 @@ Create a new project using doc-assembly as a library.
 ## 1. Scaffold a New Project
 
 ```bash
-go run github.com/rendis/doc-assembly/cmd/init@latest my-project \
+go run github.com/TetherEducation/doc-assembly/cmd/init@latest my-project \
   --module github.com/myorg/my-project
 ```
 
@@ -49,7 +49,7 @@ go mod tidy
 If working with a local clone of doc-assembly, add a `replace` directive to `go.mod`:
 
 ```
-replace github.com/rendis/doc-assembly => ../doc-assembly
+replace github.com/TetherEducation/doc-assembly => ../doc-assembly
 ```
 
 Then re-run `go mod tidy`.

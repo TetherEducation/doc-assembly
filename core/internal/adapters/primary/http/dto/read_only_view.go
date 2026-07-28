@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	documentuc "github.com/rendis/doc-assembly/core/internal/core/usecase/document"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 )
 
 // CreateReadOnlyViewLinkResponse is returned when creating a public read-only view link.

@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/rendis/doc-assembly/core/internal/core/entity"
+import "github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 
 // ContentValidationErrorDTO represents a single content validation error.
 type ContentValidationErrorDTO struct {

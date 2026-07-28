@@ -1,10 +1,10 @@
 package mapper
 
 import (
-	"github.com/rendis/doc-assembly/core/internal/adapters/primary/http/dto"
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	templateuc "github.com/rendis/doc-assembly/core/internal/core/usecase/template"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
 // TemplateMapper handles mapping between template entities and DTOs.

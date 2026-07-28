@@ -9,9 +9,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/rendis/doc-assembly/core/internal/core/entity"
-	"github.com/rendis/doc-assembly/core/internal/core/port"
-	templateuc "github.com/rendis/doc-assembly/core/internal/core/usecase/template"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
 // NewTemplateVersionService creates a new template version service.
