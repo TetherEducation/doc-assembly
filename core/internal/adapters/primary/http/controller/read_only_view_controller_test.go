@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +37,17 @@ type readOnlyViewUCStub struct {
 
 	createCodeCalls    []string
 	errByWorkspaceCode map[string]error
+
+	signingStateCalls          []signingStateStubCall
+	signingStateByWorkspace    map[string]*documentuc.SigningStateResult
+	signingStateErrByWorkspace map[string]error
+}
+
+// signingStateStubCall records how the controller fanned a batch across the
+// candidate workspace codes.
+type signingStateStubCall struct {
+	workspaceCode string
+	documentIDs   []string
 }
 
 func (s *readOnlyViewUCStub) CreateReadOnlyViewLink(_ context.Context, workspaceID, documentID string) (*documentuc.CreateReadOnlyViewLinkResult, error) {
@@ -100,6 +112,28 @@ func (s *readOnlyViewUCStub) GetPrintPDFByWorkspaceCode(_ context.Context, works
 		return nil, "", s.err
 	}
 	return s.pdfBytes, s.pdfFilename, nil
+}
+
+func (s *readOnlyViewUCStub) GetSigningStateByWorkspaceCode(
+	_ context.Context,
+	workspaceCode string,
+	documentIDs []string,
+) (*documentuc.SigningStateResult, error) {
+	s.signingStateCalls = append(s.signingStateCalls, signingStateStubCall{
+		workspaceCode: workspaceCode,
+		documentIDs:   append([]string(nil), documentIDs...),
+	})
+	if err, ok := s.signingStateErrByWorkspace[workspaceCode]; ok {
+		return nil, err
+	}
+	if s.err != nil {
+		return nil, s.err
+	}
+	if result, ok := s.signingStateByWorkspace[workspaceCode]; ok {
+		return result, nil
+	}
+	// Default: resolve nothing, so the controller keeps handing the batch on.
+	return &documentuc.SigningStateResult{Unavailable: append([]string(nil), documentIDs...)}, nil
 }
 
 type readOnlyViewLinkAuthStub struct {
@@ -359,5 +393,190 @@ func TestPublicReadOnlyViewController(t *testing.T) {
 		assert.Equal(t, `inline; filename="contract.pdf"`, recorder.Header().Get("Content-Disposition"))
 		assert.Equal(t, "8", recorder.Header().Get("Content-Length"))
 		assert.Empty(t, recorder.Body.String())
+	})
+}
+
+func TestDocumentController_GetDocumentsSigningStateByWorkspaceCode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	newRouter := func(uc *readOnlyViewUCStub, auth *readOnlyViewLinkAuthStub) *gin.Engine {
+		router := gin.New()
+		handler := controller.NewDocumentController(nil, nil, uc, nil).GetDocumentsSigningStateByWorkspaceCode
+		if auth == nil {
+			router.POST("/api/v1/documents/signing-state", handler)
+			return router
+		}
+		router.POST(
+			"/api/v1/documents/signing-state",
+			middleware.ReadOnlyViewLinkCustomAuth(auth),
+			handler,
+		)
+		return router
+	}
+
+	doRequest := func(router *gin.Engine, workspaceCode, body string) *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/signing-state", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		if workspaceCode != "" {
+			req.Header.Set("X-Workspace-Code", workspaceCode)
+		}
+		router.ServeHTTP(recorder, req)
+		return recorder
+	}
+
+	signedAt := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+
+	// The behaviour that differs from the single-document endpoints: a batch can span
+	// several authorized workspace codes, so each pass must resolve what it can and
+	// hand the remainder on rather than stopping at the first code that answers.
+	t.Run("merges results across authorized workspace codes", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{
+			signingStateByWorkspace: map[string]*documentuc.SigningStateResult{
+				"2518500001": {
+					Documents: []documentuc.SigningStateDocument{
+						{DocumentID: "doc-1", Status: entity.DocumentStatusCompleted, Signed: true},
+					},
+					Unavailable: []string{"doc-2"},
+				},
+				"SAN_VICENTE_DE_PAUL": {
+					Documents: []documentuc.SigningStateDocument{
+						{DocumentID: "doc-2", Status: entity.DocumentStatusReadyToSign},
+					},
+				},
+			},
+		}
+		auth := &readOnlyViewLinkAuthStub{
+			claims: &port.ReadOnlyViewLinkAuthClaims{
+				Email:                    "admin@example.test",
+				AuthorizedWorkspaceCodes: []string{"SAN_VICENTE_DE_PAUL", "DEFAULT"},
+			},
+		}
+
+		recorder := doRequest(newRouter(uc, auth), "2518500001", `{"documentIds":["doc-1","doc-2"]}`)
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+
+		var body struct {
+			Documents []struct {
+				DocumentID string `json:"documentId"`
+				Signed     bool   `json:"signed"`
+			} `json:"documents"`
+			Unavailable []string `json:"unavailable"`
+		}
+		require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
+		require.Len(t, body.Documents, 2)
+		assert.Equal(t, "doc-1", body.Documents[0].DocumentID)
+		assert.True(t, body.Documents[0].Signed)
+		assert.Equal(t, "doc-2", body.Documents[1].DocumentID)
+		assert.False(t, body.Documents[1].Signed)
+		assert.Empty(t, body.Unavailable)
+
+		// Only the still-unresolved id is handed to the second candidate code.
+		require.Len(t, uc.signingStateCalls, 2)
+		assert.Equal(t, "2518500001", uc.signingStateCalls[0].workspaceCode)
+		assert.Equal(t, []string{"doc-1", "doc-2"}, uc.signingStateCalls[0].documentIDs)
+		assert.Equal(t, "SAN_VICENTE_DE_PAUL", uc.signingStateCalls[1].workspaceCode)
+		assert.Equal(t, []string{"doc-2"}, uc.signingStateCalls[1].documentIDs)
+	})
+
+	t.Run("stops once every id is resolved", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{
+			signingStateByWorkspace: map[string]*documentuc.SigningStateResult{
+				"2518500001": {
+					Documents: []documentuc.SigningStateDocument{
+						{
+							DocumentID: "doc-1",
+							Status:     entity.DocumentStatusCompleted,
+							Signed:     true,
+							Recipients: []documentuc.SigningStateRecipient{
+								{Email: "guardian@example.test", Signed: true, SignedAt: &signedAt},
+							},
+						},
+					},
+				},
+			},
+		}
+		auth := &readOnlyViewLinkAuthStub{
+			claims: &port.ReadOnlyViewLinkAuthClaims{
+				AuthorizedWorkspaceCodes: []string{"SAN_VICENTE_DE_PAUL"},
+			},
+		}
+
+		recorder := doRequest(newRouter(uc, auth), "2518500001", `{"documentIds":["doc-1"]}`)
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		assert.Len(t, uc.signingStateCalls, 1, "must not query further codes once nothing is pending")
+	})
+
+	t.Run("reports ids no authorized code resolved as unavailable", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		auth := &readOnlyViewLinkAuthStub{
+			claims: &port.ReadOnlyViewLinkAuthClaims{
+				AuthorizedWorkspaceCodes: []string{"SAN_VICENTE_DE_PAUL"},
+			},
+		}
+
+		recorder := doRequest(newRouter(uc, auth), "2518500001", `{"documentIds":["doc-ghost"]}`)
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+
+		var body struct {
+			Documents   []json.RawMessage `json:"documents"`
+			Unavailable []string          `json:"unavailable"`
+		}
+		require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
+		assert.Empty(t, body.Documents)
+		assert.Equal(t, []string{"doc-ghost"}, body.Unavailable)
+	})
+
+	t.Run("propagates non-forbidden use case errors", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{
+			signingStateErrByWorkspace: map[string]error{
+				"2518500001": entity.ErrDocumentNotFound,
+			},
+		}
+
+		recorder := doRequest(newRouter(uc, nil), "2518500001", `{"documentIds":["doc-1"]}`)
+		require.Equal(t, http.StatusNotFound, recorder.Code, recorder.Body.String())
+	})
+
+	t.Run("trims and dedupes requested ids", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		recorder := doRequest(newRouter(uc, nil), "2518500001", `{"documentIds":["  doc-1  ","doc-1","","doc-2"]}`)
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		require.Len(t, uc.signingStateCalls, 1)
+		assert.Equal(t, []string{"doc-1", "doc-2"}, uc.signingStateCalls[0].documentIDs)
+	})
+
+	t.Run("rejects missing workspace code header", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		recorder := doRequest(newRouter(uc, nil), "", `{"documentIds":["doc-1"]}`)
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.signingStateCalls)
+	})
+
+	t.Run("rejects a body without document ids", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		recorder := doRequest(newRouter(uc, nil), "2518500001", `{"documentIds":[]}`)
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.signingStateCalls)
+	})
+
+	t.Run("rejects ids that are only whitespace", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		recorder := doRequest(newRouter(uc, nil), "2518500001", `{"documentIds":["  ","\t"]}`)
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.signingStateCalls)
+	})
+
+	t.Run("rejects a batch over the cap", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{}
+		ids := make([]string, 0, 201)
+		for i := 0; i < 201; i++ {
+			ids = append(ids, `"doc-`+strconv.Itoa(i)+`"`)
+		}
+		body := `{"documentIds":[` + strings.Join(ids, ",") + `]}`
+
+		recorder := doRequest(newRouter(uc, nil), "2518500001", body)
+		require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+		assert.Empty(t, uc.signingStateCalls)
 	})
 }

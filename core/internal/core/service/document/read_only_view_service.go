@@ -191,6 +191,107 @@ func (s *ReadOnlyViewService) matchesDocumentWorkspaceCode(
 	return parent != nil && strings.EqualFold(parent.Code, workspaceCode), nil
 }
 
+// GetSigningStateByWorkspaceCode reports the real signing state of each requested
+// document, authorized by workspace business code.
+//
+// Unlike the read-only link and print-PDF flows, this deliberately does NOT reject
+// invalidated, cancelled or expired documents: reporting that a document is in a
+// dead state is the useful answer, not an error. Callers use it to tell "nobody
+// ever signed this" apart from "signed", and to spot documents that need
+// regenerating rather than a reminder.
+func (s *ReadOnlyViewService) GetSigningStateByWorkspaceCode(
+	ctx context.Context,
+	workspaceCode string,
+	documentIDs []string,
+) (*documentuc.SigningStateResult, error) {
+	result := &documentuc.SigningStateResult{
+		Documents:   make([]documentuc.SigningStateDocument, 0, len(documentIDs)),
+		Unavailable: make([]string, 0),
+	}
+
+	seen := make(map[string]struct{}, len(documentIDs))
+	for _, rawID := range documentIDs {
+		documentID := strings.TrimSpace(rawID)
+		if documentID == "" {
+			continue
+		}
+		// Callers batch by admission and can legitimately repeat an ID; answer once.
+		if _, duplicate := seen[documentID]; duplicate {
+			continue
+		}
+		seen[documentID] = struct{}{}
+
+		doc, err := s.documentRepo.FindByID(ctx, documentID)
+		if err != nil {
+			// A malformed or unknown ID is a per-item outcome, not a batch failure:
+			// one bad reference in a CRM's set must not blank the whole answer.
+			if errors.Is(err, entity.ErrDocumentNotFound) || errors.Is(err, entity.ErrRecordNotFound) {
+				result.Unavailable = append(result.Unavailable, documentID)
+				continue
+			}
+			return nil, fmt.Errorf("find document: %w", err)
+		}
+		if doc == nil {
+			result.Unavailable = append(result.Unavailable, documentID)
+			continue
+		}
+
+		matches, err := s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+		if err != nil {
+			return nil, err
+		}
+		if !matches {
+			// Merged with not-found on purpose — see SigningStateResult.Unavailable.
+			result.Unavailable = append(result.Unavailable, documentID)
+			continue
+		}
+
+		recipients, err := s.signingStateRecipients(ctx, doc.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Documents = append(result.Documents, documentuc.SigningStateDocument{
+			DocumentID:          doc.ID,
+			ExternalReferenceID: doc.ClientExternalReferenceID,
+			Status:              doc.Status,
+			Signed:              doc.Status == entity.DocumentStatusCompleted,
+			Expired:             doc.IsExpired(),
+			ExpiresAt:           doc.ExpiresAt,
+			Recipients:          recipients,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *ReadOnlyViewService) signingStateRecipients(
+	ctx context.Context,
+	documentID string,
+) ([]documentuc.SigningStateRecipient, error) {
+	recipients, err := s.recipientRepo.FindByDocumentIDWithRoles(ctx, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("find signing state recipients: %w", err)
+	}
+
+	out := make([]documentuc.SigningStateRecipient, 0, len(recipients))
+	for _, recipient := range recipients {
+		if recipient == nil {
+			continue
+		}
+		out = append(out, documentuc.SigningStateRecipient{
+			Name:        recipient.Name,
+			Email:       recipient.Email,
+			RoleName:    recipient.RoleName,
+			SignerOrder: recipient.SignerOrder,
+			Status:      recipient.Status,
+			Signed:      recipient.Status == entity.RecipientStatusSigned,
+			SignedAt:    recipient.SignedAt,
+		})
+	}
+	return out, nil
+}
+
 // GetReadOnlyView returns read-only metadata/content for a public token.
 func (s *ReadOnlyViewService) GetReadOnlyView(ctx context.Context, token string) (*documentuc.ReadOnlyViewResponse, error) {
 	accessToken, err := s.validateReadOnlyViewToken(ctx, token)
