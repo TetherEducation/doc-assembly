@@ -221,48 +221,64 @@ func (s *ReadOnlyViewService) GetSigningStateByWorkspaceCode(
 		}
 		seen[documentID] = struct{}{}
 
-		doc, err := s.documentRepo.FindByID(ctx, documentID)
-		if err != nil {
-			// A malformed or unknown ID is a per-item outcome, not a batch failure:
-			// one bad reference in a CRM's set must not blank the whole answer.
-			if errors.Is(err, entity.ErrDocumentNotFound) || errors.Is(err, entity.ErrRecordNotFound) {
-				result.Unavailable = append(result.Unavailable, documentID)
-				continue
-			}
-			return nil, fmt.Errorf("find document: %w", err)
-		}
-		if doc == nil {
-			result.Unavailable = append(result.Unavailable, documentID)
-			continue
-		}
-
-		matches, err := s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+		state, err := s.resolveSigningStateDocument(ctx, workspaceCode, documentID)
 		if err != nil {
 			return nil, err
 		}
-		if !matches {
-			// Merged with not-found on purpose — see SigningStateResult.Unavailable.
+		if state == nil {
 			result.Unavailable = append(result.Unavailable, documentID)
 			continue
 		}
-
-		recipients, err := s.signingStateRecipients(ctx, doc.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		result.Documents = append(result.Documents, documentuc.SigningStateDocument{
-			DocumentID:          doc.ID,
-			ExternalReferenceID: doc.ClientExternalReferenceID,
-			Status:              doc.Status,
-			Signed:              doc.Status == entity.DocumentStatusCompleted,
-			Expired:             doc.IsExpired(),
-			ExpiresAt:           doc.ExpiresAt,
-			Recipients:          recipients,
-		})
+		result.Documents = append(result.Documents, *state)
 	}
 
 	return result, nil
+}
+
+// resolveSigningStateDocument returns nil when the document does not exist or is
+// not visible to workspaceCode. Both cases collapse to nil on purpose so the
+// caller cannot report them differently — see SigningStateResult.Unavailable.
+//
+// A missing document is a per-item outcome rather than a batch failure: one stale
+// reference in a caller's set must not blank the whole answer.
+func (s *ReadOnlyViewService) resolveSigningStateDocument(
+	ctx context.Context,
+	workspaceCode string,
+	documentID string,
+) (*documentuc.SigningStateDocument, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		if errors.Is(err, entity.ErrDocumentNotFound) || errors.Is(err, entity.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, nil
+	}
+
+	matches, err := s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+	if err != nil {
+		return nil, err
+	}
+	if !matches {
+		return nil, nil
+	}
+
+	recipients, err := s.signingStateRecipients(ctx, doc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &documentuc.SigningStateDocument{
+		DocumentID:          doc.ID,
+		ExternalReferenceID: doc.ClientExternalReferenceID,
+		Status:              doc.Status,
+		Signed:              doc.Status == entity.DocumentStatusCompleted,
+		Expired:             doc.IsExpired(),
+		ExpiresAt:           doc.ExpiresAt,
+		Recipients:          recipients,
+	}, nil
 }
 
 func (s *ReadOnlyViewService) signingStateRecipients(
