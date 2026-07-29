@@ -46,8 +46,11 @@ type SigningStateRecipientResponse struct {
 
 // SigningStateDocumentResponse reports whether one document was actually signed.
 type SigningStateDocumentResponse struct {
-	DocumentID          string                          `json:"documentId"`
-	ExternalReferenceID *string                         `json:"externalReferenceId,omitempty"`
+	DocumentID          string  `json:"documentId"`
+	ExternalReferenceID *string `json:"externalReferenceId,omitempty"`
+	// Empty when the document carries no type — such a document never publishes a
+	// completion event even once signed.
+	DocumentTypeCode    string                          `json:"documentTypeCode,omitempty"`
 	Status              string                          `json:"status"`
 	Signed              bool                            `json:"signed"`
 	Expired             bool                            `json:"expired"`
@@ -90,6 +93,7 @@ func NewSigningStateResponse(result *documentuc.SigningStateResult) SigningState
 		documents = append(documents, SigningStateDocumentResponse{
 			DocumentID:          doc.DocumentID,
 			ExternalReferenceID: doc.ExternalReferenceID,
+			DocumentTypeCode:    doc.DocumentTypeCode,
 			Status:              string(doc.Status),
 			Signed:              doc.Signed,
 			Expired:             doc.Expired,

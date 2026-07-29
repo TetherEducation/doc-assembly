@@ -54,7 +54,12 @@ type SigningStateRecipient struct {
 type SigningStateDocument struct {
 	DocumentID          string
 	ExternalReferenceID *string
-	Status              entity.DocumentStatus
+	// DocumentTypeCode lets a caller join this document back to its own per-type
+	// record without trusting its local mapping. Empty when the document has no
+	// type, which is itself worth knowing: such a document never publishes a
+	// completion event even if it is signed.
+	DocumentTypeCode string
+	Status           entity.DocumentStatus
 	// Signed is the single question callers are asking: did this document reach
 	// COMPLETED. A caller's own workflow state saying "done" is not evidence.
 	Signed bool

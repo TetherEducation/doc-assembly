@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 type ReadOnlyViewService struct {
 	documentRepo      port.DocumentRepository
 	workspaceRepo     port.WorkspaceRepository
+	documentTypeRepo  port.DocumentTypeRepository
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	recipientRepo     port.DocumentRecipientRepository
 	versionRepo       port.TemplateVersionRepository
@@ -66,6 +68,13 @@ func NewReadOnlyViewService(
 // SetWorkspaceRepository enables workspace-code validation for external read-only link creation.
 func (s *ReadOnlyViewService) SetWorkspaceRepository(workspaceRepo port.WorkspaceRepository) *ReadOnlyViewService {
 	s.workspaceRepo = workspaceRepo
+	return s
+}
+
+// SetDocumentTypeRepository enables resolving a document's business type code in the
+// signing-state report. Optional: without it the code is simply omitted.
+func (s *ReadOnlyViewService) SetDocumentTypeRepository(documentTypeRepo port.DocumentTypeRepository) *ReadOnlyViewService {
+	s.documentTypeRepo = documentTypeRepo
 	return s
 }
 
@@ -210,6 +219,9 @@ func (s *ReadOnlyViewService) GetSigningStateByWorkspaceCode(
 	}
 
 	seen := make(map[string]struct{}, len(documentIDs))
+	// A batch spans only a handful of document types, so resolve each code once
+	// rather than per document.
+	typeCodes := make(map[string]string)
 	for _, rawID := range documentIDs {
 		documentID := strings.TrimSpace(rawID)
 		if documentID == "" {
@@ -221,7 +233,7 @@ func (s *ReadOnlyViewService) GetSigningStateByWorkspaceCode(
 		}
 		seen[documentID] = struct{}{}
 
-		state, err := s.resolveSigningStateDocument(ctx, workspaceCode, documentID)
+		state, err := s.resolveSigningStateDocument(ctx, workspaceCode, documentID, typeCodes)
 		if err != nil {
 			return nil, err
 		}
@@ -245,6 +257,7 @@ func (s *ReadOnlyViewService) resolveSigningStateDocument(
 	ctx context.Context,
 	workspaceCode string,
 	documentID string,
+	typeCodes map[string]string,
 ) (*documentuc.SigningStateDocument, error) {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
@@ -273,12 +286,47 @@ func (s *ReadOnlyViewService) resolveSigningStateDocument(
 	return &documentuc.SigningStateDocument{
 		DocumentID:          doc.ID,
 		ExternalReferenceID: doc.ClientExternalReferenceID,
+		DocumentTypeCode:    s.signingStateDocumentTypeCode(ctx, doc.DocumentTypeID, typeCodes),
 		Status:              doc.Status,
 		Signed:              doc.Status == entity.DocumentStatusCompleted,
 		Expired:             doc.IsExpired(),
 		ExpiresAt:           doc.ExpiresAt,
 		Recipients:          recipients,
 	}, nil
+}
+
+// signingStateDocumentTypeCode resolves the document's business type code, memoized
+// per batch. Best-effort: the code is a convenience for callers joining a document
+// back to their own per-type record, so a lookup failure returns "" rather than
+// failing a report about signatures. An empty code is itself informative — a document
+// with no type never publishes a completion event (see the completion handler).
+func (s *ReadOnlyViewService) signingStateDocumentTypeCode(
+	ctx context.Context,
+	documentTypeID string,
+	typeCodes map[string]string,
+) string {
+	documentTypeID = strings.TrimSpace(documentTypeID)
+	if documentTypeID == "" || s.documentTypeRepo == nil {
+		return ""
+	}
+	if code, cached := typeCodes[documentTypeID]; cached {
+		return code
+	}
+
+	code := ""
+	docType, err := s.documentTypeRepo.FindByID(ctx, documentTypeID)
+	switch {
+	case err != nil:
+		slog.WarnContext(ctx, "signing state: could not resolve document type code",
+			slog.String("document_type_id", documentTypeID),
+			slog.Any("error", err),
+		)
+	case docType != nil:
+		code = docType.Code
+	}
+
+	typeCodes[documentTypeID] = code
+	return code
 }
 
 func (s *ReadOnlyViewService) signingStateRecipients(

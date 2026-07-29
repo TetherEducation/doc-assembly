@@ -50,6 +50,25 @@ func (f *signingStateRecipientRepoFake) FindByDocumentIDWithRoles(
 	return f.byDocumentID[documentID], nil
 }
 
+type signingStateDocumentTypeRepoFake struct {
+	port.DocumentTypeRepository
+	byID    map[string]*entity.DocumentType
+	err     error
+	lookups []string
+}
+
+func (f *signingStateDocumentTypeRepoFake) FindByID(_ context.Context, id string) (*entity.DocumentType, error) {
+	f.lookups = append(f.lookups, id)
+	if f.err != nil {
+		return nil, f.err
+	}
+	docType, ok := f.byID[id]
+	if !ok {
+		return nil, entity.ErrRecordNotFound
+	}
+	return docType, nil
+}
+
 func newSigningStateService(
 	docs *signingStateDocumentRepoFake,
 	recipients *signingStateRecipientRepoFake,
@@ -219,6 +238,70 @@ func TestReadOnlyViewService_GetSigningStateByWorkspaceCode(t *testing.T) {
 		require.Len(t, result.Documents, 1)
 		assert.Equal(t, []string{"doc-1"}, docs.requested,
 			"trimming happens before dedupe, so ' doc-1 ' is one lookup, not two; blanks are never looked up")
+	})
+
+	// The type code is what a caller joins on to reach its own per-type record, so it
+	// matters that a batch spanning many documents of few types stays cheap.
+	t.Run("resolves each document type code once per batch", func(t *testing.T) {
+		docs := &signingStateDocumentRepoFake{byID: map[string]*entity.Document{
+			"doc-1": {ID: "doc-1", WorkspaceID: "workspace-uuid", DocumentTypeID: "type-a", Status: entity.DocumentStatusReadyToSign},
+			"doc-2": {ID: "doc-2", WorkspaceID: "workspace-uuid", DocumentTypeID: "type-a", Status: entity.DocumentStatusReadyToSign},
+			"doc-3": {ID: "doc-3", WorkspaceID: "workspace-uuid", DocumentTypeID: "type-b", Status: entity.DocumentStatusCompleted},
+		}}
+		types := &signingStateDocumentTypeRepoFake{byID: map[string]*entity.DocumentType{
+			"type-a": {ID: "type-a", Code: "ENROLLMENT_COMMITMENT"},
+			"type-b": {ID: "type-b", Code: "IMAGE_AUTHORIZATION"},
+		}}
+
+		result, err := newSigningStateService(docs, &signingStateRecipientRepoFake{}, workspaces).
+			SetDocumentTypeRepository(types).
+			GetSigningStateByWorkspaceCode(ctx, "CAMPUS_A", []string{"doc-1", "doc-2", "doc-3"})
+
+		require.NoError(t, err)
+		require.Len(t, result.Documents, 3)
+		codes := map[string]string{}
+		for _, doc := range result.Documents {
+			codes[doc.DocumentID] = doc.DocumentTypeCode
+		}
+		assert.Equal(t, "ENROLLMENT_COMMITMENT", codes["doc-1"])
+		assert.Equal(t, "ENROLLMENT_COMMITMENT", codes["doc-2"])
+		assert.Equal(t, "IMAGE_AUTHORIZATION", codes["doc-3"])
+		assert.Equal(t, []string{"type-a", "type-b"}, types.lookups, "each type resolved once, not once per document")
+	})
+
+	// Best-effort: the report is about signatures, so a type lookup failure must not
+	// fail it. Same for a document with no type at all — an empty code is informative,
+	// because such a document never publishes a completion event.
+	t.Run("omits the type code rather than failing when it cannot be resolved", func(t *testing.T) {
+		docs := &signingStateDocumentRepoFake{byID: map[string]*entity.Document{
+			"doc-broken": {ID: "doc-broken", WorkspaceID: "workspace-uuid", DocumentTypeID: "type-a", Status: entity.DocumentStatusReadyToSign},
+			"doc-notype": {ID: "doc-notype", WorkspaceID: "workspace-uuid", Status: entity.DocumentStatusReadyToSign},
+		}}
+		types := &signingStateDocumentTypeRepoFake{err: errors.New("connection reset")}
+
+		result, err := newSigningStateService(docs, &signingStateRecipientRepoFake{}, workspaces).
+			SetDocumentTypeRepository(types).
+			GetSigningStateByWorkspaceCode(ctx, "CAMPUS_A", []string{"doc-broken", "doc-notype"})
+
+		require.NoError(t, err)
+		require.Len(t, result.Documents, 2)
+		for _, doc := range result.Documents {
+			assert.Empty(t, doc.DocumentTypeCode)
+		}
+		assert.Equal(t, []string{"type-a"}, types.lookups, "a document with no type is never looked up")
+	})
+
+	t.Run("omits the type code when no document type repository is wired", func(t *testing.T) {
+		docs := &signingStateDocumentRepoFake{byID: map[string]*entity.Document{
+			"doc-1": {ID: "doc-1", WorkspaceID: "workspace-uuid", DocumentTypeID: "type-a", Status: entity.DocumentStatusCompleted},
+		}}
+
+		result, err := newSigningStateService(docs, &signingStateRecipientRepoFake{}, workspaces).
+			GetSigningStateByWorkspaceCode(ctx, "CAMPUS_A", []string{"doc-1"})
+
+		require.NoError(t, err)
+		require.Len(t, result.Documents, 1)
+		assert.Empty(t, result.Documents[0].DocumentTypeCode)
 	})
 
 	t.Run("returns nothing when the workspace code is empty", func(t *testing.T) {
