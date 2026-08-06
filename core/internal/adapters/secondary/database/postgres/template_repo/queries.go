@@ -217,15 +217,20 @@ const (
 				dt.code AS document_type_code,
 				tpl.id AS template_id,
 				tpl.process,
-				CASE WHEN tpl.process = normalized.process THEN 0 ELSE 1 END AS process_priority
+				CASE WHEN UPPER(TRIM(tpl.process)) = normalized.process THEN 0 ELSE 1 END AS process_priority
 			FROM workspace_candidates wc
 			JOIN doc_type dt ON TRUE
 			CROSS JOIN LATERAL (
 				SELECT COALESCE(NULLIF(UPPER(TRIM($4)), ''), 'DEFAULT') AS process
 			) normalized
+			-- tpl.process is normalised on both sides: the requested process is already
+			-- uppercased above, and a stored value that differs only in case still names
+			-- the same process. Comparing tpl.process raw made any template saved as
+			-- lowercase 'default' match neither branch, so it was unreachable by every
+			-- request and its workspace fell through to the DEFAULT baseline.
 			JOIN content.templates tpl ON tpl.workspace_id = wc.id
 				AND tpl.document_type_id = dt.id
-				AND tpl.process IN (normalized.process, 'DEFAULT')
+				AND UPPER(TRIM(tpl.process)) IN (normalized.process, 'DEFAULT')
 		), ranked_templates AS (
 			SELECT *
 			FROM (
@@ -342,15 +347,20 @@ const (
 				dt.code AS document_type_code,
 				tpl.id AS template_id,
 				tpl.process,
-				CASE WHEN tpl.process = normalized.process THEN 0 ELSE 1 END AS process_priority
+				CASE WHEN UPPER(TRIM(tpl.process)) = normalized.process THEN 0 ELSE 1 END AS process_priority
 			FROM workspace_candidates wc
 			JOIN doc_type dt ON TRUE
 			CROSS JOIN LATERAL (
 				SELECT COALESCE(NULLIF(UPPER(TRIM($5)), ''), 'DEFAULT') AS process
 			) normalized
+			-- tpl.process is normalised on both sides: the requested process is already
+			-- uppercased above, and a stored value that differs only in case still names
+			-- the same process. Comparing tpl.process raw made any template saved as
+			-- lowercase 'default' match neither branch, so it was unreachable by every
+			-- request and its workspace fell through to the DEFAULT baseline.
 			JOIN content.templates tpl ON tpl.workspace_id = wc.id
 				AND tpl.document_type_id = dt.id
-				AND tpl.process IN (normalized.process, 'DEFAULT')
+				AND UPPER(TRIM(tpl.process)) IN (normalized.process, 'DEFAULT')
 		), ranked_templates AS (
 			SELECT *
 			FROM (
