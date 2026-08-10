@@ -193,7 +193,12 @@ func (ic *ImageCache) resolveOne(ctx context.Context, url, typstFilename string,
 		slog.WarnContext(ctx, "failed to download image, using placeholder",
 			slog.String("url", url), slog.Any("error", err),
 		)
-		return ic.storePlaceholder(url)
+		if name := ic.writePlaceholder(); name != "" {
+			return name
+		}
+		// The placeholder could not be written; keep the original name rather
+		// than renaming the reference to nothing.
+		return typstFilename
 	}
 	return storedName
 }
@@ -222,10 +227,28 @@ func (ic *ImageCache) downloadAndStore(ctx context.Context, url string, httpClie
 	return filepath.Base(storedPath), nil
 }
 
-// storePlaceholder stores a 1x1 PNG placeholder and returns its cache filename.
-func (ic *ImageCache) storePlaceholder(url string) string {
-	_, _ = ic.Store(url, ".png", getPlaceholderPNG())
-	return cacheKeyForURL(url) + ".png"
+// placeholderFilename names the shared placeholder inside the cache directory.
+// A cache key is a 64-character hex digest, so this cannot collide with one.
+const placeholderFilename = "image-download-failed.png"
+
+// writePlaceholder writes the shared placeholder into the cache directory and
+// returns its filename.
+//
+// It is deliberately not keyed by URL. Lookup treats any file named after the
+// URL's digest as a hit, so storing the placeholder under that key made a single
+// failed download serve the placeholder for every later render until the entry
+// aged out — one transient blip from the image host degraded a school's
+// letterhead for the whole cache window. Writing to a shared name instead leaves
+// no entry for the URL, so the next render retries the download.
+func (ic *ImageCache) writePlaceholder() string {
+	ic.mu.Lock()
+	defer ic.mu.Unlock()
+
+	path := filepath.Join(ic.dir, placeholderFilename)
+	if err := os.WriteFile(path, getPlaceholderPNG(), 0o600); err != nil {
+		return ""
+	}
+	return placeholderFilename
 }
 
 var (
@@ -233,11 +256,19 @@ var (
 	placeholderPNGOnce sync.Once
 )
 
-// getPlaceholderPNG returns a valid 1x1 light gray PNG image.
+// getPlaceholderPNG returns a valid 1x1 fully transparent PNG image.
+//
+// The placeholder exists so a failed download does not leave Typst pointing at a
+// missing file, which fails the whole compile. It is transparent rather than
+// light gray because the documents rendered here are signed contracts: a header
+// image is sized by the layout (96px tall, fit: "contain"), so an opaque
+// placeholder scales up into a visible block where the school's letterhead
+// should be. Rendering nothing is the same graceful degradation an unset image
+// injectable already produces, and the download failure is still logged at WARN.
 func getPlaceholderPNG() []byte {
 	placeholderPNGOnce.Do(func() {
 		img := image.NewRGBA(image.Rect(0, 0, 1, 1))
-		img.Set(0, 0, color.RGBA{R: 220, G: 220, B: 220, A: 255})
+		img.Set(0, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0})
 		var buf bytes.Buffer
 		_ = png.Encode(&buf, img)
 		placeholderPNG = buf.Bytes()
