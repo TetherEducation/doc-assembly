@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestSanitizeTransparentRaster_BleedsTransparentEdgesWithoutChangingAlpha(t *testing.T) {
@@ -95,4 +96,65 @@ func makeTransparentEdgePNG(t *testing.T) []byte {
 		t.Fatalf("encode test png: %v", err)
 	}
 	return buf.Bytes()
+}
+
+// A failed download must not be recorded under the image's own cache key: doing
+// so served the placeholder for every later render until the entry aged out, so
+// one blip from the image host degraded a school's letterhead for the whole
+// cache window.
+func TestImageCache_FailedDownloadIsNotCachedUnderImageKey(t *testing.T) {
+	var hits int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits++
+		if hits == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(makeTransparentEdgePNG(t))
+	}))
+	defer server.Close()
+
+	cache, err := NewImageCache(ImageCacheOptions{Dir: t.TempDir(), MaxAge: time.Hour})
+	if err != nil {
+		t.Fatalf("NewImageCache returned error: %v", err)
+	}
+	defer cache.Close()
+
+	url := server.URL + "/logo.png"
+
+	// Deliberately asserted through observable behaviour rather than the
+	// placeholder's filename, so this still fails against the old
+	// store-under-the-url-key implementation instead of failing to compile.
+	first := cache.resolveOne(context.Background(), url, "img_1.png", server.Client())
+	if first == "" {
+		t.Fatalf("failed download should still resolve to some renderable file")
+	}
+	if path, found := cache.Lookup(url); found {
+		t.Fatalf("failed download must leave no cache entry for the url, found %q", path)
+	}
+
+	cache.resolveOne(context.Background(), url, "img_1.png", server.Client())
+	if hits != 2 {
+		t.Fatalf("expected the download to be retried, got %d request(s)", hits)
+	}
+	if _, found := cache.Lookup(url); !found {
+		t.Fatalf("the successful retry should have been cached")
+	}
+}
+
+// The placeholder is scaled by the layout, so an opaque one renders as a visible
+// block where a school's letterhead belongs. It must be fully transparent.
+func TestPlaceholderPNGIsFullyTransparent(t *testing.T) {
+	img, err := png.Decode(bytes.NewReader(getPlaceholderPNG()))
+	if err != nil {
+		t.Fatalf("placeholder is not a decodable png: %v", err)
+	}
+	bounds := img.Bounds()
+	if bounds.Dx() != 1 || bounds.Dy() != 1 {
+		t.Fatalf("expected a 1x1 placeholder, got %dx%d", bounds.Dx(), bounds.Dy())
+	}
+	if _, _, _, alpha := img.At(bounds.Min.X, bounds.Min.Y).RGBA(); alpha != 0 {
+		t.Fatalf("expected a fully transparent placeholder, got alpha %d", alpha)
+	}
 }
