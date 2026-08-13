@@ -60,7 +60,7 @@ func (b *TypstBuilder) Build(doc *portabledoc.Document) (string, int, []port.Sig
 	sb.WriteString(b.pageSetup(&doc.PageConfig, hasHeader))
 
 	// Base typography
-	sb.WriteString(b.typographySetup())
+	sb.WriteString(b.typographySetup(doc.Meta.Language))
 
 	// Heading styles
 	sb.WriteString(b.headingStyles())
@@ -132,9 +132,15 @@ func detectPaperSize(formatID string) string {
 }
 
 // typographySetup generates base text and paragraph settings.
-func (b *TypstBuilder) typographySetup() string {
+//
+// language drives Typst's hyphenation dictionary. Without it Typst assumes English and
+// breaks Spanish words at impossible points — "respetar" as "re-spetar", "Establecimiento"
+// as "Establec-imiento" — on documents families sign. The whole Chilean estate is Spanish
+// and its templates already declare `meta.language`, so the value only needed passing on.
+func (b *TypstBuilder) typographySetup(language string) string {
 	var sb strings.Builder
 	sb.WriteString("#set text(\n")
+	fmt.Fprintf(&sb, "  lang: %q,\n", typstLang(language))
 
 	// Font stack
 	sb.WriteString("  font: (")
@@ -157,6 +163,20 @@ func (b *TypstBuilder) typographySetup() string {
 	fmt.Fprintf(&sb, "#set par(leading: %s, spacing: %s)\n\n", b.tokens.ParagraphLeading, b.tokens.ParagraphSpacing)
 
 	return sb.String()
+}
+
+// typstLang maps a document's declared language to a Typst language code.
+//
+// Falls back to Spanish rather than Typst's English default: every tenant on this platform
+// is Chilean, so an absent or unrecognised value is far likelier to be an unset field than
+// a genuinely English document.
+func typstLang(language string) string {
+	switch strings.ToLower(strings.TrimSpace(language)) {
+	case portabledoc.LanguageEnglish:
+		return "en"
+	default:
+		return "es"
+	}
 }
 
 // headingStyles generates show rules for heading sizes matching the CSS styles.

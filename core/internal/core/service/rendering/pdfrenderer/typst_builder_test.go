@@ -412,7 +412,7 @@ func TestTypstBuilderPageSetupHalvesTopMarginWhenHeaderEnabled(t *testing.T) {
 func TestTypstBuilderTypographySetup_ConfiguresTextEdgesForCssLikeLineHeight(t *testing.T) {
 	builder := NewTypstBuilder(&typstBuilderConverterStub{}, DefaultDesignTokens())
 
-	got := builder.typographySetup()
+	got := builder.typographySetup(portabledoc.LanguageSpanish)
 
 	if !strings.Contains(got, "top-edge: 0.8em") {
 		t.Fatalf("expected typography setup to set text top edge, got %q", got)
@@ -428,5 +428,30 @@ func TestTypstBuilderTypographySetup_ConfiguresTextEdgesForCssLikeLineHeight(t *
 	}
 	if strings.Contains(got, "size: 10.5pt") {
 		t.Fatalf("expected header base font size override to stay scoped to header text only, got %q", got)
+	}
+}
+
+func TestTypstBuilderTypographySetup_SetsHyphenationLanguage(t *testing.T) {
+	builder := NewTypstBuilder(&typstBuilderConverterStub{}, DefaultDesignTokens())
+
+	// Without a language Typst hyphenates with English rules, which breaks Spanish words
+	// at impossible points ("re-spetar", "Establec-imiento") on documents families sign.
+	spanish := builder.typographySetup(portabledoc.LanguageSpanish)
+	if !strings.Contains(spanish, `lang: "es"`) {
+		t.Fatalf("expected Spanish hyphenation language, got %q", spanish)
+	}
+
+	english := builder.typographySetup(portabledoc.LanguageEnglish)
+	if !strings.Contains(english, `lang: "en"`) {
+		t.Fatalf("expected English hyphenation language, got %q", english)
+	}
+
+	// Every tenant here is Chilean, so an unset language is far likelier to be a missing
+	// field than a genuinely English document.
+	for _, absent := range []string{"", "   ", "pt-BR"} {
+		got := builder.typographySetup(absent)
+		if !strings.Contains(got, `lang: "es"`) {
+			t.Fatalf("expected Spanish fallback for %q, got %q", absent, got)
+		}
 	}
 }
