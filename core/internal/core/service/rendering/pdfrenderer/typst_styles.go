@@ -197,27 +197,37 @@ func (c *typstConverter) buildTableStyleRules(headerStyles *entity.TableStyles) 
 }
 
 // buildTableBodyStyleRules generates Typst show rules for body cell styling.
+//
+// Body rows are every row but the header, which `where()` cannot express: its `y` selector
+// takes a single integer, so the previous `where(y: range(1, none))` was rejected outright
+// with "expected integer, found none" and failed the whole compile. Any template holding a
+// table was therefore unrenderable whenever body styles were set. A predicate show rule
+// says the same thing in a form Typst accepts.
 func (c *typstConverter) buildTableBodyStyleRules(bodyStyles *entity.TableStyles) string {
 	if bodyStyles == nil {
 		return ""
 	}
 
-	var sb strings.Builder
-
+	var sets []string
 	if bodyStyles.FontWeight != nil {
-		sb.WriteString(fmt.Sprintf("#show table.cell.where(y: range(1, none)): set text(weight: \"%s\")\n", *bodyStyles.FontWeight))
+		sets = append(sets, fmt.Sprintf("set text(weight: %q)", *bodyStyles.FontWeight))
 	}
 	if bodyStyles.TextColor != nil {
-		sb.WriteString(fmt.Sprintf("#show table.cell.where(y: range(1, none)): set text(fill: rgb(\"%s\"))\n", *bodyStyles.TextColor))
+		sets = append(sets, fmt.Sprintf("set text(fill: rgb(%q))", *bodyStyles.TextColor))
 	}
 	if bodyStyles.FontSize != nil {
-		sb.WriteString(fmt.Sprintf("#show table.cell.where(y: range(1, none)): set text(size: %dpt)\n", *bodyStyles.FontSize))
+		sets = append(sets, fmt.Sprintf("set text(size: %dpt)", *bodyStyles.FontSize))
 	}
 	if bodyStyles.FontFamily != nil {
-		sb.WriteString(fmt.Sprintf("#show table.cell.where(y: range(1, none)): set text(font: %s)\n", fontWithFallbacks(*bodyStyles.FontFamily)))
+		sets = append(sets, fmt.Sprintf("set text(font: %s)", fontWithFallbacks(*bodyStyles.FontFamily)))
+	}
+	if len(sets) == 0 {
+		return ""
 	}
 
-	return sb.String()
+	// Header cells (y == 0) are left to buildTableStyleRules; everything below is body.
+	return fmt.Sprintf("#show table.cell: it => { if it.y > 0 { %s; it } else { it } }\n",
+		strings.Join(sets, "; "))
 }
 
 // buildTableAlignParam generates the align parameter for a Typst table.
