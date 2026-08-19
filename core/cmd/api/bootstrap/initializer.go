@@ -342,6 +342,9 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	processCtrl := controller.NewProcessController(processSvc, processMapper)
 	webhookCtrl := controller.NewWebhookController(documentSvc, webhookHandlers)
 	internalDocCtrl := controller.NewInternalDocumentController(internalDocSvc, documentSvc)
+	internalTemplateCtrl := controller.NewInternalTemplateController(
+		internalDocSvc, templateVersionSvc, templateVersionMapper,
+	)
 	// --- Document Access Service (email-verification gate) ---
 	paCfg := &cfg.PublicAccess
 	rateLimitMax := paCfg.RateLimitMax
@@ -407,6 +410,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		documentCtrl,
 		webhookCtrl,
 		internalDocCtrl,
+		internalTemplateCtrl,
 		publicDocAccessCtrl,
 		publicSigningCtrl,
 		publicReadOnlyViewCtrl,

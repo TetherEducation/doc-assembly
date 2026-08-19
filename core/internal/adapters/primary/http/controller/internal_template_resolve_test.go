@@ -54,7 +54,7 @@ func TestResolveTemplateReturnsResolution(t *testing.T) {
 			},
 		},
 	}
-	controller := NewInternalDocumentController(uc)
+	controller := NewInternalTemplateController(uc, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -97,7 +97,7 @@ func TestResolveTemplateRejectsMissingHeaders(t *testing.T) {
 		delete(headers, omitted)
 
 		uc := &fakeInternalDocumentUseCase{}
-		controller := NewInternalDocumentController(uc)
+		controller := NewInternalTemplateController(uc, nil, nil)
 		recorder := httptest.NewRecorder()
 		ctx, _ := gin.CreateTestContext(recorder)
 		ctx.Request = newResolveRequest(headers)
@@ -119,7 +119,7 @@ func TestResolveTemplateNotFoundMapsTo404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	uc := &fakeInternalDocumentUseCase{resolveErr: entity.ErrInternalTemplateResolutionNotFound}
-	controller := NewInternalDocumentController(uc)
+	controller := NewInternalTemplateController(uc, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -135,7 +135,7 @@ func TestResolveTemplateNormalisesProcessAndPassesEnvironment(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	uc := &fakeInternalDocumentUseCase{}
-	controller := NewInternalDocumentController(uc)
+	controller := NewInternalTemplateController(uc, nil, nil)
 
 	headers := resolveHeaders()
 	headers[HeaderEnvironment] = "dev"
@@ -164,7 +164,7 @@ func TestResolveTemplateNormalisesProcessAndPassesEnvironment(t *testing.T) {
 func TestResolveTemplateWithoutUseCaseIs500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	controller := &InternalDocumentController{}
+	controller := &InternalTemplateController{}
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
 	ctx.Request = newResolveRequest(resolveHeaders())

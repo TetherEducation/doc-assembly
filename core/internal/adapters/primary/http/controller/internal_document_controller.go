@@ -66,12 +66,6 @@ func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, authMi
 		internal.POST("/reset", c.ResetDocument)
 		internal.POST("/:documentId/deprecate", c.DeprecateDocument)
 	}
-
-	templates := api.Group("/internal/templates")
-	templates.Use(authMiddleware)
-	{
-		templates.GET("/resolve", c.ResolveTemplate)
-	}
 }
 
 // CreateDocument creates a document via internal API.
@@ -365,74 +359,6 @@ func buildDeprecateDocumentResponse(result *documentuc.DeprecateDocumentResult) 
 		}
 	}
 	return response
-}
-
-// ResolveTemplate reports which template version a create would resolve to, without creating one.
-// @Summary Resolve the template a create would use
-// @Description Runs the configured template resolver and reports the version a document created now would use. Creates nothing.
-// @Tags Internal
-// @Produce json
-// @Param X-API-Key header string true "API Key for authentication"
-// @Param X-Tenant-Code header string true "Tenant business code"
-// @Param X-Workspace-Code header string true "Workspace business code"
-// @Param X-Document-Type header string true "Document type code"
-// @Param X-Environment header string true "Environment (prod|dev)"
-// @Param X-Process header string false "Process key (default: default)"
-// @Success 200 {object} dto.InternalResolveTemplateResponse
-// @Failure 400 {object} dto.InternalErrorResponse
-// @Failure 401 {object} dto.InternalErrorResponse
-// @Failure 404 {object} dto.InternalErrorResponse
-// @Failure 500 {object} dto.InternalErrorResponse
-// @Router /api/v1/internal/templates/resolve [get]
-func (c *InternalDocumentController) ResolveTemplate(ctx *gin.Context) {
-	if c.internalDocUC == nil {
-		ctx.JSON(http.StatusInternalServerError, dto.InternalErrorResponse{
-			Error: "internal document use case is not configured",
-			Code:  "INTERNAL_ERROR",
-		})
-		return
-	}
-
-	// Deliberately a lighter header contract than create: external and transactional ids
-	// identify a document being made, and this makes none.
-	cmd := documentuc.InternalResolveTemplateCommand{
-		TenantCode:    ctx.GetHeader(HeaderTenantCode),
-		WorkspaceCode: ctx.GetHeader(HeaderWorkspaceCode),
-		DocumentType:  ctx.GetHeader(HeaderDocumentType),
-		Process:       ctx.GetHeader(HeaderProcess),
-		ProcessType:   ctx.GetHeader(HeaderProcessType),
-		Environment:   entity.Environment(ctx.GetHeader(HeaderEnvironment)),
-	}
-
-	var missing []string
-	if cmd.TenantCode == "" {
-		missing = append(missing, HeaderTenantCode)
-	}
-	if cmd.WorkspaceCode == "" {
-		missing = append(missing, HeaderWorkspaceCode)
-	}
-	if cmd.DocumentType == "" {
-		missing = append(missing, HeaderDocumentType)
-	}
-	if cmd.Environment == "" {
-		missing = append(missing, HeaderEnvironment)
-	}
-	if len(missing) > 0 {
-		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
-			Error:   "missing required headers",
-			Code:    "MISSING_HEADERS",
-			Details: missing,
-		})
-		return
-	}
-
-	result, err := c.internalDocUC.ResolveTemplate(ctx.Request.Context(), cmd)
-	if err != nil {
-		HandleError(ctx, err)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, buildResolveTemplateResponse(result))
 }
 
 func buildResolveTemplateResponse(result *documentuc.InternalResolveTemplateResult) dto.InternalResolveTemplateResponse {

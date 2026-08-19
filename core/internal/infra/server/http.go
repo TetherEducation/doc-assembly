@@ -79,6 +79,7 @@ func NewHTTPServer(
 	documentController *controller.DocumentController,
 	webhookController *controller.WebhookController,
 	internalDocController *controller.InternalDocumentController,
+	internalTemplateController *controller.InternalTemplateController,
 	publicDocAccessController *controller.PublicDocumentAccessController,
 	publicSigningController *controller.PublicSigningController,
 	publicReadOnlyViewController *controller.PublicReadOnlyViewController,
@@ -122,7 +123,7 @@ func NewHTTPServer(
 		base.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	registerInternalRoutes(base, cfg, internalDocController, keyRepo)
+	registerInternalRoutes(base, cfg, internalDocController, internalTemplateController, keyRepo)
 
 	requestTimeout := cfg.Server.WriteTimeoutDuration() - 2*time.Second
 	if requestTimeout <= 0 {
@@ -175,7 +176,13 @@ func NewHTTPServer(
 }
 
 // registerInternalRoutes registers internal API routes with configured API key authentication.
-func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocController *controller.InternalDocumentController, keyRepo port.AutomationAPIKeyRepository) {
+func registerInternalRoutes(
+	router gin.IRouter,
+	cfg *config.Config,
+	internalDocController *controller.InternalDocumentController,
+	internalTemplateController *controller.InternalTemplateController,
+	keyRepo port.AutomationAPIKeyRepository,
+) {
 	if cfg.InternalAPI.Enabled {
 		internalV1 := router.Group("/api/v1")
 		internalV1.Use(middleware.Operation())
@@ -185,6 +192,7 @@ func registerInternalRoutes(router gin.IRouter, cfg *config.Config, internalDocC
 			authMiddleware = middleware.InternalKeyAuthPreloaded(keyRepo)
 		}
 		internalDocController.RegisterRoutes(internalV1, authMiddleware)
+		internalTemplateController.RegisterRoutes(internalV1, authMiddleware)
 		slog.InfoContext(context.Background(), "internal API routes registered",
 			slog.String("api_key_auth_mode", authMode))
 	} else {
