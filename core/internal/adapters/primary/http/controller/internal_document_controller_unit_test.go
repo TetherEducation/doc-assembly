@@ -16,10 +16,13 @@ import (
 )
 
 type fakeInternalDocumentUseCase struct {
-	results  []*documentuc.InternalCreateResult
-	err      error
-	calls    int
-	received []documentuc.InternalCreateCommand
+	results         []*documentuc.InternalCreateResult
+	err             error
+	calls           int
+	received        []documentuc.InternalCreateCommand
+	resolveResult   *documentuc.InternalResolveTemplateResult
+	resolveErr      error
+	resolveReceived []documentuc.InternalResolveTemplateCommand
 }
 
 func (f *fakeInternalDocumentUseCase) CreateDocument(_ context.Context, cmd documentuc.InternalCreateCommand) (*documentuc.InternalCreateResult, error) {
@@ -40,6 +43,20 @@ func (f *fakeInternalDocumentUseCase) CreateDocument(_ context.Context, cmd docu
 
 func (f *fakeInternalDocumentUseCase) ResetUnsignedDocument(ctx context.Context, cmd documentuc.InternalCreateCommand) (*documentuc.InternalCreateResult, error) {
 	return f.CreateDocument(ctx, cmd)
+}
+
+func (f *fakeInternalDocumentUseCase) ResolveTemplate(
+	_ context.Context,
+	cmd documentuc.InternalResolveTemplateCommand,
+) (*documentuc.InternalResolveTemplateResult, error) {
+	f.resolveReceived = append(f.resolveReceived, cmd)
+	if f.resolveErr != nil {
+		return nil, f.resolveErr
+	}
+	if f.resolveResult == nil {
+		return &documentuc.InternalResolveTemplateResult{}, nil
+	}
+	return f.resolveResult, nil
 }
 
 func TestValidateAndExtractHeaders(t *testing.T) {
