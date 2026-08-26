@@ -360,3 +360,37 @@ func buildDeprecateDocumentResponse(result *documentuc.DeprecateDocumentResult) 
 	}
 	return response
 }
+
+func buildResolveTemplateResponse(result *documentuc.InternalResolveTemplateResult) dto.InternalResolveTemplateResponse {
+	// Slices are initialised rather than left nil so the JSON carries [] instead of null:
+	// a template with no signers is a real, readable answer, not a missing field.
+	resp := dto.InternalResolveTemplateResponse{
+		TenantCode:             result.TenantCode,
+		RequestedWorkspaceCode: result.RequestedWorkspaceCode,
+		ResolvedWorkspaceCode:  result.ResolvedWorkspaceCode,
+		DocumentType:           result.DocumentType,
+		Process:                result.Process,
+		TemplateID:             result.TemplateID,
+		VersionID:              result.VersionID,
+		VersionNumber:          result.VersionNumber,
+		VersionStatus:          result.VersionStatus,
+		UpdatedAt:              result.UpdatedAt,
+		SignerRoles:            make([]dto.InternalResolvedSignerRoleResponse, 0, len(result.SignerRoles)),
+		Injectables:            make([]dto.InternalResolvedInjectableResponse, 0, len(result.Injectables)),
+	}
+	for _, role := range result.SignerRoles {
+		resp.SignerRoles = append(resp.SignerRoles, dto.InternalResolvedSignerRoleResponse{
+			RoleName:     role.RoleName,
+			SignerOrder:  role.SignerOrder,
+			AnchorString: role.AnchorString,
+		})
+	}
+	for _, injectable := range result.Injectables {
+		resp.Injectables = append(resp.Injectables, dto.InternalResolvedInjectableResponse{
+			Key:        injectable.Key,
+			Label:      injectable.Label,
+			IsRequired: injectable.IsRequired,
+		})
+	}
+	return resp
+}

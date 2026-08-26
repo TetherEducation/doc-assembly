@@ -2,6 +2,7 @@ package dto
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 )
@@ -96,4 +97,38 @@ func NewRecipientValidationErrorResponse(err *entity.RecipientValidationError) R
 		Code:   "RECIPIENT_VALIDATION_FAILED",
 		Errors: err.Errors,
 	}
+}
+
+// InternalResolvedSignerRoleResponse is one signer the resolved version expects.
+type InternalResolvedSignerRoleResponse struct {
+	RoleName     string `json:"roleName"`
+	SignerOrder  int    `json:"signerOrder"`
+	AnchorString string `json:"anchorString,omitempty"`
+}
+
+// InternalResolvedInjectableResponse is one value the resolved version fills in.
+type InternalResolvedInjectableResponse struct {
+	Key        string `json:"key"`
+	Label      string `json:"label,omitempty"`
+	IsRequired bool   `json:"isRequired"`
+}
+
+// InternalResolveTemplateResponse reports which template version a create would use.
+//
+// requestedWorkspaceCode and resolvedWorkspaceCode are returned separately and left
+// unclassified: when they differ, the caller's own hierarchy took over (a network, a
+// shared baseline), and only the caller knows what those names mean.
+type InternalResolveTemplateResponse struct {
+	TenantCode             string                               `json:"tenantCode"`
+	RequestedWorkspaceCode string                               `json:"requestedWorkspaceCode"`
+	ResolvedWorkspaceCode  string                               `json:"resolvedWorkspaceCode"`
+	DocumentType           string                               `json:"documentType"`
+	Process                string                               `json:"process,omitempty"`
+	TemplateID             string                               `json:"templateId"`
+	VersionID              string                               `json:"versionId"`
+	VersionNumber          int                                  `json:"versionNumber"`
+	VersionStatus          string                               `json:"versionStatus"`
+	UpdatedAt              *time.Time                           `json:"updatedAt,omitempty"`
+	SignerRoles            []InternalResolvedSignerRoleResponse `json:"signerRoles"`
+	Injectables            []InternalResolvedInjectableResponse `json:"injectables"`
 }
