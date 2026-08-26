@@ -583,7 +583,17 @@ func CreateTestTemplateVersion(t *testing.T, pool *pgxpool.Pool,
 	versionID := uuid.NewString()
 	now := time.Now().UTC()
 
-	content := []byte(`{"version":"1.1.0","meta":{"title":"Test Document","language":"en"},"pageConfig":{"formatId":"A4","width":595,"height":842,"margins":{"top":20,"bottom":20,"left":20,"right":20}},"variableIds":[],"signerRoles":[{"id":"role-001","label":"Signer","order":1,"name":{"type":"text","value":"Test Signer"},"email":{"type":"text","value":"signer@test.com"}}],"content":{"type":"doc","content":[{"type":"signature","attrs":{"count":1,"layout":"single-center","lineWidth":"md","signatures":[{"id":"sig-001","roleId":"role-001","label":"Signer"}]}}]},"exportInfo":{"exportedAt":"2026-01-01T00:00:00Z","sourceApp":"integration-test"}}`)
+	// Declares no signer roles on purpose. Callers that need them add explicit roles via
+	// CreateTestSignerRole, with their own names, anchors and ordering.
+	//
+	// This blob used to declare a "Signer" role that no fixture ever inserted into
+	// content.template_version_signer_roles — the exact inconsistency that
+	// trigger_template_versions_require_signer_roles (migration 000022) now rejects, and
+	// the same shape that took contract creation down fleet-wide on 2026-08-14. Keeping
+	// the declaration here would have meant either publishing an inconsistent version or
+	// injecting a role that collides with the ones tests create (the signer_roles table
+	// is unique on version+name, version+anchor and version+order).
+	content := []byte(`{"version":"1.1.0","meta":{"title":"Test Document","language":"en"},"pageConfig":{"formatId":"A4","width":595,"height":842,"margins":{"top":20,"bottom":20,"left":20,"right":20}},"variableIds":[],"signerRoles":[],"content":{"type":"doc","content":[]},"exportInfo":{"exportedAt":"2026-01-01T00:00:00Z","sourceApp":"integration-test"}}`)
 
 	_, err := pool.Exec(ctx, `
 		INSERT INTO content.template_versions
@@ -591,6 +601,37 @@ func CreateTestTemplateVersion(t *testing.T, pool *pgxpool.Pool,
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		versionID, templateID, versionNumber, name, nil, content, status, now)
 	require.NoError(t, err, "failed to create test template version")
+
+	return versionID
+}
+
+// CreateTestPublishableTemplateVersion creates a DRAFT version whose content declares a
+// signer role and carries the matching signature node, so it passes ValidateForPublish.
+//
+// Use this for tests that publish through the service (POST .../publish). That path runs
+// replaceSignerRoles before flipping the status, so the derived rows exist by the time
+// trigger_template_versions_require_signer_roles evaluates the row.
+//
+// CreateTestTemplateVersion deliberately declares no signer roles, because tests that
+// publish by direct SQL (PublishTestVersion) would otherwise be asserting the exact
+// inconsistent shape the trigger exists to reject.
+func CreateTestPublishableTemplateVersion(t *testing.T, pool *pgxpool.Pool,
+	templateID string, versionNumber int, name string) string {
+	t.Helper()
+	ctx := context.Background()
+
+	versionID := uuid.NewString()
+	now := time.Now().UTC()
+
+	content := []byte(`{"version":"1.1.0","meta":{"title":"Test Document","language":"en"},"pageConfig":{"formatId":"A4","width":595,"height":842,"margins":{"top":20,"bottom":20,"left":20,"right":20}},"variableIds":[],"signerRoles":[{"id":"role-001","label":"Signer","order":1,"name":{"type":"text","value":"Test Signer"},"email":{"type":"text","value":"signer@test.com"}}],"content":{"type":"doc","content":[{"type":"signature","attrs":{"count":1,"layout":"single-center","lineWidth":"md","signatures":[{"id":"sig-001","roleId":"role-001","label":"Signer"}]}}]},"exportInfo":{"exportedAt":"2026-01-01T00:00:00Z","sourceApp":"integration-test"}}`)
+
+	_, err := pool.Exec(ctx, `
+		INSERT INTO content.template_versions
+			(id, template_id, version_number, name, description, content_structure, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		versionID, templateID, versionNumber, name, nil, content,
+		entity.VersionStatusDraft, now)
+	require.NoError(t, err, "failed to create publishable test template version")
 
 	return versionID
 }
