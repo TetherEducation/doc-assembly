@@ -77,7 +77,15 @@ func NewAutomationController(
 }
 
 // RegisterRoutes sets up the /api/v1/automation route group with its own middleware chain.
-func (ctrl *AutomationController) RegisterRoutes(base *gin.Engine, middlewareProvider *middleware.Provider) {
+//
+// Takes gin.IRouter rather than *gin.Engine so the caller can mount this under the
+// configured server base path. Mounting on the engine root instead made these routes
+// unreachable wherever a base path is set: in production DOC_ENGINE_SERVER_BASE_PATH is
+// "/doc-assembly" and the load balancer only forwards /doc-assembly/*, so every
+// /api/v1/automation/* request 404'd before reaching the handler. It went unnoticed
+// because the test server runs with an empty base path, where engine root and base are
+// the same router.
+func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewareProvider *middleware.Provider) {
 	g := base.Group("/api/v1/automation")
 	g.Use(middleware.Operation())
 	g.Use(middleware.RequestTimeout(automationRequestTimeout))
