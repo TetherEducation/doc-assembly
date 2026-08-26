@@ -363,7 +363,7 @@ func TestTemplateVersionController_PublishVersion(t *testing.T) {
 	defer testhelper.CleanupTemplate(t, pool, templateID)
 
 	t.Run("success with ADMIN", func(t *testing.T) {
-		versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+		versionID := testhelper.CreateTestPublishableTemplateVersion(t, pool, templateID, 1, "v1.0")
 		defer testhelper.CleanupTemplateVersion(t, pool, versionID)
 
 		resp, _ := client.
@@ -463,7 +463,7 @@ func TestTemplateVersionController_SchedulePublish(t *testing.T) {
 	defer testhelper.CleanupTemplate(t, pool, templateID)
 
 	t.Run("success", func(t *testing.T) {
-		versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+		versionID := testhelper.CreateTestPublishableTemplateVersion(t, pool, templateID, 1, "v1.0")
 		defer testhelper.CleanupTemplateVersion(t, pool, versionID)
 
 		futureTime := time.Now().Add(24 * time.Hour).UTC()
