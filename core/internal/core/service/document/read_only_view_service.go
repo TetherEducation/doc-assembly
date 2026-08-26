@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 type ReadOnlyViewService struct {
 	documentRepo      port.DocumentRepository
 	workspaceRepo     port.WorkspaceRepository
+	documentTypeRepo  port.DocumentTypeRepository
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	recipientRepo     port.DocumentRecipientRepository
 	versionRepo       port.TemplateVersionRepository
@@ -66,6 +68,13 @@ func NewReadOnlyViewService(
 // SetWorkspaceRepository enables workspace-code validation for external read-only link creation.
 func (s *ReadOnlyViewService) SetWorkspaceRepository(workspaceRepo port.WorkspaceRepository) *ReadOnlyViewService {
 	s.workspaceRepo = workspaceRepo
+	return s
+}
+
+// SetDocumentTypeRepository enables resolving a document's business type code in the
+// signing-state report. Optional: without it the code is simply omitted.
+func (s *ReadOnlyViewService) SetDocumentTypeRepository(documentTypeRepo port.DocumentTypeRepository) *ReadOnlyViewService {
+	s.documentTypeRepo = documentTypeRepo
 	return s
 }
 
@@ -189,6 +198,162 @@ func (s *ReadOnlyViewService) matchesDocumentWorkspaceCode(
 		return false, fmt.Errorf("find parent workspace: %w", err)
 	}
 	return parent != nil && strings.EqualFold(parent.Code, workspaceCode), nil
+}
+
+// GetSigningStateByWorkspaceCode reports the real signing state of each requested
+// document, authorized by workspace business code.
+//
+// Unlike the read-only link and print-PDF flows, this deliberately does NOT reject
+// invalidated, cancelled or expired documents: reporting that a document is in a
+// dead state is the useful answer, not an error. Callers use it to tell "nobody
+// ever signed this" apart from "signed", and to spot documents that need
+// regenerating rather than a reminder.
+func (s *ReadOnlyViewService) GetSigningStateByWorkspaceCode(
+	ctx context.Context,
+	workspaceCode string,
+	documentIDs []string,
+) (*documentuc.SigningStateResult, error) {
+	result := &documentuc.SigningStateResult{
+		Documents:   make([]documentuc.SigningStateDocument, 0, len(documentIDs)),
+		Unavailable: make([]string, 0),
+	}
+
+	seen := make(map[string]struct{}, len(documentIDs))
+	// A batch spans only a handful of document types, so resolve each code once
+	// rather than per document.
+	typeCodes := make(map[string]string)
+	for _, rawID := range documentIDs {
+		documentID := strings.TrimSpace(rawID)
+		if documentID == "" {
+			continue
+		}
+		// Callers batch by admission and can legitimately repeat an ID; answer once.
+		if _, duplicate := seen[documentID]; duplicate {
+			continue
+		}
+		seen[documentID] = struct{}{}
+
+		state, err := s.resolveSigningStateDocument(ctx, workspaceCode, documentID, typeCodes)
+		if err != nil {
+			return nil, err
+		}
+		if state == nil {
+			result.Unavailable = append(result.Unavailable, documentID)
+			continue
+		}
+		result.Documents = append(result.Documents, *state)
+	}
+
+	return result, nil
+}
+
+// resolveSigningStateDocument returns nil when the document does not exist or is
+// not visible to workspaceCode. Both cases collapse to nil on purpose so the
+// caller cannot report them differently — see SigningStateResult.Unavailable.
+//
+// A missing document is a per-item outcome rather than a batch failure: one stale
+// reference in a caller's set must not blank the whole answer.
+func (s *ReadOnlyViewService) resolveSigningStateDocument(
+	ctx context.Context,
+	workspaceCode string,
+	documentID string,
+	typeCodes map[string]string,
+) (*documentuc.SigningStateDocument, error) {
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if err != nil {
+		if errors.Is(err, entity.ErrDocumentNotFound) || errors.Is(err, entity.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find document: %w", err)
+	}
+	if doc == nil {
+		return nil, nil
+	}
+
+	matches, err := s.matchesDocumentWorkspaceCode(ctx, doc, workspaceCode)
+	if err != nil {
+		return nil, err
+	}
+	if !matches {
+		return nil, nil
+	}
+
+	recipients, err := s.signingStateRecipients(ctx, doc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &documentuc.SigningStateDocument{
+		DocumentID:          doc.ID,
+		ExternalReferenceID: doc.ClientExternalReferenceID,
+		DocumentTypeCode:    s.signingStateDocumentTypeCode(ctx, doc.DocumentTypeID, typeCodes),
+		Status:              doc.Status,
+		Signed:              doc.Status == entity.DocumentStatusCompleted,
+		Expired:             doc.IsExpired(),
+		ExpiresAt:           doc.ExpiresAt,
+		Recipients:          recipients,
+	}, nil
+}
+
+// signingStateDocumentTypeCode resolves the document's business type code, memoized
+// per batch. Best-effort: the code is a convenience for callers joining a document
+// back to their own per-type record, so a lookup failure returns "" rather than
+// failing a report about signatures. An empty code is itself informative — a document
+// with no type never publishes a completion event (see the completion handler).
+func (s *ReadOnlyViewService) signingStateDocumentTypeCode(
+	ctx context.Context,
+	documentTypeID string,
+	typeCodes map[string]string,
+) string {
+	documentTypeID = strings.TrimSpace(documentTypeID)
+	if documentTypeID == "" || s.documentTypeRepo == nil {
+		return ""
+	}
+	if code, cached := typeCodes[documentTypeID]; cached {
+		return code
+	}
+
+	code := ""
+	docType, err := s.documentTypeRepo.FindByID(ctx, documentTypeID)
+	switch {
+	case err != nil:
+		slog.WarnContext(ctx, "signing state: could not resolve document type code",
+			slog.String("document_type_id", documentTypeID),
+			slog.Any("error", err),
+		)
+	case docType != nil:
+		code = docType.Code
+	}
+
+	typeCodes[documentTypeID] = code
+	return code
+}
+
+func (s *ReadOnlyViewService) signingStateRecipients(
+	ctx context.Context,
+	documentID string,
+) ([]documentuc.SigningStateRecipient, error) {
+	recipients, err := s.recipientRepo.FindByDocumentIDWithRoles(ctx, documentID)
+	if err != nil {
+		return nil, fmt.Errorf("find signing state recipients: %w", err)
+	}
+
+	out := make([]documentuc.SigningStateRecipient, 0, len(recipients))
+	for _, recipient := range recipients {
+		if recipient == nil {
+			continue
+		}
+		out = append(out, documentuc.SigningStateRecipient{
+			Name:        recipient.Name,
+			Email:       recipient.Email,
+			RoleName:    recipient.RoleName,
+			SignerOrder: recipient.SignerOrder,
+			Status:      recipient.Status,
+			Signed:      recipient.Status == entity.RecipientStatusSigned,
+			SignedAt:    recipient.SignedAt,
+		})
+	}
+	return out, nil
 }
 
 // GetReadOnlyView returns read-only metadata/content for a public token.

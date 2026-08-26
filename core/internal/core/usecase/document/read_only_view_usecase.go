@@ -36,6 +36,50 @@ type ReadOnlyViewResponse struct {
 	Reason         *string
 }
 
+// SigningStateRecipient reports one recipient's progress on a document.
+type SigningStateRecipient struct {
+	Name        string
+	Email       string
+	RoleName    string
+	SignerOrder int
+	// Status is the recipient projection on the document. Only SIGNED is
+	// authoritative: intermediate provider states (SENT/DELIVERED) are owned by
+	// the signing attempt and are not consistently projected back here.
+	Status   entity.RecipientStatus
+	Signed   bool
+	SignedAt *time.Time
+}
+
+// SigningStateDocument reports whether one document has actually been signed.
+type SigningStateDocument struct {
+	DocumentID          string
+	ExternalReferenceID *string
+	// DocumentTypeCode lets a caller join this document back to its own per-type
+	// record without trusting its local mapping. Empty when the document has no
+	// type, which is itself worth knowing: such a document never publishes a
+	// completion event even if it is signed.
+	DocumentTypeCode string
+	Status           entity.DocumentStatus
+	// Signed is the single question callers are asking: did this document reach
+	// COMPLETED. A caller's own workflow state saying "done" is not evidence.
+	Signed bool
+	// Expired documents cannot mint a signing session (CreateOrGetSession
+	// refuses them), so they need regeneration rather than a reminder.
+	Expired    bool
+	ExpiresAt  *time.Time
+	Recipients []SigningStateRecipient
+}
+
+// SigningStateResult is the batch answer for a set of requested document IDs.
+type SigningStateResult struct {
+	Documents []SigningStateDocument
+	// Unavailable lists requested IDs that were not resolved. Documents that do
+	// not exist and documents belonging to another workspace are deliberately
+	// merged here so the endpoint cannot be used to probe for the existence of
+	// documents outside the caller's workspace.
+	Unavailable []string
+}
+
 // ReadOnlyViewUseCase defines the input port for expiring read-only document views.
 type ReadOnlyViewUseCase interface {
 	CreateReadOnlyViewLink(ctx context.Context, workspaceID, documentID string) (*CreateReadOnlyViewLinkResult, error)
@@ -48,4 +92,9 @@ type ReadOnlyViewUseCase interface {
 	// GetPrintPDFByWorkspaceCode is the external-caller flavor of GetPrintPDF,
 	// authorized by workspace business code.
 	GetPrintPDFByWorkspaceCode(ctx context.Context, workspaceCode, documentID string, blank bool) ([]byte, string, error)
+	// GetSigningStateByWorkspaceCode reports, for each requested document, whether
+	// it was actually signed. External callers track their own completion state
+	// (e.g. a CRM requirement marked done by staff) which can diverge from whether
+	// anyone ever signed; this is the authoritative answer.
+	GetSigningStateByWorkspaceCode(ctx context.Context, workspaceCode string, documentIDs []string) (*SigningStateResult, error)
 }

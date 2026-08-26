@@ -265,6 +265,14 @@ func registerReadOnlyViewLinkRoute(
 		middleware.ReadOnlyViewLinkCustomAuth(auth),
 		documentController.GetDocumentPrintPDFByWorkspaceCode,
 	)
+	// Batch, so a caller reconciling many documents does not need one request per
+	// document. The static "signing-state" segment is a sibling of ":documentId"
+	// under POST, same as the panel group's "/documents/batch".
+	v1.POST(
+		"/documents/signing-state",
+		middleware.ReadOnlyViewLinkCustomAuth(auth),
+		documentController.GetDocumentsSigningStateByWorkspaceCode,
+	)
 }
 
 func registerLegacyDocumentRoute(

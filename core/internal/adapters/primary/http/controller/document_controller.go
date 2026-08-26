@@ -318,6 +318,95 @@ func (c *DocumentController) GetDocumentPrintPDFByWorkspaceCode(ctx *gin.Context
 	HandleError(ctx, entity.ErrForbidden)
 }
 
+// maxSigningStateDocumentIDs bounds one batch. Each ID costs two queries (document
+// + recipients), so this caps a single request's fan-out; callers reconciling a
+// whole cohort are expected to page rather than send one enormous batch.
+const maxSigningStateDocumentIDs = 200
+
+// GetDocumentsSigningStateByWorkspaceCode reports the real signing state of a batch
+// of documents for external callers identifying the workspace by business code.
+// @Summary Get documents signing state
+// @Description Reports, per document, whether it was actually signed, plus per-recipient progress. Lets a caller tell "nobody ever signed" apart from "signed" instead of trusting its own workflow state.
+// @Tags Documents
+// @Accept json
+// @Produce json
+// @Param X-Workspace-Code header string true "Workspace business code"
+// @Param request body dto.SigningStateRequest true "Document IDs to report on"
+// @Success 200 {object} dto.SigningStateResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/documents/signing-state [post]
+func (c *DocumentController) GetDocumentsSigningStateByWorkspaceCode(ctx *gin.Context) {
+	workspaceCode := strings.TrimSpace(ctx.GetHeader(middleware.ReadOnlyViewLinkWorkspaceCodeHeader))
+	if workspaceCode == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		return
+	}
+
+	var req dto.SigningStateRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "documentIds is required"})
+		return
+	}
+
+	pending := normalizeSigningStateDocumentIDs(req.DocumentIDs)
+	if len(pending) == 0 {
+		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "documentIds must contain at least one id"})
+		return
+	}
+	if len(pending) > maxSigningStateDocumentIDs {
+		ctx.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error: fmt.Sprintf("documentIds must contain at most %d ids", maxSigningStateDocumentIDs),
+		})
+		return
+	}
+
+	// The single-document endpoints treat the candidate codes as "try until one is
+	// allowed". A batch cannot: documents in one request may sit under different
+	// authorized codes (campus, network, sandbox parent), so each pass resolves what
+	// it can and hands the rest to the next candidate. Anything no authorized code
+	// resolves stays unavailable.
+	documents := make([]documentuc.SigningStateDocument, 0, len(pending))
+	for _, candidateCode := range readOnlyViewWorkspaceCodeCandidates(ctx, workspaceCode) {
+		if len(pending) == 0 {
+			break
+		}
+		result, err := c.readOnlyViewUC.GetSigningStateByWorkspaceCode(ctx.Request.Context(), candidateCode, pending)
+		if err != nil {
+			if errors.Is(err, entity.ErrForbidden) {
+				continue
+			}
+			HandleError(ctx, err)
+			return
+		}
+		documents = append(documents, result.Documents...)
+		pending = result.Unavailable
+	}
+
+	ctx.JSON(http.StatusOK, dto.NewSigningStateResponse(&documentuc.SigningStateResult{
+		Documents:   documents,
+		Unavailable: pending,
+	}))
+}
+
+func normalizeSigningStateDocumentIDs(ids []string) []string {
+	seen := make(map[string]struct{}, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
 func printPDFBlankParam(ctx *gin.Context) bool {
 	value := strings.ToLower(strings.TrimSpace(ctx.Query("blank")))
 	return value == "1" || value == "true"
