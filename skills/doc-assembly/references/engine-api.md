@@ -9,7 +9,9 @@ engine := sdk.New()                           // default config search
 engine := sdk.NewWithConfig("settings/app.yaml") // explicit path
 ```
 
-Every method below returns `*Engine`, so configuration can be chained. They must be called **before** `Run()` — there is no hot-reconfiguration after start.
+Configuration methods below return `*Engine`, so they can be chained. They must be called **before** `Run()` — there is no hot-reconfiguration after start.
+
+**Runtime commands** are the exception: they return a result (not `*Engine`) and are callable **after** initialize (including from `OnDocumentCompleted` after `Run()`). Calling them before initialize returns `sdk.ErrEngineNotInitialized`.
 
 ## Lifecycle
 
@@ -94,6 +96,18 @@ Use these for request enrichment (custom headers, audit trails, tenant resolutio
 | Method | Purpose |
 |---|---|
 | `OnDocumentCompleted(fn sdk.DocumentCompletedHandler)` | Callback invoked from within the River `dispatch_attempt_completion` worker when a document reaches `COMPLETED`. Return an error to retry with backoff. See [completion-events.md](completion-events.md). |
+
+## Runtime commands
+
+These are callable after initialize (from `OnDocumentCompleted`, `OnStart`, or any other `*Engine` holder). They are not `Set*` configuration.
+
+| Method | Returns | Purpose |
+|---|---|---|
+| `CreateReadOnlyViewLinkByWorkspaceCode(ctx, workspaceCode, documentID)` | `(*sdk.CreateReadOnlyViewLinkResult, error)` | Mints a fresh Read-Only View Link using the same rules as `POST /api/v1/documents/{documentId}/view-link`. Pass `ev.WorkspaceCode` and `ev.DocumentID` from a completion event. No Keycloak. Does not return PDF bytes. |
+
+`CreateReadOnlyViewLinkResult` has `URL` (view page, no `/pdf` suffix), `Token`, and `ExpiresAt`. Byte fetch is `GET {URL}/pdf` — token only, no `Authorization`. Before initialize: `sdk.ErrEngineNotInitialized`. After initialize with a missing use case: `sdk.ErrReadOnlyViewNotWired` (library bug, not a silent skip).
+
+Creation is still not a `SigningProvider` concern. See [signing.md](signing.md).
 
 ## Default resolution rules
 

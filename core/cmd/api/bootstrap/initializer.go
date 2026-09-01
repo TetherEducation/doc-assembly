@@ -378,6 +378,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	).SetWorkspaceRepository(workspaceRepo).
 		SetDocumentTypeRepository(documentTypeRepo).
 		SetCompletedPDFProvider(signingProvider, signingAttemptRepo)
+	e.readOnlyViewUseCase = readOnlyViewSvc
 	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
 	publicSigningCtrl := controller.NewPublicSigningController(preSigningSvc, documentAccessSvc, publicURL)
@@ -431,6 +432,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	sched := scheduler.New(cfg.Scheduler.Enabled)
 	registerSchedulerJobs(sched, &cfg.Scheduler, documentSvc)
 
+	e.initialized = true
 	return &appComponents{
 		httpServer:  httpServer,
 		dbPool:      pool,

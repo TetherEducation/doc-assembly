@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -15,9 +16,18 @@ import (
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/service/rendering/pdfrenderer"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
 	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 	"github.com/TetherEducation/doc-assembly/core/internal/infra/logging"
 	"github.com/TetherEducation/doc-assembly/core/internal/migrations"
+)
+
+var (
+	// ErrEngineNotInitialized is returned by runtime Engine commands called before initialize.
+	ErrEngineNotInitialized = errors.New("engine not initialized")
+	// ErrReadOnlyViewNotWired is returned when initialize completed but the
+	// read-only view use case pointer is missing. That is a library bug.
+	ErrReadOnlyViewNotWired = errors.New("read-only view use case missing after initialize")
 )
 
 // Engine is the main entry point for doc-assembly.
@@ -60,6 +70,9 @@ type Engine struct {
 	// Lifecycle hooks
 	onStartHooks    []func(ctx context.Context) error // Run after config/preflight, before HTTP server
 	onShutdownHooks []func(ctx context.Context) error // Run after HTTP server stops, before exit
+
+	initialized         bool
+	readOnlyViewUseCase documentuc.ReadOnlyViewUseCase
 }
 
 // OnDocumentCompleted registers a handler that is called when a document
@@ -68,6 +81,23 @@ type Engine struct {
 func (e *Engine) OnDocumentCompleted(fn port.DocumentCompletedHandler) *Engine {
 	e.documentCompletedHandler = fn
 	return e
+}
+
+// CreateReadOnlyViewLinkByWorkspaceCode mints a fresh Read-Only View Link for a
+// document identified by workspace business code. It is a runtime command: call
+// it after initialize (from OnDocumentCompleted or any other *Engine holder),
+// not as a pre-Run Set*.
+func (e *Engine) CreateReadOnlyViewLinkByWorkspaceCode(
+	ctx context.Context,
+	workspaceCode, documentID string,
+) (*documentuc.CreateReadOnlyViewLinkResult, error) {
+	if !e.initialized {
+		return nil, ErrEngineNotInitialized
+	}
+	if e.readOnlyViewUseCase == nil {
+		return nil, ErrReadOnlyViewNotWired
+	}
+	return e.readOnlyViewUseCase.CreateReadOnlyViewLinkByWorkspaceCode(ctx, workspaceCode, documentID)
 }
 
 // New creates a new Engine with default configuration.
