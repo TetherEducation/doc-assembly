@@ -22,7 +22,22 @@ engine.OnDocumentCompleted(func(ctx context.Context, ev sdk.DocumentCompletedEve
 })
 ```
 
-You can register only **one** handler per engine. Calling `OnDocumentCompleted` twice replaces the previous one.
+You can register only **one** handler per engine. Calling `OnDocumentCompleted` twice replaces the previous one. Register the handler **before** `Run()`. The callback runs later, inside a River worker, after initialize — so it may close over `*Engine` and call runtime commands.
+
+To mint a Read-Only View Link for a downstream fetcher that GETs PDF bytes with no extra headers:
+
+```go
+engine := sdk.New()
+engine.OnDocumentCompleted(func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {
+    link, err := engine.CreateReadOnlyViewLinkByWorkspaceCode(ctx, ev.WorkspaceCode, ev.DocumentID)
+    if err != nil {
+        return err
+    }
+    return postDownloadURL(ctx, ev, link.URL+"/pdf")
+})
+```
+
+`link.URL` is the view page (`/public/view/{token}`). Byte fetch is `GET {URL}/pdf` — token only, no `Authorization`. See [engine-api.md](engine-api.md) and [signing.md](signing.md).
 
 ## Event payload
 
@@ -64,7 +79,9 @@ The handler runs inside a River worker:
 | `nil` | Job ack'd. Done. |
 | `error` | River retries with exponential backoff according to its default policy. Same `(DocumentID, attempt_id)` will be re-delivered. |
 
-This means **your handler MUST be idempotent**. The same event can be delivered twice (after a transient failure on first attempt). De-dupe by `(DocumentID, AttemptID-from-event-context)` or by a unique key in your downstream system. A naïve "always insert a new audit row" implementation will produce duplicates after the first retry.
+This means **your handler MUST be idempotent** at the downstream system. The same event can be delivered twice (after a transient failure on first attempt). De-dupe by `(DocumentID, AttemptID-from-event-context)` or by a unique key in your downstream system. A naïve "always insert a new audit row" implementation will produce duplicates after the first retry.
+
+`CreateReadOnlyViewLinkByWorkspaceCode` mints a **fresh** Read-Only View Link on every call (same as HTTP `POST .../view-link`). That is not idempotent at the token row. Idempotency belongs on the downstream POST: replace `downloadUrl` for that document with `{URL}/pdf` from *this* invocation. Do not try to reuse an older token.
 
 Long-running work: keep the handler short. If you need to do heavy work, enqueue your own job onto your own queue from inside the handler and return `nil` once the enqueue commits.
 
@@ -82,7 +99,7 @@ What is **not** guaranteed:
 - That all email notifications already went out (notifications are best-effort).
 - The order of completion handler vs your own scheduler-driven cleanup jobs — they run in their own River workers.
 
-If your handler depends on the signed PDF bytes, fetch them from the storage adapter using the `DocumentID`; do not assume any specific download URL is in `Metadata`.
+If your handler needs a **public** PDF URL (another service GETs bytes with no `Authorization`), mint a Read-Only View Link and use `{URL}/pdf`. If your handler needs the signed PDF **bytes in-process**, fetch them from the storage adapter using the `DocumentID`. Do not assume any specific download URL is in `Metadata`. Do not wrap HTTP to this engine.
 
 ## What if you do not register a handler?
 

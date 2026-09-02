@@ -11,3 +11,10 @@ var New = bootstrap.New
 
 // NewWithConfig creates a new Engine that loads config from the given file path.
 var NewWithConfig = bootstrap.NewWithConfig
+
+// Runtime command errors. CreateReadOnlyViewLinkByWorkspaceCode returns these
+// instead of panicking when the engine is not ready.
+var (
+	ErrEngineNotInitialized = bootstrap.ErrEngineNotInitialized
+	ErrReadOnlyViewNotWired = bootstrap.ErrReadOnlyViewNotWired
+)

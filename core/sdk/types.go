@@ -1,6 +1,9 @@
 package sdk
 
-import "github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+import (
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	documentuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/document"
+)
 
 // --- Core Context & Results ---
 
@@ -12,6 +15,11 @@ type InjectorResult = entity.InjectorResult
 
 // InjectableValue wraps a typed value (string, number, table, etc.).
 type InjectableValue = entity.InjectableValue
+
+// CreateReadOnlyViewLinkResult is the expiring public Read-Only View Link
+// returned by Engine.CreateReadOnlyViewLinkByWorkspaceCode. URL is the view
+// page; byte fetch is GET {URL}/pdf (token only, no Authorization).
+type CreateReadOnlyViewLinkResult = documentuc.CreateReadOnlyViewLinkResult
 
 // --- Value Type Enum ---
 

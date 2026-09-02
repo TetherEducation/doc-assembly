@@ -20,6 +20,10 @@ _Avoid_: doc-assembly document, managed document
 A document created, stored, rendered, signed, or viewed through the current doc-assembly document lifecycle. It must be accessed through the standard doc-assembly document, signing, and read-only view flows.
 _Avoid_: legacy document, external document
 
+**Read-Only View Link**:
+An expiring public grant of read-only access to a Doc Assembly Document. It is not permission to sign or edit. The same grant exists however it is issued.
+_Avoid_: View Link, signing link, access link
+
 ## Example Dialogue
 
 Developer: "Can we use the Legacy Document Proxy to fetch an old contract from our previous storage system?"
@@ -33,3 +37,11 @@ Domain Expert: "The Legacy Document Handler decides that; doc-assembly only prov
 Developer: "Can we use it to download a doc-assembly document without going through the read-only view flow?"
 
 Domain Expert: "No. Doc Assembly Documents stay on the standard document access paths; the proxy only exists for legacy documents."
+
+Developer: "Is a View Link a different kind of access than a Read-Only View Link?"
+
+Domain Expert: "No. Read-Only View Link is the name. It never grants signing."
+
+Developer: "If a host issues one when a document completes, is that a different grant than one issued from the panel?"
+
+Domain Expert: "No. It is the same Read-Only View Link."
