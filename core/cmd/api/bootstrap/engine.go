@@ -61,8 +61,9 @@ type Engine struct {
 	webhookHandlers      map[string]port.WebhookHandler
 
 	// Middleware
-	globalMiddleware []gin.HandlerFunc // Applied to all routes (after CORS, before auth)
-	apiMiddleware    []gin.HandlerFunc // Applied to /api/v1/* routes (after auth)
+	globalMiddleware []gin.HandlerFunc   // Applied to all routes (after CORS, before auth)
+	apiMiddleware    []gin.HandlerFunc   // Applied to /api/v1/* routes (after auth)
+	routeRegistrars  []func(gin.IRouter) // Wrapper routes mounted on the base path group
 
 	// Worker
 	documentCompletedHandler port.DocumentCompletedHandler
@@ -277,6 +278,17 @@ func (e *Engine) SetWebhookHandlers(handlers map[string]port.WebhookHandler) *En
 // Execution order: Recovery -> Logger -> CORS -> [User Global Middleware] -> Routes
 func (e *Engine) UseMiddleware(mw gin.HandlerFunc) *Engine {
 	e.globalMiddleware = append(e.globalMiddleware, mw)
+	return e
+}
+
+// RegisterRoutes lets a wrapper mount its own handlers on the engine base path
+// group. Registrars run after every built-in controller and before the SPA
+// fallback, so a wrapper route wins over the catch-all. The group carries
+// recovery, logging and CORS but no authentication: the handler owns its own.
+func (e *Engine) RegisterRoutes(fn func(base gin.IRouter)) *Engine {
+	if fn != nil {
+		e.routeRegistrars = append(e.routeRegistrars, fn)
+	}
 	return e
 }
 
