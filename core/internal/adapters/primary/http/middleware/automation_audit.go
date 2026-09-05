@@ -75,9 +75,10 @@ func AutomationAuditLogger(auditRepo port.AutomationAuditLogRepository) gin.Hand
 }
 
 // captureRequestBody buffers the whole request body so downstream handlers see every byte,
-// and returns what the audit entry should persist: the body itself when it fits within
-// bodyCaptureLimitBytes, otherwise a small marker object. A truncated prefix is never stored:
-// it is not valid JSON, and the JSONB column would reject the whole audit row.
+// and returns what the audit entry should persist: the body itself when it is valid JSON
+// that fits within bodyCaptureLimitBytes, otherwise a small marker object. Neither a
+// truncated prefix nor malformed JSON is ever stored verbatim: the JSONB column would
+// reject it, and with it the whole audit row.
 func captureRequestBody(c *gin.Context) json.RawMessage {
 	if c.Request.Body == nil || c.Request.Body == http.NoBody {
 		return nil
@@ -89,6 +90,8 @@ func captureRequestBody(c *gin.Context) json.RawMessage {
 		return nil
 	case len(raw) > bodyCaptureLimitBytes:
 		return truncatedBodyMarker(len(raw))
+	case !json.Valid(raw):
+		return invalidBodyMarker(len(raw))
 	default:
 		return raw
 	}
@@ -98,6 +101,11 @@ func captureRequestBody(c *gin.Context) json.RawMessage {
 func truncatedBodyMarker(originalBytes int) json.RawMessage {
 	return json.RawMessage(fmt.Sprintf(
 		`{"truncated":true,"originalBytes":%d,"limitBytes":%d}`, originalBytes, bodyCaptureLimitBytes))
+}
+
+// invalidBodyMarker is stored in place of bodies that are not valid JSON.
+func invalidBodyMarker(originalBytes int) json.RawMessage {
+	return json.RawMessage(fmt.Sprintf(`{"invalidJson":true,"originalBytes":%d}`, originalBytes))
 }
 
 // responseStatusWriter wraps gin.ResponseWriter to capture the HTTP status code.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -155,4 +156,21 @@ func TestAutomationAuditLogger_NoBodyStoresNothing(t *testing.T) {
 
 	entry := awaitAuditEntry(t, repo)
 	assert.Nil(t, entry.RequestBody)
+}
+
+func TestAutomationAuditLogger_MalformedBodyIsMarked(t *testing.T) {
+	repo := newFakeAuditLogRepo()
+	var seen []byte
+	router := newAuditTestRouter(repo, &seen)
+	body := []byte(`{"pad": "unterminated`)
+
+	req := httptest.NewRequest(http.MethodPut, auditTestPath, bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, body, seen, "handler must still receive the malformed body")
+
+	entry := awaitAuditEntry(t, repo)
+	assert.JSONEq(t, fmt.Sprintf(`{"invalidJson":true,"originalBytes":%d}`, len(body)), string(entry.RequestBody))
 }

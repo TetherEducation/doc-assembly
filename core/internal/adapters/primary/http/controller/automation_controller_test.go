@@ -451,6 +451,45 @@ func TestAutomationController_UpdateContentLargeBody(t *testing.T) {
 }
 
 // =============================================================================
+// Request Body Guard Tests
+// =============================================================================
+
+func TestAutomationController_RequestBodyGuards(t *testing.T) {
+	env := newAutomationEnv(t)
+
+	templateID := testhelper.CreateTestTemplate(t, env.pool, env.workspaceID, "Body Guard Template", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, env.pool, templateID) })
+	versionID := testhelper.CreateTestTemplateVersion(t, env.pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+	putContentPath := fmt.Sprintf("/api/v1/automation/templates/%s/versions/%s/content", templateID, versionID)
+
+	t.Run("malformed JSON is rejected with 400 and still audited", func(t *testing.T) {
+		malformed := []byte(`{"contentStructure": {"version": "1.1.0", "meta": {`)
+		resp, body := env.client.DoRaw(http.MethodPut, putContentPath, malformed)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, "response body: %s", string(body))
+
+		stored := awaitAuditRequestBody(t, env, versionID, http.StatusBadRequest)
+		marker := testhelper.ParseJSON[map[string]interface{}](t, stored)
+		assert.Equal(t, true, marker["invalidJson"])
+		assert.Equal(t, float64(len(malformed)), marker["originalBytes"])
+	})
+}
+
+// awaitAuditRequestBody waits for the asynchronous audit write of the request against
+// resourceID that finished with status, and returns the request_body it recorded.
+func awaitAuditRequestBody(t *testing.T, env *automationEnv, resourceID string, status int) json.RawMessage {
+	t.Helper()
+	var stored json.RawMessage
+	require.Eventually(t, func() bool {
+		return env.pool.QueryRow(context.Background(),
+			`SELECT request_body FROM automation.audit_log
+			 WHERE api_key_id = $1 AND resource_id = $2 AND response_status = $3
+			 ORDER BY created_at DESC LIMIT 1`,
+			env.keyID, resourceID, status).Scan(&stored) == nil
+	}, 5*time.Second, 100*time.Millisecond, "audit row with status %d was not written", status)
+	return stored
+}
+
+// =============================================================================
 // Test Helpers
 // =============================================================================
 
