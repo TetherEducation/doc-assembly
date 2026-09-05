@@ -111,3 +111,7 @@ curl localhost:8080/health
 ```
 
 If any of these fail and you cannot fix them in three iterations, stop and report — do not paper over with retries or env toggles.
+
+## Promoting a template version by direct SQL
+
+`TemplateVersionService.PublishVersion` has five effects — `ValidateForPublish`, `replaceSignerRoles`, `replaceInjectables`, `archiveCurrentPublished`, and the status flip — and the status flip is only the last. An `UPDATE ... SET status='PUBLISHED'` reproduces that one alone: the version ends up with no derived signer roles (every document creation then fails with `no matching signature anchor found`, HTTP 422) and no derived injectables (variables render unresolved). Migration 000022 now rejects the roleless case at the database; the injectables case is not guarded. Publish through the panel or the automation API's `POST .../versions/{id}/publish`, never by hand. The 2026-08-14 incident and its remediation are written up in the `tools-doc-assembly` repo under `docs/signer-role-bypass-2026-08-14.md`.
