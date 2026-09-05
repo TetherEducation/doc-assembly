@@ -242,6 +242,7 @@ func (ctrl *AutomationController) listWorkspaces(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/tenants/{tenantId}/workspaces [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
@@ -293,6 +294,7 @@ func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/tenants/{tenantId}/workspaces/{workspaceId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateWorkspace(c *gin.Context) {
@@ -462,6 +464,7 @@ func (ctrl *AutomationController) listTemplates(c *gin.Context) {
 // @Success 201 {object} dto.TemplateCreateResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createTemplate(c *gin.Context) {
@@ -527,6 +530,7 @@ func (ctrl *AutomationController) getTemplate(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateTemplate(c *gin.Context) {
@@ -606,6 +610,7 @@ func (ctrl *AutomationController) listDocumentTypes(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/document-type [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
@@ -651,6 +656,7 @@ func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/process [put]
 // @Security AutomationKey
 func (ctrl *AutomationController) setProcessFields(c *gin.Context) {
@@ -719,6 +725,7 @@ func (ctrl *AutomationController) listVersions(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createVersion(c *gin.Context) {
@@ -781,6 +788,7 @@ func (ctrl *AutomationController) getVersion(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions/{versionId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateVersion(c *gin.Context) {
@@ -901,6 +909,7 @@ func generateWorkspaceCode(name string) string {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/content [put]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateVersionContent(c *gin.Context) {

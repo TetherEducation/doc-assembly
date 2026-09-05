@@ -69,6 +69,10 @@ signing_session_auth:
 internal_api:
   enabled: false                         # mounts /internal/* for service-to-service calls
 
+automation:
+  max_body_bytes: 16777216               # DOC_ENGINE_AUTOMATION_MAX_BODY_BYTES — max request body for
+                                         # /api/v1/automation; larger requests get 413 (default 16 MiB)
+
 signing:
   provider: documenso                    # mock | documenso (or your own via SetSigningProvider)
   api_key: ""
