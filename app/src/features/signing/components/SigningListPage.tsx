@@ -7,6 +7,7 @@ import { SigningListToolbar } from './SigningListToolbar'
 import { SigningDocumentRow } from './SigningDocumentRow'
 import { BulkActionsToolbar } from './BulkActionsToolbar'
 import { DeprecateDocumentDialog } from './DeprecateDocumentDialog'
+import { CreateDocumentWizard } from './CreateDocumentWizard'
 import {
   useSigningDocuments,
   useSigningDocumentTypeOptions,
@@ -35,6 +36,7 @@ export function SigningListPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deprecateTarget, setDeprecateTarget] =
     useState<SigningDocumentListItem | null>(null)
+  const [createWizardOpen, setCreateWizardOpen] = useState(false)
 
   // Debounce search — clear selection when debounced value changes
   useEffect(() => {
@@ -119,12 +121,8 @@ export function SigningListPage() {
     })
   }
 
-  const handleNavigateToCreate = () => {
-    navigate({
-      to: '/workspace/$workspaceId/signing/create',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router type limitation
-      params: { workspaceId: workspaceId ?? '' } as any,
-    })
+  const handleOpenCreateWizard = () => {
+    setCreateWizardOpen(true)
   }
 
   return (
@@ -141,7 +139,7 @@ export function SigningListPage() {
             </h1>
           </div>
           <button
-            onClick={handleNavigateToCreate}
+            onClick={handleOpenCreateWizard}
             className="group flex h-12 items-center gap-2 rounded-none bg-foreground px-6 text-sm font-medium tracking-wide text-background shadow-lg shadow-muted transition-colors hover:bg-foreground/90"
           >
             <Plus size={20} />
@@ -286,6 +284,12 @@ export function SigningListPage() {
         documentId={deprecateTarget?.id ?? ''}
         documentTitle={deprecateTarget?.title ?? ''}
         onSuccess={() => setDeprecateTarget(null)}
+      />
+
+      <CreateDocumentWizard
+        open={createWizardOpen}
+        onOpenChange={setCreateWizardOpen}
+        onSuccess={handleNavigateToDetail}
       />
     </div>
   )
