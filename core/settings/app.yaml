@@ -71,6 +71,12 @@ internal_api:
 legacy_documents:
   max_body_bytes: 65536 # DOC_ENGINE_LEGACY_DOCUMENTS_MAX_BODY_BYTES - Default 64 KiB
 
+# Automation API (/api/v1/automation, authenticated with X-Automation-Key).
+# Requests with a larger body are rejected with 413. Template content that embeds
+# images as data URLs can be large, hence the generous default.
+automation:
+  max_body_bytes: 16777216 # DOC_ENGINE_AUTOMATION_MAX_BODY_BYTES - Default 16 MiB
+
 # Signing provider configuration (Documenso self-hosted)
 signing:
   provider: documenso         # DOC_ENGINE_SIGNING_PROVIDER

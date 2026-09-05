@@ -24,6 +24,7 @@ type Config struct {
 	Notification       NotificationConfig       `mapstructure:"notification"`
 	PublicAccess       PublicAccessConfig       `mapstructure:"public_access"`
 	LegacyDocuments    LegacyDocumentsConfig    `mapstructure:"legacy_documents"`
+	Automation         AutomationConfig         `mapstructure:"automation"`
 	Worker             WorkerConfig             `mapstructure:"worker"`
 	InjectableSources  InjectableSourcesConfig  `mapstructure:"injectable_sources"`
 
@@ -337,6 +338,25 @@ func (c LegacyDocumentsConfig) MaxBodyBytesOrDefault() int64 {
 		return c.MaxBodyBytes
 	}
 	return defaultLegacyDocumentMaxBodyBytes
+}
+
+const defaultAutomationMaxBodyBytes int64 = 16 * 1024 * 1024
+
+// AutomationConfig configures the automation API (/api/v1/automation).
+type AutomationConfig struct {
+	// MaxBodyBytes caps request bodies; larger requests are rejected with 413.
+	// Template content that embeds images as data URLs can be large, hence the
+	// generous default.
+	MaxBodyBytes int64 `mapstructure:"max_body_bytes"`
+}
+
+// MaxBodyBytesOrDefault returns the configured request body limit, falling
+// back to 16 MiB for missing or invalid values.
+func (c AutomationConfig) MaxBodyBytesOrDefault() int64 {
+	if c.MaxBodyBytes > 0 {
+		return c.MaxBodyBytes
+	}
+	return defaultAutomationMaxBodyBytes
 }
 
 // WorkerConfig holds River job queue worker configuration.

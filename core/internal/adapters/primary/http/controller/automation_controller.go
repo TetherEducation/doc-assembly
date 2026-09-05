@@ -85,11 +85,14 @@ func NewAutomationController(
 // /api/v1/automation/* request 404'd before reaching the handler. It went unnoticed
 // because the test server runs with an empty base path, where engine root and base are
 // the same router.
-func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewareProvider *middleware.Provider) {
+func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewareProvider *middleware.Provider, maxBodyBytes int64) {
 	g := base.Group("/api/v1/automation")
 	g.Use(middleware.Operation())
 	g.Use(middleware.RequestTimeout(automationRequestTimeout))
 	g.Use(middleware.AutomationKeyAuth(ctrl.keyRepo))
+	// The body cap must precede the audit logger, which buffers the whole body and answers
+	// 413 when the cap is hit.
+	g.Use(middleware.RequestBodyLimit(maxBodyBytes))
 	g.Use(middleware.AutomationAuditLogger(ctrl.auditRepo))
 
 	// Tenants

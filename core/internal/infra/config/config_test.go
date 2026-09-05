@@ -118,6 +118,41 @@ legacy_documents:
 	assert.Equal(t, int64(4096), cfg.LegacyDocuments.MaxBodyBytes)
 }
 
+func TestAutomationConfig_DefaultMaxBodyBytes(t *testing.T) {
+	cfg := AutomationConfig{}
+
+	assert.Equal(t, int64(16*1024*1024), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestAutomationConfig_UsesConfiguredMaxBodyBytes(t *testing.T) {
+	cfg := AutomationConfig{MaxBodyBytes: 4096}
+
+	assert.Equal(t, int64(4096), cfg.MaxBodyBytesOrDefault())
+}
+
+func TestAutomationConfig_NonPositiveFallsBackToDefault(t *testing.T) {
+	for _, value := range []int64{0, -1} {
+		cfg := AutomationConfig{MaxBodyBytes: value}
+
+		assert.Equal(t, int64(16*1024*1024), cfg.MaxBodyBytesOrDefault())
+	}
+}
+
+func TestAutomationConfig_EnvOverridesMaxBodyBytes(t *testing.T) {
+	t.Setenv("DOC_ENGINE_AUTOMATION_MAX_BODY_BYTES", "4096")
+
+	configFile := filepath.Join(t.TempDir(), "app.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(`
+automation:
+  max_body_bytes: 2048
+`), 0o600))
+
+	cfg, err := LoadFromFile(configFile)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(4096), cfg.Automation.MaxBodyBytes)
+}
+
 func TestApplySigningEmbedEnvOverrides(t *testing.T) {
 	t.Setenv("DOC_ENGINE_SIGNING_EMBED_ENABLED", "true")
 	t.Setenv("DOC_ENGINE_SIGNING_EMBED_DARK_MODE_DISABLED", "true")

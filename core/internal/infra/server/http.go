@@ -161,7 +161,7 @@ func NewHTTPServer(
 	// Mount under the base path like every other controller. Registering on the engine
 	// root put these routes outside /doc-assembly in production, where the load balancer
 	// forwards nothing else, so the whole automation API was unreachable.
-	automationController.RegisterRoutes(base, middlewareProvider)
+	automationController.RegisterRoutes(base, middlewareProvider, cfg.Automation.MaxBodyBytesOrDefault())
 
 	// Serve embedded SPA if frontendFS is provided, otherwise return 404 for unmatched routes.
 	if frontendFS != nil {

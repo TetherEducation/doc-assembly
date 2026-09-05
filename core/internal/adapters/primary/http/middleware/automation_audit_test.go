@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,16 +42,18 @@ func (f *fakeAuditLogRepo) ListByKeyID(_ context.Context, _ string, _, _ int) ([
 
 const auditTestPath = "/api/v1/automation/templates/tpl-1/versions/v-1/content"
 
-// newAuditTestRouter wires the audit middleware behind a stub of AutomationKeyAuth and in
-// front of a handler that records every byte it can read from the request body.
-func newAuditTestRouter(repo *fakeAuditLogRepo, seen *[]byte) *gin.Engine {
+// newAuditTestRouter wires the audit middleware behind a stub of AutomationKeyAuth (plus any
+// middleware in before) and in front of a handler that records every byte it can read from
+// the request body.
+func newAuditTestRouter(repo *fakeAuditLogRepo, seen *[]byte, before ...gin.HandlerFunc) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.PUT("/api/v1/automation/templates/:templateId/versions/:versionId/content",
-		func(c *gin.Context) {
-			c.Set(automationKeyIDCtxKey, "key-1")
-			c.Set(automationKeyPrefixCtxKey, "doca_test")
-		},
+	chain := []gin.HandlerFunc{func(c *gin.Context) {
+		c.Set(automationKeyIDCtxKey, "key-1")
+		c.Set(automationKeyPrefixCtxKey, "doca_test")
+	}}
+	chain = append(chain, before...)
+	chain = append(chain,
 		AutomationAuditLogger(repo),
 		func(c *gin.Context) {
 			body, err := io.ReadAll(c.Request.Body)
@@ -61,6 +65,7 @@ func newAuditTestRouter(repo *fakeAuditLogRepo, seen *[]byte) *gin.Engine {
 			c.Status(http.StatusOK)
 		},
 	)
+	router.PUT("/api/v1/automation/templates/:templateId/versions/:versionId/content", chain...)
 	return router
 }
 
@@ -173,4 +178,43 @@ func TestAutomationAuditLogger_MalformedBodyIsMarked(t *testing.T) {
 
 	entry := awaitAuditEntry(t, repo)
 	assert.JSONEq(t, fmt.Sprintf(`{"invalidJson":true,"originalBytes":%d}`, len(body)), string(entry.RequestBody))
+}
+
+func TestAutomationAuditLogger_OversizedBodyIsRejectedWith413(t *testing.T) {
+	repo := newFakeAuditLogRepo()
+	var seen []byte
+	router := newAuditTestRouter(repo, &seen, RequestBodyLimit(1024))
+	body := jsonBodyOfSize(t, 2048)
+
+	req := httptest.NewRequest(http.MethodPut, auditTestPath, bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+	assert.JSONEq(t, `{"error":"request body exceeds the limit of 1024 bytes"}`, w.Body.String())
+	assert.Nil(t, seen, "handler must not run for an oversized body")
+
+	entry := awaitAuditEntry(t, repo)
+	assert.Equal(t, http.StatusRequestEntityTooLarge, entry.ResponseStatus)
+	assert.Nil(t, entry.RequestBody)
+	require.NotNil(t, entry.Action)
+	assert.Equal(t, "UPDATE_CONTENT", *entry.Action)
+}
+
+func TestAutomationAuditLogger_UnreadableBodyIsRejectedWith400(t *testing.T) {
+	repo := newFakeAuditLogRepo()
+	var seen []byte
+	router := newAuditTestRouter(repo, &seen)
+
+	req := httptest.NewRequest(http.MethodPut, auditTestPath, iotest.ErrReader(errors.New("connection reset")))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.JSONEq(t, `{"error":"failed to read request body"}`, w.Body.String())
+	assert.Nil(t, seen, "handler must not run for an unreadable body")
+
+	entry := awaitAuditEntry(t, repo)
+	assert.Equal(t, http.StatusBadRequest, entry.ResponseStatus)
+	assert.Nil(t, entry.RequestBody)
 }

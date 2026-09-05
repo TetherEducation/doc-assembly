@@ -1,8 +1,8 @@
 package config
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -136,6 +136,9 @@ func setDefaults(v *viper.Viper) {
 
 	// Legacy Document Proxy defaults
 	v.SetDefault("legacy_documents.max_body_bytes", 64*1024)
+
+	// Automation API defaults
+	v.SetDefault("automation.max_body_bytes", 16*1024*1024)
 
 	// Worker defaults
 	v.SetDefault("worker.enabled", false)

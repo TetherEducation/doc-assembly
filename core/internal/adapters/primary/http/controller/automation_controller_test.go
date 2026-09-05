@@ -3,6 +3,7 @@
 package controller_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 	"github.com/TetherEducation/doc-assembly/core/internal/testing/testhelper"
 )
 
@@ -471,6 +473,17 @@ func TestAutomationController_RequestBodyGuards(t *testing.T) {
 		marker := testhelper.ParseJSON[map[string]interface{}](t, stored)
 		assert.Equal(t, true, marker["invalidJson"])
 		assert.Equal(t, float64(len(malformed)), marker["originalBytes"])
+	})
+
+	t.Run("body over the size cap is rejected with 413 and still audited", func(t *testing.T) {
+		// Exactly one byte over the cap: the server consumes the whole body before answering,
+		// so the client reliably reads the 413 instead of racing a closed connection.
+		oversized := bytes.Repeat([]byte("x"), int(config.AutomationConfig{}.MaxBodyBytesOrDefault())+1)
+		resp, body := env.client.DoRaw(http.MethodPut, putContentPath, oversized)
+		require.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode, "response body: %s", string(body))
+
+		stored := awaitAuditRequestBody(t, env, versionID, http.StatusRequestEntityTooLarge)
+		assert.Empty(t, stored, "no body is recorded for a rejected oversized request")
 	})
 }
 

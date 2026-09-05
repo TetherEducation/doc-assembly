@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,13 +30,17 @@ func AutomationAuditLogger(auditRepo port.AutomationAuditLogRepository) gin.Hand
 	return func(c *gin.Context) {
 		// Buffer the whole request body for the handler; the audit entry keeps at most
 		// bodyCaptureLimitBytes of it.
-		requestBody := captureRequestBody(c)
+		requestBody, readErr := captureRequestBody(c)
 
 		// Wrap ResponseWriter to capture status code
 		rw := &responseStatusWriter{ResponseWriter: c.Writer, status: http.StatusOK}
 		c.Writer = rw
 
-		c.Next()
+		if readErr != nil {
+			abortUnreadableBody(c, readErr)
+		} else {
+			c.Next()
+		}
 
 		// Read context values after handler ran
 		keyID, _ := GetAutomationKeyID(c)
@@ -78,23 +83,39 @@ func AutomationAuditLogger(auditRepo port.AutomationAuditLogRepository) gin.Hand
 // and returns what the audit entry should persist: the body itself when it is valid JSON
 // that fits within bodyCaptureLimitBytes, otherwise a small marker object. Neither a
 // truncated prefix nor malformed JSON is ever stored verbatim: the JSONB column would
-// reject it, and with it the whole audit row.
-func captureRequestBody(c *gin.Context) json.RawMessage {
+// reject it, and with it the whole audit row. A body that cannot be read in full (for
+// example past a RequestBodyLimit) is reported as an error and never stored.
+func captureRequestBody(c *gin.Context) (json.RawMessage, error) {
 	if c.Request.Body == nil || c.Request.Body == http.NoBody {
-		return nil
+		return nil, nil
 	}
 	raw, err := io.ReadAll(c.Request.Body)
 	c.Request.Body = io.NopCloser(bytes.NewReader(raw))
 	switch {
-	case err != nil || len(raw) == 0:
-		return nil
+	case err != nil:
+		return nil, err
+	case len(raw) == 0:
+		return nil, nil
 	case len(raw) > bodyCaptureLimitBytes:
-		return truncatedBodyMarker(len(raw))
+		return truncatedBodyMarker(len(raw)), nil
 	case !json.Valid(raw):
-		return invalidBodyMarker(len(raw))
+		return invalidBodyMarker(len(raw)), nil
 	default:
-		return raw
+		return raw, nil
 	}
+}
+
+// abortUnreadableBody rejects a request whose body could not be read in full: 413 when it
+// exceeded the RequestBodyLimit, 400 otherwise. Handlers never see a partial body.
+func abortUnreadableBody(c *gin.Context, err error) {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": fmt.Sprintf("request body exceeds the limit of %d bytes", maxBytesErr.Limit),
+		})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
 }
 
 // truncatedBodyMarker is stored in place of bodies larger than bodyCaptureLimitBytes.
