@@ -4,9 +4,12 @@ package controller_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
@@ -382,6 +385,69 @@ func TestAutomationController_UpdateContentNonDraft(t *testing.T) {
 	})
 	assert.NotEqual(t, http.StatusOK, resp.StatusCode, "updating content of a published version should fail")
 	assert.GreaterOrEqual(t, resp.StatusCode, http.StatusBadRequest, "expected a 4xx error status")
+}
+
+// =============================================================================
+// Large Body Content Update Test
+// =============================================================================
+
+// auditBodyCaptureLimit mirrors bodyCaptureLimitBytes in middleware/automation_audit.go.
+// It bounds what the audit log persists, not what handlers may read: bodies above it must
+// still reach updateVersionContent intact.
+const auditBodyCaptureLimit = 64 * 1024
+
+func TestAutomationController_UpdateContentLargeBody(t *testing.T) {
+	env := newAutomationEnv(t)
+
+	templateID := testhelper.CreateTestTemplate(t, env.pool, env.workspaceID, "Large Body Template", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, env.pool, templateID) })
+	versionID := testhelper.CreateTestTemplateVersion(t, env.pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+
+	// Pad the document with one paragraph whose text node alone exceeds the capture limit.
+	doc := minimalPortabledoc()
+	content := doc["content"].(map[string]interface{})
+	nodes := content["content"].([]interface{})
+	nodes = append(nodes, map[string]interface{}{
+		"type": "paragraph",
+		"content": []interface{}{
+			map[string]interface{}{"type": "text", "text": strings.Repeat("x", 100*1024)},
+		},
+	})
+	content["content"] = nodes
+
+	reqBody := map[string]interface{}{"contentStructure": doc}
+	raw, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+	require.Greater(t, len(raw), auditBodyCaptureLimit, "test payload must exceed the audit capture limit")
+
+	putContentPath := fmt.Sprintf("/api/v1/automation/templates/%s/versions/%s/content", templateID, versionID)
+	putResp, putBody := env.client.PUT(putContentPath, reqBody)
+	require.Equal(t, http.StatusOK, putResp.StatusCode, "put content body: %s", string(putBody))
+
+	// The stored content must round-trip intact through the API.
+	getResp, getBody := env.client.GET(putContentPath)
+	require.Equal(t, http.StatusOK, getResp.StatusCode)
+	detail := testhelper.ParseJSON[dto.TemplateVersionDetailResponse](t, getBody)
+	expected, err := json.Marshal(doc)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(expected), string(detail.ContentStructure))
+
+	// The audit entry is written asynchronously. It must exist (a truncated JSON prefix would
+	// be rejected by the JSONB column) and hold at most the capture limit.
+	var stored json.RawMessage
+	require.Eventually(t, func() bool {
+		return env.pool.QueryRow(context.Background(),
+			`SELECT request_body FROM automation.audit_log
+			 WHERE api_key_id = $1 AND action = 'UPDATE_CONTENT' AND resource_id = $2
+			 ORDER BY created_at DESC LIMIT 1`,
+			env.keyID, versionID).Scan(&stored) == nil
+	}, 5*time.Second, 100*time.Millisecond, "audit row for UPDATE_CONTENT was not written")
+
+	require.True(t, json.Valid(stored), "stored request_body must be valid JSON: %s", string(stored))
+	assert.LessOrEqual(t, len(stored), auditBodyCaptureLimit)
+	marker := testhelper.ParseJSON[map[string]interface{}](t, stored)
+	assert.Equal(t, true, marker["truncated"])
+	assert.Equal(t, float64(len(raw)), marker["originalBytes"])
 }
 
 // =============================================================================
