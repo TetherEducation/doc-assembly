@@ -92,6 +92,7 @@ func NewHTTPServer(
 	readOnlyViewLinkAuthenticator port.ReadOnlyViewLinkAuthenticator,
 	legacyDocumentHandler port.LegacyDocumentHandler,
 	keyRepo port.AutomationAPIKeyRepository,
+	customRoutes []func(gin.IRouter),
 	frontendFS fs.FS,
 ) *HTTPServer {
 	if cfg.Environment == "production" {
@@ -162,6 +163,14 @@ func NewHTTPServer(
 	// root put these routes outside /doc-assembly in production, where the load balancer
 	// forwards nothing else, so the whole automation API was unreachable.
 	automationController.RegisterRoutes(base, middlewareProvider, cfg.Automation.MaxBodyBytesOrDefault())
+
+	// Wrapper-registered routes: after every built-in controller, before the
+	// SPA fallback, on the base path group (no authentication of their own).
+	for _, register := range customRoutes {
+		if register != nil {
+			register(base)
+		}
+	}
 
 	// Serve embedded SPA if frontendFS is provided, otherwise return 404 for unmatched routes.
 	if frontendFS != nil {

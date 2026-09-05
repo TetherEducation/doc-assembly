@@ -425,6 +425,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		e.readOnlyViewAuth,
 		e.legacyDocumentHandler,
 		automationAPIKeyRepo,
+		e.routeRegistrars,
 		frontendFS,
 	)
 

@@ -81,6 +81,7 @@ The handler owns authentication, authorization, request parsing, legacy lookup, 
 |---|---|
 | `UseMiddleware(mw gin.HandlerFunc)` | Global. Order: Recovery → Logger → CORS → **your global** → routes. |
 | `UseAPIMiddleware(mw gin.HandlerFunc)` | Only `/api/v1/*`. Order: Operation → Auth → Identity → Roles → **your API** → controller. |
+| `RegisterRoutes(fn func(base gin.IRouter))` | Mounts your own handlers on the base path group, after every built-in controller and before the SPA fallback. No authentication is applied — the handler owns its own. |
 
 Use these for request enrichment (custom headers, audit trails, tenant resolution overrides). Do not use them for auth — there are dedicated authenticators.
 
