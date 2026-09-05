@@ -27,9 +27,9 @@ type HTTPClient struct {
 // NewHTTPClient creates a new test HTTP client.
 func NewHTTPClient(t *testing.T, baseURL string) *HTTPClient {
 	return &HTTPClient{
-		t:       t,
-		client:  &http.Client{},
-		baseURL: baseURL,
+		t:            t,
+		client:       &http.Client{},
+		baseURL:      baseURL,
 		extraHeaders: map[string]string{},
 	}
 }
@@ -110,15 +110,28 @@ func (c *HTTPClient) WithHeader(key, value string) *HTTPClient {
 	}
 }
 
-// Do executes an HTTP request and returns the response and body.
+// Do executes an HTTP request with body marshalled as JSON and returns the response and body.
 func (c *HTTPClient) Do(method, path string, body interface{}) (*http.Response, []byte) {
+	c.t.Helper()
+
+	var raw []byte
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		require.NoError(c.t, err, "failed to marshal request body")
+		raw = jsonBody
+	}
+
+	return c.DoRaw(method, path, raw)
+}
+
+// DoRaw executes an HTTP request sending body exactly as given (nil sends no body). Use it
+// for payloads json.Marshal cannot produce, such as malformed JSON or oversized blobs.
+func (c *HTTPClient) DoRaw(method, path string, body []byte) (*http.Response, []byte) {
 	c.t.Helper()
 
 	var reqBody io.Reader
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		require.NoError(c.t, err, "failed to marshal request body")
-		reqBody = bytes.NewReader(jsonBody)
+		reqBody = bytes.NewReader(body)
 	}
 
 	req, err := http.NewRequest(method, c.baseURL+path, reqBody)

@@ -4,17 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	"github.com/gin-gonic/gin"
 )
 
 const (
+	// bodyCaptureLimitBytes caps the request body persisted with an audit entry. It does not
+	// limit what handlers read: the middleware always hands the complete body downstream.
 	bodyCaptureLimitBytes = 64 * 1024 // 64 KB
 	auditWriteTimeout     = 3 * time.Second
 )
@@ -24,22 +28,19 @@ const (
 // is available in the context.
 func AutomationAuditLogger(auditRepo port.AutomationAuditLogRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Capture request body (limited to bodyCaptureLimitBytes)
-		var requestBody json.RawMessage
-		if c.Request.Body != nil {
-			limited := io.LimitReader(c.Request.Body, bodyCaptureLimitBytes)
-			raw, _ := io.ReadAll(limited)
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(raw))
-			if len(raw) > 0 {
-				requestBody = raw
-			}
-		}
+		// Buffer the whole request body for the handler; the audit entry keeps at most
+		// bodyCaptureLimitBytes of it.
+		requestBody, readErr := captureRequestBody(c)
 
 		// Wrap ResponseWriter to capture status code
 		rw := &responseStatusWriter{ResponseWriter: c.Writer, status: http.StatusOK}
 		c.Writer = rw
 
-		c.Next()
+		if readErr != nil {
+			abortUnreadableBody(c, readErr)
+		} else {
+			c.Next()
+		}
 
 		// Read context values after handler ran
 		keyID, _ := GetAutomationKeyID(c)
@@ -76,6 +77,56 @@ func AutomationAuditLogger(auditRepo port.AutomationAuditLogRepository) gin.Hand
 			_ = auditRepo.Create(ctx, logEntry)
 		}()
 	}
+}
+
+// captureRequestBody buffers the whole request body so downstream handlers see every byte,
+// and returns what the audit entry should persist: the body itself when it is valid JSON
+// that fits within bodyCaptureLimitBytes, otherwise a small marker object. Neither a
+// truncated prefix nor malformed JSON is ever stored verbatim: the JSONB column would
+// reject it, and with it the whole audit row. A body that cannot be read in full (for
+// example past a RequestBodyLimit) is reported as an error and never stored.
+func captureRequestBody(c *gin.Context) (json.RawMessage, error) {
+	if c.Request.Body == nil || c.Request.Body == http.NoBody {
+		return nil, nil
+	}
+	raw, err := io.ReadAll(c.Request.Body)
+	c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+	switch {
+	case err != nil:
+		return nil, err
+	case len(raw) == 0:
+		return nil, nil
+	case len(raw) > bodyCaptureLimitBytes:
+		return truncatedBodyMarker(len(raw)), nil
+	case !json.Valid(raw):
+		return invalidBodyMarker(len(raw)), nil
+	default:
+		return raw, nil
+	}
+}
+
+// abortUnreadableBody rejects a request whose body could not be read in full: 413 when it
+// exceeded the RequestBodyLimit, 400 otherwise. Handlers never see a partial body.
+func abortUnreadableBody(c *gin.Context, err error) {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": fmt.Sprintf("request body exceeds the limit of %d bytes", maxBytesErr.Limit),
+		})
+		return
+	}
+	c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+}
+
+// truncatedBodyMarker is stored in place of bodies larger than bodyCaptureLimitBytes.
+func truncatedBodyMarker(originalBytes int) json.RawMessage {
+	return json.RawMessage(fmt.Sprintf(
+		`{"truncated":true,"originalBytes":%d,"limitBytes":%d}`, originalBytes, bodyCaptureLimitBytes))
+}
+
+// invalidBodyMarker is stored in place of bodies that are not valid JSON.
+func invalidBodyMarker(originalBytes int) json.RawMessage {
+	return json.RawMessage(fmt.Sprintf(`{"invalidJson":true,"originalBytes":%d}`, originalBytes))
 }
 
 // responseStatusWriter wraps gin.ResponseWriter to capture the HTTP status code.

@@ -85,11 +85,14 @@ func NewAutomationController(
 // /api/v1/automation/* request 404'd before reaching the handler. It went unnoticed
 // because the test server runs with an empty base path, where engine root and base are
 // the same router.
-func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewareProvider *middleware.Provider) {
+func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewareProvider *middleware.Provider, maxBodyBytes int64) {
 	g := base.Group("/api/v1/automation")
 	g.Use(middleware.Operation())
 	g.Use(middleware.RequestTimeout(automationRequestTimeout))
 	g.Use(middleware.AutomationKeyAuth(ctrl.keyRepo))
+	// The body cap must precede the audit logger, which buffers the whole body and answers
+	// 413 when the cap is hit.
+	g.Use(middleware.RequestBodyLimit(maxBodyBytes))
 	g.Use(middleware.AutomationAuditLogger(ctrl.auditRepo))
 
 	// Tenants
@@ -239,6 +242,7 @@ func (ctrl *AutomationController) listWorkspaces(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/tenants/{tenantId}/workspaces [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
@@ -290,6 +294,7 @@ func (ctrl *AutomationController) createWorkspace(c *gin.Context) {
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/tenants/{tenantId}/workspaces/{workspaceId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateWorkspace(c *gin.Context) {
@@ -459,6 +464,7 @@ func (ctrl *AutomationController) listTemplates(c *gin.Context) {
 // @Success 201 {object} dto.TemplateCreateResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createTemplate(c *gin.Context) {
@@ -524,6 +530,7 @@ func (ctrl *AutomationController) getTemplate(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateTemplate(c *gin.Context) {
@@ -603,6 +610,7 @@ func (ctrl *AutomationController) listDocumentTypes(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/document-type [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
@@ -648,6 +656,7 @@ func (ctrl *AutomationController) assignDocumentType(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/process [put]
 // @Security AutomationKey
 func (ctrl *AutomationController) setProcessFields(c *gin.Context) {
@@ -716,6 +725,7 @@ func (ctrl *AutomationController) listVersions(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions [post]
 // @Security AutomationKey
 func (ctrl *AutomationController) createVersion(c *gin.Context) {
@@ -778,6 +788,7 @@ func (ctrl *AutomationController) getVersion(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions/{versionId} [patch]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateVersion(c *gin.Context) {
@@ -898,6 +909,7 @@ func generateWorkspaceCode(name string) string {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/templates/{templateId}/versions/{versionId}/content [put]
 // @Security AutomationKey
 func (ctrl *AutomationController) updateVersionContent(c *gin.Context) {
