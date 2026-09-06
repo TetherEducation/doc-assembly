@@ -1,3 +1,4 @@
+import { toAbsoluteAppUrl } from '@/lib/app-url'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
@@ -46,16 +47,6 @@ const TERMINAL_STATUSES: string[] = [
   SigningDocumentStatus.ERROR,
 ]
 
-
-function toAbsoluteUrl(url: string): string {
-  try {
-    return new URL(url).toString()
-  } catch {
-    const basePath = (import.meta.env.VITE_BASE_PATH || '').replace(/\/$/, '')
-    const normalizedUrl = url.startsWith('/') ? url : `/${url}`
-    return `${window.location.origin}${basePath}${normalizedUrl}`
-  }
-}
 
 function formatDate(dateString?: string): string {
   if (!dateString) return '-'
@@ -171,7 +162,7 @@ export function SigningDetailPage() {
     setIsCreatingReadOnlyLink(true)
     try {
       const viewLink = await signingApi.createViewLink(documentId)
-      await navigator.clipboard.writeText(toAbsoluteUrl(viewLink.url))
+      await navigator.clipboard.writeText(toAbsoluteAppUrl(viewLink.url))
       setReadOnlyLinkCopied(true)
       toast({
         title: t(
