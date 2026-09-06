@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -21,7 +22,7 @@ import {
   publicLanguageOptions,
   type PublicSigningLanguage,
 } from '../public-signing-language'
-import { useEmbeddedMode } from '../public-signing-embed'
+import { useEmbeddedMode } from '../public-signing-embed'
 
 type AccessStatus = 'active' | 'completed' | 'expired'
 
@@ -297,7 +298,7 @@ function PageLayout({
                 <Box size={14} fill="currentColor" />
               </div>
               <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
-                Doc-Assembly
+                {APP_NAME}
               </span>
             </div>
             <div className="flex items-center gap-2">

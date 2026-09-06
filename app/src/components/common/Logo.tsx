@@ -1,5 +1,6 @@
+import { APP_NAME } from '@/lib/brand'
 import { Box } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
@@ -45,7 +46,7 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
             sizes.text
           )}
         >
-          Doc-Assembly
+          {APP_NAME}
         </span>
       )}
     </div>

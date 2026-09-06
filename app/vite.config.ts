@@ -5,6 +5,7 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import path from 'path'
 
 export default defineConfig(() => {
+  const appName = process.env.VITE_APP_NAME || 'Doc-Assembly'
   const basePath = process.env.VITE_BASE_PATH || ''
   const normalizedBase = basePath ? `${basePath}/` : '/'
   const proxyPrefix = basePath || ''
@@ -15,6 +16,17 @@ export default defineConfig(() => {
       tanstackRouter({ target: 'react', autoCodeSplitting: true }),
       react(),
       tailwindcss(),
+      {
+        name: 'app-name-html',
+        transformIndexHtml(html: string) {
+          return html
+            .replace(/<title>[^<]*<\/title>/, `<title>${appName}</title>`)
+            .replace(
+              /(<meta name="description" content=")[^"]*/,
+              `$1${appName} - Document Assembly Platform`
+            )
+        },
+      },
     ],
     resolve: {
       alias: {
@@ -30,6 +42,7 @@ export default defineConfig(() => {
       ],
     },
     define: {
+      __APP_NAME__: JSON.stringify(appName),
       __BUILD_TIMESTAMP__: JSON.stringify(new Date().toISOString()),
     },
     server: {

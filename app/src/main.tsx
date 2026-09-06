@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
@@ -7,10 +8,10 @@ import { routeTree } from './routeTree.gen'
 import { AuthProvider } from '@/features/auth/components/AuthProvider'
 import { Toaster } from '@/components/ui/toaster'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import './index.css'
+import './index.css'
 
 declare const __BUILD_TIMESTAMP__: string
-console.log(`[Doc-Assembly] Build: ${__BUILD_TIMESTAMP__}`)
+console.log(`[${APP_NAME}] Build: ${__BUILD_TIMESTAMP__}`)
 
 // Create a new router instance
 // @ts-expect-error - TanStack Router requires strictNullChecks but we have it disabled

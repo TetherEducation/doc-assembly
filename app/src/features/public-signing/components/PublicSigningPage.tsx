@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -55,7 +56,7 @@ import {
   publicLanguageOptions,
   type PublicSigningLanguage,
 } from '../public-signing-language'
-import {
+import {
   EmbeddedModeContext,
   notifyParentSigningEvent,
   useEmbeddedMode,
@@ -597,7 +598,7 @@ function PageShell({
               <Box size={14} fill="currentColor" />
             </div>
             <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
-              Doc-Assembly
+              {APP_NAME}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -611,7 +612,7 @@ function PageShell({
 
       <footer className="border-t border-border py-2 text-center">
         <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">
-          Doc-Assembly
+          {APP_NAME}
         </span>
       </footer>
     </div>

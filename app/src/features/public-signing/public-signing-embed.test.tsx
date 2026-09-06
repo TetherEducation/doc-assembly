@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { PublicSigningPage } from './components/PublicSigningPage'
@@ -116,11 +117,11 @@ describe('PublicSigningPage embedded mode', () => {
     document.documentElement.classList.remove('dark')
   })
 
-  it('renders the Doc-Assembly chrome when not embedded', async () => {
+  it('renders the branded chrome when not embedded', async () => {
     render(<PublicSigningPage token="tok" />)
 
     expect(await screen.findByText('publicSigning.completed.title')).toBeTruthy()
-    expect(screen.getAllByText('Doc-Assembly').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(APP_NAME).length).toBeGreaterThan(0)
     expect(document.documentElement.dataset.themeLock).toBeUndefined()
   })
 
@@ -134,7 +135,7 @@ describe('PublicSigningPage embedded mode', () => {
       expect(await screen.findByText('publicSigning.completed.title')).toBeTruthy()
 
       // Chrome-less: no wordmark, no language/theme toggles.
-      expect(screen.queryByText('Doc-Assembly')).toBeNull()
+      expect(screen.queryByText(APP_NAME)).toBeNull()
       expect(screen.queryByTestId('language-selector')).toBeNull()
       expect(screen.queryByTestId('theme-toggle')).toBeNull()
 
@@ -224,7 +225,7 @@ describe('PublicDocumentAccessPage embedded mode', () => {
 
   it('renders its own chrome standalone', () => {
     render(<PublicDocumentAccessPage expiredToken="tok" expiredMessage="expired" />)
-    expect(screen.getAllByText('Doc-Assembly').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(APP_NAME).length).toBeGreaterThan(0)
   })
 
   it('hides chrome when reached from an embedded signing page', () => {
@@ -233,7 +234,7 @@ describe('PublicDocumentAccessPage embedded mode', () => {
         <PublicDocumentAccessPage expiredToken="tok" expiredMessage="expired" />
       </EmbeddedModeContext.Provider>,
     )
-    expect(screen.queryByText('Doc-Assembly')).toBeNull()
+    expect(screen.queryByText(APP_NAME)).toBeNull()
     expect(screen.queryByTestId('language-selector')).toBeNull()
     expect(screen.queryByTestId('theme-toggle')).toBeNull()
   })
