@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Box, Loader2, AlertCircle } from 'lucide-react'
@@ -80,7 +81,7 @@ function LoginPage() {
               <Box size={16} fill="currentColor" />
             </div>
             <span className="font-display text-lg font-bold uppercase tracking-tight text-foreground">
-              Doc-Assembly
+              {APP_NAME}
             </span>
           </div>
 

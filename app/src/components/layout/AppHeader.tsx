@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { motion } from 'framer-motion'
 import { Box, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -5,7 +6,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ContextBreadcrumb } from '@/components/common/ContextBreadcrumb'
 import { Button } from '@/components/ui/button'
-import { useSandboxMode } from '@/stores/sandbox-mode-store'
+import { useSandboxMode } from '@/stores/sandbox-mode-store'
 
 interface AppHeaderProps {
   variant?: 'minimal' | 'full'
@@ -74,7 +75,7 @@ export function AppHeader({
               isSandboxActive ? 'text-sandbox' : 'text-foreground'
             )}
           >
-            Doc-Assembly
+            {APP_NAME}
           </motion.span>
         </motion.div>
 

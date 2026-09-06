@@ -1,3 +1,4 @@
+import { APP_NAME } from '@/lib/brand'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Paginator } from '@/components/ui/paginator'
@@ -233,7 +234,7 @@ function SelectTenantPage() {
           layoutId="app-logo-text"
           className="font-display text-sm font-bold uppercase tracking-tight text-foreground"
         >
-          Doc-Assembly
+          {APP_NAME}
         </motion.span>
       </motion.div>
 
