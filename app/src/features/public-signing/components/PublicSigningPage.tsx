@@ -1,3 +1,4 @@
+import { toAbsoluteAppUrl } from '@/lib/app-url'
 import { APP_NAME } from '@/lib/brand'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -799,7 +800,7 @@ function CompletedScreen({
           {canDownload && downloadUrl && (
             <div className="mt-6 flex justify-center">
               <a
-                href={downloadUrl}
+                href={toAbsoluteAppUrl(downloadUrl)}
                 className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Download size={16} />
