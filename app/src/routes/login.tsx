@@ -1,12 +1,9 @@
+import { useLogin } from '@/features/auth/hooks/useLogin'
 import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
-import { useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '@/stores/auth-store'
-import { loginWithCredentials, getUserInfo } from '@/lib/oidc'
-import { fetchMyRoles } from '@/features/auth/api/auth-api'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 
@@ -16,58 +13,15 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
-  const { setTokens, setUserProfile, setAllRoles } = useAuthStore()
-
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
-
-    try {
-      // Authenticate with Keycloak
-      const tokens = await loginWithCredentials(username, password)
-
-      // Store tokens
-      setTokens(tokens.access_token, tokens.refresh_token, tokens.expires_in)
-
-      // Get user info from Keycloak
-      const userInfo = await getUserInfo()
-      setUserProfile({
-        id: userInfo.sub,
-        email: userInfo.email || '',
-        firstName: userInfo.given_name,
-        lastName: userInfo.family_name,
-        username: userInfo.preferred_username,
-      })
-
-      // Fetch roles from backend API
-      try {
-        const roles = await fetchMyRoles()
-        setAllRoles(roles)
-      } catch (rolesError) {
-        console.warn('[Auth] Failed to fetch roles:', rolesError)
-        // Continue without roles - user can still access basic features
-      }
-
-      // Navigate to tenant selection
-      navigate({ to: '/select-tenant' })
-    } catch (err) {
-      console.error('[Auth] Login failed:', err)
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('login.error', 'Invalid username or password')
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const {
+    username,
+    setUsername,
+    password,
+    setPassword,
+    isLoading,
+    error,
+    handleLogin,
+  } = useLogin()
 
   return (
     <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-background">
