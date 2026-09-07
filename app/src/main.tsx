@@ -9,6 +9,7 @@ import { AuthProvider } from '@/features/auth/components/AuthProvider'
 import { Toaster } from '@/components/ui/toaster'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './index.css'
+import './brand-overrides.css'
 
 declare const __BUILD_TIMESTAMP__: string
 console.log(`[${APP_NAME}] Build: ${__BUILD_TIMESTAMP__}`)

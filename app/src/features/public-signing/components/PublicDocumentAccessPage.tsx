@@ -1,8 +1,8 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Box,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -295,7 +295,7 @@ function PageLayout({
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
             <div className="flex items-center gap-3">
               <div className="flex h-7 w-7 items-center justify-center border-2 border-foreground text-foreground">
-                <Box size={14} fill="currentColor" />
+                <BrandIcon size={14} />
               </div>
               <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
                 {APP_NAME}

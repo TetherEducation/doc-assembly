@@ -1,7 +1,8 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
 import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, Box, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth-store'
 import { loginWithCredentials, getUserInfo } from '@/lib/oidc'
@@ -78,7 +79,7 @@ function LoginPage() {
         <div className="mb-16 max-w-2xl md:mb-20">
           <div className="mb-10 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center border-2 border-foreground text-foreground">
-              <Box size={16} fill="currentColor" />
+              <BrandIcon size={16} />
             </div>
             <span className="font-display text-lg font-bold uppercase tracking-tight text-foreground">
               {APP_NAME}
