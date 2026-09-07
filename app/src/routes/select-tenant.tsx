@@ -1,3 +1,4 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
@@ -11,7 +12,7 @@ import { useAppContextStore, type TenantWithRole, type WorkspaceWithRole } from 
 import { useWorkspaceTransitionStore } from '@/stores/workspace-transition-store'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Box, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -228,7 +229,7 @@ function SelectTenantPage() {
           layoutId="app-logo-icon"
           className="flex h-6 w-6 items-center justify-center border-2 border-foreground"
         >
-          <Box size={12} fill="currentColor" className="text-foreground" />
+          <BrandIcon size={12} className="text-foreground" />
         </motion.div>
         <motion.span
           layoutId="app-logo-text"

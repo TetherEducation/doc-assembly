@@ -1,5 +1,5 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
-import { Box } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
@@ -37,7 +37,7 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
           sizes.container
         )}
       >
-        <Box size={sizes.icon} fill="currentColor" className="text-foreground" />
+        <BrandIcon size={sizes.icon} className="text-foreground" />
       </div>
       {showText && (
         <span

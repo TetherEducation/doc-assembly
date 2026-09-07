@@ -1,0 +1,15 @@
+/*
+ * Brand token overrides.
+ *
+ * Intentionally empty in this repository: the engine ships its own palette and
+ * tools-doc-assembly uses it unchanged. Wrappers that embed this SPA under their
+ * own identity overwrite this file during their build to restyle the app —
+ * tools-team-signing replaces it with the TetherEducation palette.
+ *
+ * It is imported from main.tsx AFTER index.css rather than with an @import at
+ * the top of index.css, because CSS requires @import to precede other rules,
+ * which would put these declarations BEFORE the :root block they need to beat.
+ *
+ * Override the semantic HSL triples (--primary, --background, --foreground, …)
+ * for :root and for .dark. Values are bare "H S% L%" triples, not hsl().
+ */

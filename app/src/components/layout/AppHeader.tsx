@@ -1,6 +1,7 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { APP_NAME } from '@/lib/brand'
 import { motion } from 'framer-motion'
-import { Box, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
@@ -59,9 +60,8 @@ export function AppHeader({
               isSandboxActive ? 'border-sandbox' : 'border-foreground'
             )}
           >
-            <Box
+            <BrandIcon
               size={16}
-              fill="currentColor"
               className={cn(
                 'transition-colors',
                 isSandboxActive ? 'text-sandbox' : 'text-foreground'

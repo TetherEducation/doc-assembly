@@ -1,3 +1,4 @@
+import { BrandIcon } from '@/components/common/BrandIcon'
 import { toAbsoluteAppUrl } from '@/lib/app-url'
 import { APP_NAME } from '@/lib/brand'
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
@@ -8,7 +9,6 @@ import { TextStyle, FontFamily, FontSize } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import TextAlign from '@tiptap/extension-text-align'
 import {
-  Box,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -596,7 +596,7 @@ function PageShell({
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-7 w-7 items-center justify-center border-2 border-foreground text-foreground">
-              <Box size={14} fill="currentColor" />
+              <BrandIcon size={14} />
             </div>
             <span className="font-display text-sm font-bold uppercase tracking-tight text-foreground">
               {APP_NAME}
