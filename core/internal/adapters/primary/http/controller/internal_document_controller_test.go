@@ -895,3 +895,88 @@ func loadDocumentSupersedeState(t *testing.T, pool *pgxpool.Pool, documentID str
 
 	return state
 }
+
+func (e *internalCreateEnv) postCancel(
+	t *testing.T,
+	documentID string,
+	reason *string,
+) (*http.Response, []byte) {
+	t.Helper()
+
+	req := map[string]any{}
+	if reason != nil {
+		req["reason"] = *reason
+	}
+
+	return e.client.
+		WithHeader("X-API-Key", testhelper.TestInternalAPIKey).
+		POST("/api/v1/internal/documents/"+documentID+"/cancel", req)
+}
+
+func TestInternalDocumentController_CancelInFlightDocument(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-cancel", "tx-cancel-1", nil, nil, map[string]any{"a": 1})
+
+	reason := "admission cancelled by campus"
+	resp, body := env.postCancel(t, doc.ID, &reason)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	var result dto.InternalCancelDocumentResponse
+	require.NoError(t, json.Unmarshal(body, &result))
+	assert.Equal(t, doc.ID, result.ID)
+	assert.Equal(t, string(entity.DocumentStatusCancelled), result.Status)
+
+	assert.Equal(t, entity.DocumentStatusCancelled, loadDocumentStatusInternal(t, env.pool, doc.ID))
+	assert.Equal(t, 1, countDocumentEventsInternal(t, env.pool, doc.ID, entity.EventDocumentCancelled))
+}
+
+// A signed contract is a legal record. The internal API must not provide any route
+// to void one - this is the guard that made it safe to let crm-admission call this
+// endpoint automatically on every terminal admission transition.
+func TestInternalDocumentController_CancelRefusesCompletedDocument(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-cancel-done", "tx-cancel-done-1", nil, nil, map[string]any{"a": 1})
+	setDocumentStatusInternal(t, env.pool, doc.ID, entity.DocumentStatusCompleted)
+
+	resp, body := env.postCancel(t, doc.ID, nil)
+	require.NotEqual(t, http.StatusOK, resp.StatusCode, string(body))
+
+	// Unchanged: still COMPLETED, still the record of record.
+	assert.Equal(t, entity.DocumentStatusCompleted, loadDocumentStatusInternal(t, env.pool, doc.ID))
+}
+
+func TestInternalDocumentController_CancelRecordsTheReason(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-cancel-reason", "tx-cancel-reason-1", nil, nil, map[string]any{"a": 1})
+
+	reason := "admission withdrawn by guardian"
+	resp, body := env.postCancel(t, doc.ID, &reason)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	// The reason must survive into the event metadata, or the audit trail is just
+	// "cancelled by user" for every cause - which is what forced the August 2026
+	// cleanup to reconstruct justifications from admission records afterwards.
+	var metadata string
+	require.NoError(t, env.pool.QueryRow(context.Background(),
+		`select coalesce(metadata::text, '') from execution.document_events
+		  where document_id = $1 and event_type = $2 limit 1`,
+		doc.ID, entity.EventDocumentCancelled,
+	).Scan(&metadata))
+	assert.Contains(t, metadata, reason)
+}
+
+func TestInternalDocumentController_CancelRequiresAPIKey(t *testing.T) {
+	env := setupInternalCreateEnv(t, nil, true)
+	env.createPublishedTemplate(t, env.workspaceID, env.documentTypeID)
+
+	_, _, doc := env.postCreate(t, env.documentTypeCode, "ext-cancel-auth", "tx-cancel-auth-1", nil, nil, map[string]any{"a": 1})
+
+	resp, _ := env.client.POST("/api/v1/internal/documents/"+doc.ID+"/cancel", map[string]any{})
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}

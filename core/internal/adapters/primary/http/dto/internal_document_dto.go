@@ -60,6 +60,18 @@ type InternalDeprecateDocumentResponse struct {
 	ProviderCleanup *ProviderCleanupResponse `json:"providerCleanup,omitempty"`
 }
 
+// InternalCancelDocumentRequest is the request for cancelling an in-flight document
+// via the internal API.
+type InternalCancelDocumentRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
+// InternalCancelDocumentResponse is returned after cancelling an in-flight document.
+type InternalCancelDocumentResponse struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
 // InternalErrorResponse is the error response for internal API.
 type InternalErrorResponse struct {
 	Error   string   `json:"error"`
