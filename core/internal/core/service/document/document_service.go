@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -361,10 +362,41 @@ func (s *DocumentService) RefreshDocumentStatus(ctx context.Context, documentID 
 	return s.documentRepo.FindByIDWithRecipients(ctx, documentID)
 }
 
+// defaultCancellationReason is what the panel has always written, and is kept as
+// the fallback so panel-initiated cancellations read exactly as they did before.
+const defaultCancellationReason = "cancelled by user"
+
+// resolveCancellationReason picks the reason to persist against a cancellation.
+//
+// A caller that supplies only whitespace has effectively supplied nothing, and
+// storing "   " would be worse than the default: it reads as a recorded reason
+// while carrying none.
+func resolveCancellationReason(reason *string) string {
+	if reason == nil {
+		return defaultCancellationReason
+	}
+	if trimmed := strings.TrimSpace(*reason); trimmed != "" {
+		return trimmed
+	}
+	return defaultCancellationReason
+}
+
 // CancelDocument cancels/voids a document that is pending signatures.
+func (s *DocumentService) CancelDocument(ctx context.Context, documentID string) error {
+	return s.CancelDocumentWithReason(ctx, documentID, nil)
+}
+
+// CancelDocumentWithReason cancels a pending document and records why.
+//
+// The reason is not decoration. Every envelope voided by hand during the August
+// 2026 cleanup had to have its justification reconstructed afterwards from
+// admission records, because "cancelled by user" is what the panel writes for
+// every cancellation regardless of cause. A service-to-service caller knows the
+// actual reason ("admission cancelled by campus"), and storing it is the
+// difference between an audit trail and a guess.
 //
 //nolint:nestif
-func (s *DocumentService) CancelDocument(ctx context.Context, documentID string) error {
+func (s *DocumentService) CancelDocumentWithReason(ctx context.Context, documentID string, reason *string) error {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
 		return fmt.Errorf("finding document: %w", err)
@@ -372,16 +404,21 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 
 	oldStatus := string(doc.Status)
 
+	// A completed document is terminal, so a signed contract can never be voided
+	// through this path - the legal record is immutable by construction, not by
+	// the caller remembering to check.
 	if doc.IsTerminal() {
 		return fmt.Errorf("cannot cancel document in terminal state: %s", doc.Status)
 	}
+
+	invalidationReason := resolveCancellationReason(reason)
 
 	if doc.ActiveAttemptID != nil && *doc.ActiveAttemptID != "" {
 		attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
 		if err != nil {
 			return fmt.Errorf("finding active attempt: %w", err)
 		}
-		if err := s.signingUOW.TerminateActiveAttempt(ctx, attempt, entity.SigningAttemptStatusCancelled, "cancelled by user", "ATTEMPT_CANCELLED"); err != nil {
+		if err := s.signingUOW.TerminateActiveAttempt(ctx, attempt, entity.SigningAttemptStatusCancelled, invalidationReason, "ATTEMPT_CANCELLED"); err != nil {
 			return fmt.Errorf("cancelling active attempt: %w", err)
 		}
 	} else {
@@ -393,9 +430,13 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 		}
 	}
 
-	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentCancelled, entity.ActorUser, "", oldStatus, string(entity.DocumentStatusCancelled), nil)
+	cancelMetadata, _ := json.Marshal(map[string]any{"reason": invalidationReason})
+	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentCancelled, entity.ActorUser, "", oldStatus, string(entity.DocumentStatusCancelled), cancelMetadata)
 
-	slog.InfoContext(ctx, "document cancelled", slog.String("document_id", documentID))
+	slog.InfoContext(ctx, "document cancelled",
+		slog.String("document_id", documentID),
+		slog.String("reason", invalidationReason),
+	)
 
 	return nil
 }

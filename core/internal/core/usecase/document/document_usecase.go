@@ -74,6 +74,10 @@ type DocumentUseCase interface {
 	// CancelDocument cancels/voids a document that is pending signatures.
 	CancelDocument(ctx context.Context, documentID string) error
 
+	// CancelDocumentWithReason cancels a pending document and records why it was
+	// cancelled. Service-to-service callers know the real cause; the panel does not.
+	CancelDocumentWithReason(ctx context.Context, documentID string, reason *string) error
+
 	// DeprecateDocument invalidates a completed document and best-effort cleans it up in the signing provider.
 	DeprecateDocument(ctx context.Context, documentID string, reason *string) (*DeprecateDocumentResult, error)
 
