@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,55 @@ func TestChecksumIsStableAcrossKeyOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, sumA, sumB, "key order must not change the checksum")
+}
+
+// The production path: ContentStructure is json.RawMessage, and encoding/json
+// passes one straight through untouched. Hashing it directly would hash key order
+// and whitespace - approvals would expire spontaneously after a harmless round trip
+// through jsonb, and a warning that fires for no reason is one people stop reading.
+//
+// This test failed before rawJSON() existed, which is how the bug was found.
+func TestChecksumIsStableForRawJSONAcrossKeyOrderAndWhitespace(t *testing.T) {
+	t.Parallel()
+
+	compact := json.RawMessage(`{"type":"doc","title":"Contrato"}`)
+	reordered := json.RawMessage(`{"title":"Contrato","type":"doc"}`)
+	spaced := json.RawMessage(`{  "title" : "Contrato" ,  "type" :  "doc"  }`)
+
+	first, err := ChecksumOfContent(compact)
+	require.NoError(t, err)
+	second, err := ChecksumOfContent(reordered)
+	require.NoError(t, err)
+	third, err := ChecksumOfContent(spaced)
+	require.NoError(t, err)
+
+	assert.Equal(t, first, second, "key order in stored JSON must not invalidate an approval")
+	assert.Equal(t, first, third, "whitespace in stored JSON must not invalidate an approval")
+}
+
+// ...but a real edit still must.
+func TestChecksumChangesForEditedRawJSON(t *testing.T) {
+	t.Parallel()
+
+	before, err := ChecksumOfContent(json.RawMessage(`{"clause":"original"}`))
+	require.NoError(t, err)
+	after, err := ChecksumOfContent(json.RawMessage(`{"clause":"edited"}`))
+	require.NoError(t, err)
+
+	assert.NotEqual(t, before, after, "an edited clause must still invalidate the approval")
+}
+
+// A Go value and its encoded form describe the same document and must agree, or an
+// approval proposed from one and checked against the other would look stale.
+func TestChecksumAgreesBetweenRawAndDecodedForms(t *testing.T) {
+	t.Parallel()
+
+	decoded, err := ChecksumOfContent(map[string]any{"type": "doc", "title": "Contrato"})
+	require.NoError(t, err)
+	raw, err := ChecksumOfContent(json.RawMessage(`{"title":"Contrato","type":"doc"}`))
+	require.NoError(t, err)
+
+	assert.Equal(t, decoded, raw)
 }
 
 func TestChecksumChangesWithContent(t *testing.T) {

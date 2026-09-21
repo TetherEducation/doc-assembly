@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -60,17 +61,43 @@ type TemplateVersionApproval struct {
 // ChecksumOfContent hashes a content structure so an approval can be tied to the
 // exact text it approved.
 //
-// Marshalled through encoding/json rather than hashing raw bytes: the same content
-// read back from jsonb can differ byte-for-byte from what was written (key order,
-// whitespace) while being the same document. Hashing the raw form would make
-// approvals expire spontaneously, which trains people to ignore the warning.
+// The same document read back from jsonb can differ byte-for-byte from what was
+// written - key order and whitespace are not preserved - while being the same
+// document. Hashing those bytes would make approvals expire spontaneously, and a
+// warning that fires for no reason is one people learn to ignore.
+//
+// So raw JSON is decoded before it is hashed. encoding/json passes a
+// json.RawMessage straight through untouched, which means marshalling one is
+// hashing the raw bytes; decoding first and re-encoding sorts object keys and
+// drops insignificant whitespace, giving the same hash for the same document
+// however it was stored.
 func ChecksumOfContent(content any) (string, error) {
+	if raw, ok := rawJSON(content); ok {
+		var decoded any
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return "", fmt.Errorf("decoding content before hashing: %w", err)
+		}
+		content = decoded
+	}
+
 	canonical, err := json.Marshal(content)
 	if err != nil {
 		return "", err
 	}
 	sum := sha256.Sum256(canonical)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// rawJSON reports content that is already encoded JSON rather than a Go value.
+func rawJSON(content any) ([]byte, bool) {
+	switch v := content.(type) {
+	case json.RawMessage:
+		return v, len(v) > 0
+	case []byte:
+		return v, len(v) > 0
+	default:
+		return nil, false
+	}
 }
 
 // NewTemplateVersionApproval starts a proposal for a version's current content.
