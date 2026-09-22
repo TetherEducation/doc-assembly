@@ -33,6 +33,7 @@ import (
 	tagrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tag_repo"
 	templaterepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_repo"
 	templatetagrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_tag_repo"
+	templateversionapprovalrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_approval_repo"
 	templateversioninjectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_injectable_repo"
 	templateversionrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_repo"
 	templateversionsignerrolerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_signer_role_repo"
@@ -134,6 +135,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	workspaceInjectableRepo := workspaceinjectablerepo.New(pool)
 	templateRepo := templaterepo.New(pool)
 	templateVersionRepo := templateversionrepo.New(pool)
+	templateVersionApprovalRepo := templateversionapprovalrepo.New(pool)
 	templateTagRepo := templatetagrepo.New(pool)
 	templateVersionInjectableRepo := templateversioninjectablerepo.New(pool)
 	templateVersionSignerRoleRepo := templateversionsignerrolerepo.New(pool)
@@ -345,6 +347,10 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	internalTemplateCtrl := controller.NewInternalTemplateController(
 		internalDocSvc, templateVersionSvc, templateVersionMapper,
 	)
+	templateApprovalSvc := templatesvc.NewTemplateApprovalService(
+		templateVersionApprovalRepo, templateVersionRepo,
+	)
+	internalApprovalCtrl := controller.NewInternalApprovalController(templateApprovalSvc)
 	// --- Document Access Service (email-verification gate) ---
 	paCfg := &cfg.PublicAccess
 	rateLimitMax := paCfg.RateLimitMax
@@ -413,6 +419,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		webhookCtrl,
 		internalDocCtrl,
 		internalTemplateCtrl,
+		internalApprovalCtrl,
 		publicDocAccessCtrl,
 		publicSigningCtrl,
 		publicReadOnlyViewCtrl,
