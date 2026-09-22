@@ -32,6 +32,21 @@ var (
 
 	// ErrApprovalNotFound is returned when no approval exists for a version.
 	ErrApprovalNotFound = errors.New("no approval found for template version")
+
+	// ErrApprovalDeciderRequired is returned when a decision names nobody. A row
+	// recording that someone agreed but not who fails at the single question this
+	// table exists to answer, so the entity refuses it rather than trusting every
+	// caller to check first.
+	ErrApprovalDeciderRequired = errors.New("a decision must record who made it")
+
+	// ErrApprovalContentUnchanged is returned when proposing content identical to
+	// what is already approved. Re-proposing would move the latest approval back to
+	// PENDING and silently revoke a standing approval of the very same text.
+	ErrApprovalContentUnchanged = errors.New("content is unchanged since the standing approval")
+
+	// ErrApprovalNotPending is returned when withdrawing something already decided.
+	// A decision is a historical fact and is never retracted.
+	ErrApprovalNotPending = errors.New("only a pending proposal can be withdrawn")
 )
 
 // TemplateVersionApproval records a school's decision about one exact contract text.
@@ -124,6 +139,9 @@ func (a *TemplateVersionApproval) Decide(
 	}
 	if status != ApprovalStatusApproved && status != ApprovalStatusChangesRequested {
 		return errors.New("a decision must be APPROVED or CHANGES_REQUESTED")
+	}
+	if strings.TrimSpace(email) == "" {
+		return ErrApprovalDeciderRequired
 	}
 	if status == ApprovalStatusChangesRequested &&
 		(comment == nil || strings.TrimSpace(*comment) == "") {

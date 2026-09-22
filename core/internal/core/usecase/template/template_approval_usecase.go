@@ -10,6 +10,11 @@ import (
 type ProposeApprovalCommand struct {
 	TemplateVersionID string
 	ProposedBy        string
+
+	// WorkspaceCode the caller claims the version belongs to. Checked, not trusted:
+	// every sibling internal endpoint scopes by tenant and workspace, and without it
+	// any holder of the internal key could act on any school's contract.
+	WorkspaceCode string
 }
 
 // DecideApprovalCommand records what the school decided.
@@ -20,11 +25,16 @@ type ProposeApprovalCommand struct {
 // so the context the decision was made in is not derivable from the template.
 type DecideApprovalCommand struct {
 	ApprovalID string
-	Approved   bool
-	Email      string
-	Name       string
-	Campus     string
-	Comment    *string
+
+	// WorkspaceCode the caller claims the approval's version belongs to. Checked
+	// against the template's actual workspace before anything is written, so the
+	// record cannot say one school's director approved another school's contract.
+	WorkspaceCode string
+	Approved      bool
+	Email         string
+	Name          string
+	Campus        string
+	Comment       *string
 }
 
 // ApprovalState is the answer to "may this version be published, and why not?".
@@ -58,4 +68,8 @@ type TemplateApprovalUseCase interface {
 
 	// ListHistory returns a version's approvals, newest first.
 	ListHistory(ctx context.Context, versionID string) ([]*entity.TemplateVersionApproval, error)
+
+	// Withdraw retracts a proposal that has not been decided, so a proposal sent by
+	// mistake does not have to be answered by the school to get rid of it.
+	Withdraw(ctx context.Context, approvalID, workspaceCode string) error
 }

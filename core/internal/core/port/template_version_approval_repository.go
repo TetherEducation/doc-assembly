@@ -30,6 +30,18 @@ type TemplateVersionApprovalRepository interface {
 	// ListForVersion returns a version's approval history, newest first.
 	ListForVersion(ctx context.Context, versionID string) ([]*entity.TemplateVersionApproval, error)
 
+	// Withdraw removes a proposal that is still PENDING.
+	//
+	// Without this a proposal sent by mistake can only be escaped by asking someone
+	// at the school to decide something we never meant to send them - or by deleting
+	// the row in SQL, which is the side-door this codebase keeps closing. Deleting
+	// rather than marking withdrawn is deliberate: an undecided proposal carries no
+	// governance fact worth keeping, and a WITHDRAWN row would complicate every
+	// "newest approval" lookup for nothing.
+	//
+	// Returns entity.ErrApprovalNotPending when the row was already decided.
+	Withdraw(ctx context.Context, id string) error
+
 	// RecordDecision writes a decision onto a proposal that is still PENDING.
 	//
 	// The status guard is in the UPDATE itself rather than a read-then-write, so two

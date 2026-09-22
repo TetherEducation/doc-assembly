@@ -3,12 +3,14 @@ package template
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
@@ -18,6 +20,8 @@ type approvalRepoFake struct {
 	latest      *entity.TemplateVersionApproval
 	created     []*entity.TemplateVersionApproval
 	decisionErr error
+	withdrawn   bool
+	withdrawErr error
 }
 
 func (f *approvalRepoFake) Create(
@@ -61,6 +65,11 @@ func (f *approvalRepoFake) ListForVersion(
 	return nil, nil
 }
 
+func (f *approvalRepoFake) Withdraw(_ context.Context, _ string) error {
+	f.withdrawn = true
+	return f.withdrawErr
+}
+
 func (f *approvalRepoFake) RecordDecision(
 	_ context.Context, _ *entity.TemplateVersionApproval,
 ) error {
@@ -70,11 +79,22 @@ func (f *approvalRepoFake) RecordDecision(
 // versionRepoStub satisfies versionContentReader - one method, because that is all
 // the service asked for.
 type versionRepoStub struct {
-	content any
+	content       any
+	workspaceCode string
 }
 
 func newVersionRepoStub(content any) *versionRepoStub {
-	return &versionRepoStub{content: content}
+	return &versionRepoStub{content: content, workspaceCode: testWorkspace}
+}
+
+// The workspace a version really belongs to. Scoping checks the caller's claim
+// against this rather than believing the header.
+func (v *versionRepoStub) FindByIDWithDetailsAndTemplateWorkspace(
+	_ context.Context, id string,
+) (*port.TemplateVersionContext, error) {
+	return &port.TemplateVersionContext{
+		Workspace: &entity.Workspace{Code: v.workspaceCode},
+	}, nil
 }
 
 func (v *versionRepoStub) FindByID(
@@ -89,6 +109,8 @@ func (v *versionRepoStub) FindByID(
 	}
 	return &entity.TemplateVersion{ID: id, ContentStructure: encoded}, nil
 }
+
+const testWorkspace = "AYELEN"
 
 func newService(approvals *approvalRepoFake, content any) *TemplateApprovalService {
 	return &TemplateApprovalService{
@@ -105,7 +127,7 @@ func TestProposeHashesCurrentContent(t *testing.T) {
 	svc := newService(repo, content)
 
 	approval, err := svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
-		TemplateVersionID: "v1", ProposedBy: "chris@tether.education",
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education", WorkspaceCode: testWorkspace,
 	})
 	require.NoError(t, err)
 
@@ -127,7 +149,7 @@ func TestProposeRefusesWhenOneIsOutstanding(t *testing.T) {
 	svc := newService(repo, map[string]any{"clause": "original"})
 
 	_, err := svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
-		TemplateVersionID: "v1", ProposedBy: "chris@tether.education",
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education", WorkspaceCode: testWorkspace,
 	})
 	require.Error(t, err)
 	assert.Empty(t, repo.created, "nothing may be written when a proposal is outstanding")
@@ -194,7 +216,7 @@ func TestDecideRecordsApproval(t *testing.T) {
 	svc := newService(repo, map[string]any{"clause": "original"})
 
 	decided, err := svc.Decide(context.Background(), templateuc.DecideApprovalCommand{
-		ApprovalID: "approval-1", Approved: true,
+		ApprovalID: "approval-1", WorkspaceCode: testWorkspace, Approved: true,
 		Email: "director@colegio.cl", Name: "La Directora", Campus: "2036400001",
 	})
 	require.NoError(t, err)
@@ -211,7 +233,7 @@ func TestDecideRequiresACommentToRejectt(t *testing.T) {
 	svc := newService(repo, map[string]any{"clause": "original"})
 
 	_, err := svc.Decide(context.Background(), templateuc.DecideApprovalCommand{
-		ApprovalID: "approval-1", Approved: false,
+		ApprovalID: "approval-1", WorkspaceCode: testWorkspace, Approved: false,
 		Email: "director@colegio.cl", Name: "La Directora", Campus: "2036400001",
 	})
 	require.ErrorIs(t, err, entity.ErrApprovalCommentRequired)
@@ -231,8 +253,178 @@ func TestDecideSurfacesALostRace(t *testing.T) {
 	svc := newService(repo, map[string]any{"clause": "original"})
 
 	_, err := svc.Decide(context.Background(), templateuc.DecideApprovalCommand{
-		ApprovalID: "approval-1", Approved: true,
+		ApprovalID: "approval-1", WorkspaceCode: testWorkspace, Approved: true,
 		Email: "director@colegio.cl", Name: "La Directora", Campus: "2036400001",
 	})
 	require.ErrorIs(t, err, entity.ErrApprovalAlreadyDecided)
+}
+
+// ---------------------------------------------------------------------------
+// Workspace scoping. The internal API key proves "a Tether service is calling",
+// not which school it is calling for. Without these, a caller could record that
+// one school's director approved another school's contract.
+// ---------------------------------------------------------------------------
+
+func TestProposeRefusesAVersionInAnotherWorkspace(t *testing.T) {
+	t.Parallel()
+
+	repo := &approvalRepoFake{}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	_, err := svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education",
+		WorkspaceCode: "SOME_OTHER_SCHOOL",
+	})
+	require.ErrorIs(t, err, ErrWorkspaceMismatch)
+	assert.Empty(t, repo.created, "nothing may be written for a workspace the caller does not own")
+}
+
+func TestDecideRefusesAnApprovalInAnotherWorkspace(t *testing.T) {
+	t.Parallel()
+
+	pending := entity.NewTemplateVersionApproval("v1", "chris@tether.education", "sum")
+	pending.ID = "approval-1"
+	repo := &approvalRepoFake{byID: map[string]*entity.TemplateVersionApproval{"approval-1": pending}}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	_, err := svc.Decide(context.Background(), templateuc.DecideApprovalCommand{
+		ApprovalID: "approval-1", WorkspaceCode: "SOME_OTHER_SCHOOL", Approved: true,
+		Email: "impostor@elsewhere.cl", Name: "Someone", Campus: "9999999999",
+	})
+	require.ErrorIs(t, err, ErrWorkspaceMismatch)
+	assert.Equal(t, entity.ApprovalStatusPending, pending.Status, "the proposal must be untouched")
+}
+
+// A missing header must not be a way to opt out of the check.
+func TestAnEmptyWorkspaceClaimIsRefused(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&approvalRepoFake{}, map[string]any{"clause": "original"})
+
+	_, err := svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education", WorkspaceCode: "  ",
+	})
+	require.ErrorIs(t, err, ErrWorkspaceScopeRequired)
+}
+
+// The workspace code is a business code, not a secret; case should not decide
+// whether a school can approve its own contract.
+func TestWorkspaceClaimIsCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&approvalRepoFake{}, map[string]any{"clause": "original"})
+
+	_, err := svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education",
+		WorkspaceCode: strings.ToLower(testWorkspace),
+	})
+	require.NoError(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// Re-proposing unchanged content would move the latest approval back to PENDING
+// and silently revoke a standing approval of the identical text.
+// ---------------------------------------------------------------------------
+
+func TestProposeRefusesContentAlreadyApproved(t *testing.T) {
+	t.Parallel()
+
+	content := map[string]any{"clause": "original"}
+	encoded, err := json.Marshal(content)
+	require.NoError(t, err)
+	sum, err := entity.ChecksumOfContent(json.RawMessage(encoded))
+	require.NoError(t, err)
+
+	approved := entity.NewTemplateVersionApproval("v1", "chris@tether.education", sum)
+	require.NoError(t, approved.Decide(
+		entity.ApprovalStatusApproved, "director@colegio.cl", "La Directora", "2036400001", nil))
+
+	repo := &approvalRepoFake{latest: approved}
+	svc := newService(repo, content)
+
+	_, err = svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education", WorkspaceCode: testWorkspace,
+	})
+	require.ErrorIs(t, err, entity.ErrApprovalContentUnchanged)
+	assert.Empty(t, repo.created, "a standing approval must not be revoked by an accidental re-proposal")
+}
+
+func TestProposeAllowsEditedContentAfterApproval(t *testing.T) {
+	t.Parallel()
+
+	approvedSum, err := entity.ChecksumOfContent(map[string]any{"clause": "original"})
+	require.NoError(t, err)
+	approved := entity.NewTemplateVersionApproval("v1", "chris@tether.education", approvedSum)
+	require.NoError(t, approved.Decide(
+		entity.ApprovalStatusApproved, "director@colegio.cl", "La Directora", "2036400001", nil))
+
+	// The version has since been edited, so a fresh decision is exactly right.
+	svc := newService(&approvalRepoFake{latest: approved}, map[string]any{"clause": "edited"})
+
+	_, err = svc.Propose(context.Background(), templateuc.ProposeApprovalCommand{
+		TemplateVersionID: "v1", ProposedBy: "chris@tether.education", WorkspaceCode: testWorkspace,
+	})
+	require.NoError(t, err)
+}
+
+// ---------------------------------------------------------------------------
+// Withdraw: a proposal sent by mistake must not have to be answered by a school.
+// ---------------------------------------------------------------------------
+
+func TestWithdrawRetractsAPendingProposal(t *testing.T) {
+	t.Parallel()
+
+	pending := entity.NewTemplateVersionApproval("v1", "chris@tether.education", "sum")
+	pending.ID = "approval-1"
+	repo := &approvalRepoFake{byID: map[string]*entity.TemplateVersionApproval{"approval-1": pending}}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	require.NoError(t, svc.Withdraw(context.Background(), "approval-1", testWorkspace))
+	assert.True(t, repo.withdrawn)
+}
+
+func TestWithdrawRefusesAnotherWorkspace(t *testing.T) {
+	t.Parallel()
+
+	pending := entity.NewTemplateVersionApproval("v1", "chris@tether.education", "sum")
+	pending.ID = "approval-1"
+	repo := &approvalRepoFake{byID: map[string]*entity.TemplateVersionApproval{"approval-1": pending}}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	err := svc.Withdraw(context.Background(), "approval-1", "SOME_OTHER_SCHOOL")
+	require.ErrorIs(t, err, ErrWorkspaceMismatch)
+	assert.False(t, repo.withdrawn, "a caller must not retract another school's proposal")
+}
+
+// A decision is a historical fact and is never retracted - the repository guards
+// on status, and that refusal must reach the caller intact.
+func TestWithdrawRefusesSomethingAlreadyDecided(t *testing.T) {
+	t.Parallel()
+
+	decided := entity.NewTemplateVersionApproval("v1", "chris@tether.education", "sum")
+	decided.ID = "approval-1"
+	repo := &approvalRepoFake{
+		byID:        map[string]*entity.TemplateVersionApproval{"approval-1": decided},
+		withdrawErr: entity.ErrApprovalNotPending,
+	}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	err := svc.Withdraw(context.Background(), "approval-1", testWorkspace)
+	require.ErrorIs(t, err, entity.ErrApprovalNotPending)
+}
+
+// A decision naming nobody fails at the one question this table exists to answer.
+func TestDecideRefusesAnAnonymousDecider(t *testing.T) {
+	t.Parallel()
+
+	pending := entity.NewTemplateVersionApproval("v1", "chris@tether.education", "sum")
+	pending.ID = "approval-1"
+	repo := &approvalRepoFake{byID: map[string]*entity.TemplateVersionApproval{"approval-1": pending}}
+	svc := newService(repo, map[string]any{"clause": "original"})
+
+	_, err := svc.Decide(context.Background(), templateuc.DecideApprovalCommand{
+		ApprovalID: "approval-1", WorkspaceCode: testWorkspace, Approved: true,
+		Email: "   ", Name: "La Directora", Campus: "2036400001",
+	})
+	require.ErrorIs(t, err, entity.ErrApprovalDeciderRequired)
 }

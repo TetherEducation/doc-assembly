@@ -39,6 +39,10 @@ const (
 		WHERE template_version_id = $1
 		ORDER BY proposed_at DESC`
 
+	queryWithdraw = `
+		DELETE FROM content.template_version_approvals
+		WHERE id = $1 AND status = 'PENDING'`
+
 	// The WHERE status = 'PENDING' is the concurrency guard: two simultaneous
 	// decisions cannot both write, because the second matches no row.
 	queryRecordDecision = `

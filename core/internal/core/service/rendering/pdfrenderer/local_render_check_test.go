@@ -84,6 +84,14 @@ func TestLocalRenderCheck(t *testing.T) {
 			"explorer-images/chile/2036400001/images/e0780f04-7883-4f4c-b5ce-8f5664e18700.jpeg",
 	}
 
+		// A file holding the exact campus_logo value the injector will emit lets the same
+	// harness exercise Atrio SVG data URIs without editing this file per run.
+	if lp := os.Getenv("RENDER_LOGO_FILE"); lp != "" {
+		if b, err := os.ReadFile(lp); err == nil {
+			injectables["campus_logo"] = string(b)
+		}
+	}
+
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue

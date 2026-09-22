@@ -11,6 +11,7 @@ import (
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	templatesvc "github.com/TetherEducation/doc-assembly/core/internal/core/service/template"
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
@@ -58,6 +59,7 @@ func (c *InternalApprovalController) RegisterRoutes(
 	approvals.Use(authMiddleware)
 	{
 		approvals.POST("/:approvalId/decision", c.DecideApproval)
+		approvals.DELETE("/:approvalId", c.WithdrawApproval)
 	}
 }
 
@@ -89,9 +91,15 @@ func (c *InternalApprovalController) ProposeApproval(ctx *gin.Context) {
 		return
 	}
 
+	workspace, ok := requireWorkspace(ctx)
+	if !ok {
+		return
+	}
+
 	approval, err := c.approvalUC.Propose(ctx.Request.Context(), templateuc.ProposeApprovalCommand{
 		TemplateVersionID: ctx.Param("versionId"),
 		ProposedBy:        strings.TrimSpace(req.ProposedBy),
+		WorkspaceCode:     workspace,
 	})
 	if err != nil {
 		writeApprovalError(ctx, err)
@@ -131,13 +139,19 @@ func (c *InternalApprovalController) DecideApproval(ctx *gin.Context) {
 		return
 	}
 
+	workspace, ok := requireWorkspace(ctx)
+	if !ok {
+		return
+	}
+
 	approval, err := c.approvalUC.Decide(ctx.Request.Context(), templateuc.DecideApprovalCommand{
-		ApprovalID: ctx.Param("approvalId"),
-		Approved:   req.Approved,
-		Email:      strings.TrimSpace(req.Email),
-		Name:       strings.TrimSpace(req.Name),
-		Campus:     strings.TrimSpace(req.Campus),
-		Comment:    req.Comment,
+		ApprovalID:    ctx.Param("approvalId"),
+		WorkspaceCode: workspace,
+		Approved:      req.Approved,
+		Email:         strings.TrimSpace(req.Email),
+		Name:          strings.TrimSpace(req.Name),
+		Campus:        strings.TrimSpace(req.Campus),
+		Comment:       req.Comment,
 	})
 	if err != nil {
 		writeApprovalError(ctx, err)
@@ -202,6 +216,49 @@ func (c *InternalApprovalController) ListApprovals(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.InternalApprovalHistoryResponse{Items: items})
 }
 
+// WithdrawApproval retracts a proposal that has not been decided.
+// @Summary Withdraw an undecided proposal
+// @Description Removes a PENDING proposal so one sent by mistake need not be answered by the school. A decided approval is never retracted.
+// @Tags Internal
+// @Produce json
+// @Param X-API-Key header string true "API Key for authentication"
+// @Param X-Workspace-Code header string true "Workspace business code"
+// @Param approvalId path string true "Approval ID"
+// @Success 204
+// @Failure 401 {object} dto.InternalErrorResponse
+// @Failure 404 {object} dto.InternalErrorResponse
+// @Failure 409 {object} dto.InternalErrorResponse
+// @Router /api/v1/internal/approvals/{approvalId} [delete]
+func (c *InternalApprovalController) WithdrawApproval(ctx *gin.Context) {
+	workspace, ok := requireWorkspace(ctx)
+	if !ok {
+		return
+	}
+	if err := c.approvalUC.Withdraw(ctx.Request.Context(), ctx.Param("approvalId"), workspace); err != nil {
+		writeApprovalError(ctx, err)
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
+// requireWorkspace reads the workspace the caller claims to be acting for.
+//
+// The internal API key alone only proves "a Tether service is calling". Which
+// school it is calling for comes from this header and is verified against the
+// template downstream, matching how every other internal endpoint scopes itself.
+func requireWorkspace(ctx *gin.Context) (string, bool) {
+	workspace := strings.TrimSpace(ctx.GetHeader(HeaderWorkspaceCode))
+	if workspace == "" {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
+			Error:   "missing required header",
+			Code:    "MISSING_HEADERS",
+			Details: []string{HeaderWorkspaceCode},
+		})
+		return "", false
+	}
+	return workspace, true
+}
+
 // readInternalJSON decodes a required JSON body, answering 400 on malformed input.
 func readInternalJSON(ctx *gin.Context, target any) bool {
 	if ctx.Request.Body == nil {
@@ -241,7 +298,22 @@ func writeApprovalError(ctx *gin.Context, err error) {
 		ctx.JSON(http.StatusConflict, dto.InternalErrorResponse{
 			Error: err.Error(), Code: "APPROVAL_ALREADY_DECIDED",
 		})
-	case errors.Is(err, entity.ErrApprovalCommentRequired):
+	case errors.Is(err, entity.ErrApprovalContentUnchanged):
+		ctx.JSON(http.StatusConflict, dto.InternalErrorResponse{
+			Error: err.Error(), Code: "APPROVAL_CONTENT_UNCHANGED",
+		})
+	case errors.Is(err, entity.ErrApprovalNotPending):
+		ctx.JSON(http.StatusConflict, dto.InternalErrorResponse{
+			Error: err.Error(), Code: "APPROVAL_NOT_PENDING",
+		})
+	case errors.Is(err, templatesvc.ErrWorkspaceMismatch),
+		errors.Is(err, templatesvc.ErrWorkspaceScopeRequired):
+		// 403, not 404: the caller asked about something real and was refused.
+		ctx.JSON(http.StatusForbidden, dto.InternalErrorResponse{
+			Error: err.Error(), Code: "WORKSPACE_SCOPE",
+		})
+	case errors.Is(err, entity.ErrApprovalDeciderRequired),
+		errors.Is(err, entity.ErrApprovalCommentRequired):
 		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{
 			Error: err.Error(), Code: "APPROVAL_COMMENT_REQUIRED",
 		})
