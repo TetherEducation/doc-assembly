@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -43,6 +44,7 @@ type AutomationController struct {
 	versionMapper     *mapper.TemplateVersionMapper
 	injectableMapper  *mapper.InjectableMapper
 	docTypeMapper     *mapper.DocumentTypeMapper
+	uploadedSourceUC  templateuc.UploadedSourceUseCase
 }
 
 // NewAutomationController creates a new AutomationController.
@@ -59,6 +61,7 @@ func NewAutomationController(
 	versionMapper *mapper.TemplateVersionMapper,
 	injectableMapper *mapper.InjectableMapper,
 	docTypeMapper *mapper.DocumentTypeMapper,
+	uploadedSourceUC templateuc.UploadedSourceUseCase,
 ) *AutomationController {
 	return &AutomationController{
 		tenantUC:          tenantUC,
@@ -73,6 +76,7 @@ func NewAutomationController(
 		versionMapper:     versionMapper,
 		injectableMapper:  injectableMapper,
 		docTypeMapper:     docTypeMapper,
+		uploadedSourceUC:  uploadedSourceUC,
 	}
 }
 
@@ -126,6 +130,7 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 
 	// Document Types
 	g.GET("/document-types", ctrl.listDocumentTypes)
+	g.POST("/document-types", ctrl.createDocumentType)
 	g.POST("/templates/:templateId/document-type", ctrl.assignDocumentType)
 
 	// Versions
@@ -137,6 +142,8 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 	g.POST("/templates/:templateId/versions/:versionId/archive", ctrl.archiveVersion)
 	g.GET("/templates/:templateId/versions/:versionId/content", ctrl.getVersionContent)
 	g.PUT("/templates/:templateId/versions/:versionId/content", ctrl.updateVersionContent)
+	g.POST("/templates/:templateId/versions/:versionId/source-document", ctrl.storeUploadedPDF)
+	g.PUT("/templates/:templateId/versions/:versionId/placements", ctrl.replacePlacements)
 }
 
 // checkTenantAccess verifies the API key has access to the given tenant.
@@ -927,4 +934,91 @@ func (ctrl *AutomationController) updateVersionContent(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func (ctrl *AutomationController) createDocumentType(c *gin.Context) {
+	var req dto.AutomationCreateDocumentTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	if !ctrl.checkTenantAccess(c, req.TenantID) {
+		return
+	}
+	docType, err := ctrl.documentTypeUC.CreateDocumentType(c.Request.Context(), cataloguc.CreateDocumentTypeCommand{
+		TenantID:    req.TenantID,
+		Code:        req.Code,
+		Name:        entity.I18nText(req.Name),
+		Description: entity.I18nText(req.Description),
+	})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, ctrl.docTypeMapper.ToResponse(docType))
+}
+
+func (ctrl *AutomationController) storeUploadedPDF(c *gin.Context) {
+	if ctrl.uploadedSourceUC == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "uploaded PDF storage is not configured"})
+		return
+	}
+	file, err := c.FormFile("file")
+	if err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	opened, err := file.Open()
+	if err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	defer opened.Close()
+	pdf, err := io.ReadAll(io.LimitReader(opened, 12<<20+1))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	result, err := ctrl.uploadedSourceUC.StorePDF(c.Request.Context(), templateuc.StoreUploadedPDFCommand{
+		TemplateID: c.Param("templateId"),
+		VersionID:  c.Param("versionId"),
+		PDF:        pdf,
+	})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"pageCount": result.PageCount, "pageSizes": result.PageSizes})
+}
+
+func (ctrl *AutomationController) replacePlacements(c *gin.Context) {
+	if ctrl.uploadedSourceUC == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "uploaded PDF storage is not configured"})
+		return
+	}
+	var req dto.AutomationReplacePlacementsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+	signers := make([]templateuc.SignerPlacement, 0, len(req.Signers))
+	for _, signer := range req.Signers {
+		fields := make([]entity.PlacedField, 0, len(signer.Fields))
+		for _, field := range signer.Fields {
+			fields = append(fields, entity.PlacedField{
+				Type: field.Type, Page: field.Page, X: field.X, Y: field.Y, Width: field.Width, Height: field.Height,
+			})
+		}
+		signers = append(signers, templateuc.SignerPlacement{Name: signer.Name, Order: signer.Order, Fields: fields})
+	}
+	result, err := ctrl.uploadedSourceUC.ReplacePlacements(c.Request.Context(), templateuc.ReplacePlacementsCommand{
+		TemplateID: c.Param("templateId"),
+		VersionID:  c.Param("versionId"),
+		Signers:    signers,
+	})
+	if err != nil {
+		HandleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }

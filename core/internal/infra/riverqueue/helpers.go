@@ -73,9 +73,39 @@ func mapSignatureFieldPositions(fields []port.SignatureField, dbSignerRoles []*e
 			continue
 		}
 		posX, posY := port.ConvertFieldToDocumensoPosition(f)
-		positions = append(positions, port.SignatureFieldPosition{RoleID: dbRoleID, Page: f.Page, PositionX: posX, PositionY: posY, Width: f.Width, Height: f.Height})
+		positions = append(positions, port.SignatureFieldPosition{RoleID: dbRoleID, Page: f.Page, PositionX: posX, PositionY: posY, Width: f.Width, Height: f.Height, Type: "SIGNATURE"})
 	}
 	return positions, nil
+}
+
+func positionsFromPlacedFields(fields []entity.PlacedField, pages []entity.PageSize) ([]port.SignatureFieldPosition, error) {
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("uploaded PDF has no placed fields")
+	}
+	out := make([]port.SignatureFieldPosition, 0, len(fields))
+	for _, field := range fields {
+		if field.Page < 1 || field.Page > len(pages) {
+			return nil, fmt.Errorf("placed field page %d is outside the PDF", field.Page)
+		}
+		page := pages[field.Page-1]
+		if page.Width <= 0 || page.Height <= 0 || field.Width <= 0 || field.Height <= 0 {
+			return nil, fmt.Errorf("placed field on page %d has no size", field.Page)
+		}
+		fieldType, err := entity.NormalizeFieldType(field.Type)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, port.SignatureFieldPosition{
+			RoleID:    field.RoleID,
+			Page:      field.Page,
+			PositionX: (field.X / page.Width) * 100,
+			PositionY: ((page.Height - (field.Y + field.Height)) / page.Height) * 100,
+			Width:     (field.Width / page.Width) * 100,
+			Height:    (field.Height / page.Height) * 100,
+			Type:      fieldType,
+		})
+	}
+	return out, nil
 }
 
 func buildDefaultSignatureFieldPositions(recipients []*entity.DocumentRecipient) []port.SignatureFieldPosition {

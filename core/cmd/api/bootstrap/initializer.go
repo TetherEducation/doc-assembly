@@ -39,6 +39,7 @@ import (
 	templateversionsignerrolerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_signer_role_repo"
 	tenantmemberrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_member_repo"
 	tenantrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_repo"
+	uploadedsourcerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/uploaded_source_repo"
 	useraccesshistoryrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/user_access_history_repo"
 	userrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/user_repo"
 	workspaceinjectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/workspace_injectable_repo"
@@ -135,6 +136,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	workspaceInjectableRepo := workspaceinjectablerepo.New(pool)
 	templateRepo := templaterepo.New(pool)
 	templateVersionRepo := templateversionrepo.New(pool)
+	uploadedSourceRepo := uploadedsourcerepo.New(pool)
 	templateVersionApprovalRepo := templateversionapprovalrepo.New(pool)
 	templateTagRepo := templatetagrepo.New(pool)
 	templateVersionInjectableRepo := templateversioninjectablerepo.New(pool)
@@ -211,6 +213,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	templateVersionSvc := templatesvc.NewTemplateVersionService(
 		templateVersionRepo, templateVersionInjectableRepo, templateVersionSignerRoleRepo,
 		systemInjectableRepo, templateRepo, templateTagRepo, contentValidator, workspaceRepo,
+		uploadedSourceRepo,
 	)
 
 	// --- Storage Adapter ---
@@ -261,6 +264,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		RecipientRepo:     documentRecipientRepo,
 		AttemptRepo:       signingAttemptRepo,
 		VersionRepo:       templateVersionRepo,
+		SourceRepo:        uploadedSourceRepo,
 		SignerRoleRepo:    templateVersionSignerRoleRepo,
 		FieldResponseRepo: documentFieldResponseRepo,
 		PDFRenderer:       pdfRenderer,
@@ -391,11 +395,15 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	publicReadOnlyViewCtrl := controller.NewPublicReadOnlyViewController(readOnlyViewSvc)
 	signingSessionCtrl := controller.NewSigningSessionController(signingSessionSvc)
 	automationKeyCtrl := controller.NewAutomationKeyController(automationAPIKeyUC)
+	uploadedSourceSvc := templatesvc.NewUploadedSourceService(
+		templateVersionRepo, templateVersionSignerRoleRepo, uploadedSourceRepo, storageAdapter,
+	)
 	automationCtrl := controller.NewAutomationController(
 		tenantSvc, workspaceSvc, injectableSvc,
 		templateSvc, templateVersionSvc, documentTypeSvc,
 		automationAPIKeyRepo, automationAuditLogRepo,
 		templateMapper, templateVersionMapper, injectableMapper, docTypeMapper,
+		uploadedSourceSvc,
 	)
 
 	publicDocAuth := e.publicDocAuth
