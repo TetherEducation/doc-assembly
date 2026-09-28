@@ -40,6 +40,7 @@ import (
 	templateversionsignerrolerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_signer_role_repo"
 	tenantmemberrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_member_repo"
 	tenantrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tenant_repo"
+	uploadedsourcerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/uploaded_source_repo"
 	useraccesshistoryrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/user_access_history_repo"
 	userrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/user_repo"
 	workspaceinjectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/workspace_injectable_repo"
@@ -175,6 +176,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 
 	// Create services - Content
 	templateService := templatesvc.NewTemplateService(templateRepo, templateVersionRepo, templateTagRepo, workspaceRepo, nil)
+	uploadedSourceRepo := uploadedsourcerepo.New(pool)
 	templateVersionService := templatesvc.NewTemplateVersionService(
 		templateVersionRepo,
 		templateVersionInjectableRepo,
@@ -184,6 +186,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		templateTagRepo,
 		contentValidator,
 		workspaceRepo,
+		uploadedSourceRepo,
 	)
 
 	// Create repositories - Document/Execution
@@ -215,11 +218,15 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	notificationSvc := documentsvc.NewNotificationService(noopNotifier, docRecipientRepo, docRepo, docAccessTokenRepo, testPublicURL)
 
 	// River attempt UoW in insert-only mode for integration helpers.
+	uploadedSourceSvc := templatesvc.NewUploadedSourceService(
+		templateVersionRepo, templateVersionSignerRoleRepo, uploadedSourceRepo, storageAdapter,
+	)
 	riverSvc, err := riverqueue.New(context.Background(), pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{
 		DocumentRepo:      docRepo,
 		RecipientRepo:     docRecipientRepo,
 		AttemptRepo:       signingAttemptRepo,
 		VersionRepo:       templateVersionRepo,
+		SourceRepo:        uploadedSourceRepo,
 		SignerRoleRepo:    templateVersionSignerRoleRepo,
 		FieldResponseRepo: docFieldResponseRepo,
 		PDFRenderer:       mockPDFRenderer,
@@ -421,6 +428,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		templateService, templateVersionService, documentTypeService,
 		automationKeyRepo, automationAuditRepo,
 		templateMapper, templateVersionMapper, injectableMapper, docTypeMapper,
+		uploadedSourceSvc,
 	)
 
 	// Register automation routes

@@ -121,3 +121,33 @@ type AutomationUpdateVersionRequest struct {
 type AutomationUpdateVersionContentRequest struct {
 	ContentStructure json.RawMessage `json:"contentStructure" binding:"required"`
 }
+
+// AutomationCreateDocumentTypeRequest creates a tenant document type.
+type AutomationCreateDocumentTypeRequest struct {
+	TenantID    string            `json:"tenantId" binding:"required"`
+	Code        string            `json:"code" binding:"required"`
+	Name        map[string]string `json:"name" binding:"required"`
+	Description map[string]string `json:"description"`
+}
+
+// AutomationFieldPlacement is one box in PDF points, origin bottom-left.
+type AutomationFieldPlacement struct {
+	Type   string  `json:"type" binding:"required"`
+	Page   int     `json:"page" binding:"required"`
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width" binding:"required"`
+	Height float64 `json:"height" binding:"required"`
+}
+
+// AutomationSignerPlacement is one signer and their boxes.
+type AutomationSignerPlacement struct {
+	Name   string                     `json:"name" binding:"required"`
+	Order  int                        `json:"order" binding:"required"`
+	Fields []AutomationFieldPlacement `json:"fields" binding:"required,min=1"`
+}
+
+// AutomationReplacePlacementsRequest replaces signer roles and field boxes.
+type AutomationReplacePlacementsRequest struct {
+	Signers []AutomationSignerPlacement `json:"signers" binding:"required,min=1"`
+}

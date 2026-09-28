@@ -280,7 +280,7 @@ func (a *Adapter) buildSingleFieldPayload(
 
 	return &fieldPayload{
 		RecipientID: providerRecipientID,
-		Type:        "SIGNATURE",
+		Type:        providerFieldType(sf.Type),
 		Page:        sf.Page,
 		PositionX:   sf.PositionX,
 		PositionY:   sf.PositionY,
@@ -978,7 +978,7 @@ func buildMissingSignatureFieldPayloads(env *envelopeDetailResponse, signatureFi
 
 		fieldPayloads = append(fieldPayloads, fieldPayload{
 			RecipientID: providerRecipientID,
-			Type:        "SIGNATURE",
+			Type:        providerFieldType(sf.Type),
 			Page:        sf.Page,
 			PositionX:   sf.PositionX,
 			PositionY:   sf.PositionY,
@@ -1385,6 +1385,15 @@ type webhookRecipient struct {
 }
 
 // Field creation types for Documenso API
+
+func providerFieldType(raw string) string {
+	switch strings.ToUpper(strings.TrimSpace(raw)) {
+	case "DATE", "TEXT", "INITIALS", "SIGNATURE":
+		return strings.ToUpper(strings.TrimSpace(raw))
+	default:
+		return "SIGNATURE"
+	}
+}
 
 type fieldPayload struct {
 	RecipientID int     `json:"recipientId"`

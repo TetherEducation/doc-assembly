@@ -30,6 +30,7 @@ type Dependencies struct {
 	RecipientRepo     port.DocumentRecipientRepository
 	AttemptRepo       port.SigningAttemptRepository
 	VersionRepo       port.TemplateVersionRepository
+	SourceRepo        port.UploadedSourceRepository
 	SignerRoleRepo    port.TemplateVersionSignerRoleRepository
 	FieldResponseRepo port.DocumentFieldResponseRepository
 	PDFRenderer       port.PDFRenderer
@@ -62,6 +63,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg config.WorkerConfig, deps 
 			RecipientRepo:     deps.RecipientRepo,
 			AttemptRepo:       deps.AttemptRepo,
 			VersionRepo:       deps.VersionRepo,
+			SourceRepo:        deps.SourceRepo,
 			SignerRoleRepo:    deps.SignerRoleRepo,
 			FieldResponseRepo: deps.FieldResponseRepo,
 			PDFRenderer:       deps.PDFRenderer,
