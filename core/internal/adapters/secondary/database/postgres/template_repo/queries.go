@@ -332,8 +332,25 @@ const (
 			JOIN tenant t ON TRUE
 			JOIN resolution_env re ON TRUE
 			JOIN tenancy.workspaces w ON w.tenant_id = t.id AND w.code = iw.code
+			-- An ARCHIVED workspace is retired, but its templates are not deleted with
+			-- it, and the campus code is still the first entry in WorkspaceCodes. With
+			-- no status filter here that workspace stays a candidate at priority 1, so
+			-- it CAPTURES resolution for its campus and outranks the network and DEFAULT
+			-- fallbacks that were supposed to take over when it was retired -- serving a
+			-- template nobody maintains any more instead of the live baseline.
+			--
+			-- Found on 1060800002 (Superior del Maipo Sede Basica), archived while
+			-- holding three PUBLISHED versions left roleless by the 2026-08-14
+			-- direct-SQL publish bypass. Any request for one of those document types at
+			-- that campus resolves into the retired workspace and fails recipient
+			-- validation with a 422, although the network/DEFAULT templates are healthy.
+			--
+			-- SUSPENDED is deliberately still a candidate: it is a temporary state, not
+			-- a retirement, and excluding it would silently change serving for reasons
+			-- this fix has not measured.
 			WHERE w.type <> 'SYSTEM'
 			  AND w.code <> 'SYS_WRKSP'
+			  AND w.status <> 'ARCHIVED'
 			  AND (
 				(re.value = 'dev' AND w.is_sandbox = TRUE)
 				OR (re.value = 'prod' AND w.is_sandbox = FALSE)

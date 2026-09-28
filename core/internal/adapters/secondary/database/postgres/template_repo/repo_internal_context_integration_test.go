@@ -139,3 +139,123 @@ func TestFindInternalTemplateContext_ExactProcessOutranksDefaultRegardlessOfCase
 	require.Equal(t, overrideVersion, resolved.Version.ID,
 		"the process-specific template should win over the DEFAULT baseline")
 }
+
+// A retired workspace must stop serving. Its templates are not deleted when it is
+// archived and its campus code is still first in WorkspaceCodes, so without a status
+// filter it stays a priority-1 candidate and captures resolution for that campus --
+// outranking the network and DEFAULT fallbacks that were meant to take over. Production
+// had 1060800002 archived while holding three PUBLISHED versions left roleless by the
+// 2026-08-14 publish bypass: every request for those document types at that campus
+// resolved into the retired workspace and 422'd on recipient validation, with healthy
+// templates sitting one priority behind it.
+func TestFindInternalTemplateContext_ArchivedWorkspaceDoesNotCaptureResolution(t *testing.T) {
+	pool := testhelper.GetTestPool(t)
+	repo := templaterepo.New(pool)
+	ctx := context.Background()
+
+	tenantID := testhelper.CreateTestTenant(t, pool, "Archived Tenant", "ARCTEN")
+	t.Cleanup(func() { testhelper.CleanupTenant(t, pool, tenantID) })
+
+	docTypeID := testhelper.CreateTestDocumentType(t, pool, tenantID,
+		"ENROLLMENT_CONFIRMATION", "Comprobante de Matricula")
+	t.Cleanup(func() { testhelper.CleanupDocumentType(t, pool, docTypeID) })
+
+	// The campus workspace, first in priority order, about to be retired.
+	campusID := testhelper.CreateTestWorkspace(t, pool, &tenantID, "Retired Campus",
+		entity.WorkspaceTypeClient)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, campusID) })
+	campusTemplate := testhelper.CreateTestTemplate(t, pool, campusID, "Campus Comprobante", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, pool, campusTemplate) })
+	testhelper.SetTemplateDocumentType(t, pool, campusTemplate, docTypeID)
+	campusVersion := testhelper.CreateTestTemplateVersion(t, pool, campusTemplate, 1, "v1.0",
+		entity.VersionStatusPublished)
+	t.Cleanup(func() { testhelper.CleanupTemplateVersion(t, pool, campusVersion) })
+
+	// The fallback that should take over once the campus workspace is retired.
+	fallbackID := testhelper.CreateTestWorkspace(t, pool, &tenantID, "Network Fallback",
+		entity.WorkspaceTypeClient)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, fallbackID) })
+	fallbackTemplate := testhelper.CreateTestTemplate(t, pool, fallbackID, "Network Comprobante", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, pool, fallbackTemplate) })
+	testhelper.SetTemplateDocumentType(t, pool, fallbackTemplate, docTypeID)
+	fallbackVersion := testhelper.CreateTestTemplateVersion(t, pool, fallbackTemplate, 1, "v1.0",
+		entity.VersionStatusPublished)
+	t.Cleanup(func() { testhelper.CleanupTemplateVersion(t, pool, fallbackVersion) })
+
+	campusCode := workspaceCode(t, pool, campusID)
+	fallbackCode := workspaceCode(t, pool, fallbackID)
+	published := true
+
+	query := port.InternalTemplateContextQuery{
+		TenantCode:             "ARCTEN",
+		RequestedWorkspaceCode: campusCode,
+		WorkspaceCodes:         []string{campusCode, fallbackCode},
+		DocumentType:           "ENROLLMENT_CONFIRMATION",
+		Published:              &published,
+	}
+
+	// Control: while the campus workspace is ACTIVE it must win on priority, so a pass
+	// below cannot come from the campus template being unreachable for some other reason.
+	resolved, err := repo.FindInternalTemplateContext(ctx, query)
+	require.NoError(t, err)
+	require.NotNil(t, resolved)
+	require.NotNil(t, resolved.Version)
+	require.Equal(t, campusVersion, resolved.Version.ID,
+		"an active campus workspace should win on priority")
+
+	testhelper.UpdateWorkspaceStatus(t, pool, campusID, entity.WorkspaceStatusArchived)
+
+	resolved, err = repo.FindInternalTemplateContext(ctx, query)
+	require.NoError(t, err)
+	require.NotNil(t, resolved)
+	require.NotNil(t, resolved.Workspace)
+	require.Equal(t, fallbackCode, resolved.Workspace.Code,
+		"an archived workspace must not capture resolution for its campus")
+	require.NotNil(t, resolved.Version)
+	require.Equal(t, fallbackVersion, resolved.Version.ID,
+		"resolution should fall through to the next workspace in priority order")
+}
+
+// SUSPENDED is a temporary state, not a retirement, so it must keep serving. Pinned so
+// the archived filter above is not later widened to w.status = 'ACTIVE' without someone
+// deciding that deliberately.
+func TestFindInternalTemplateContext_SuspendedWorkspaceStillResolves(t *testing.T) {
+	pool := testhelper.GetTestPool(t)
+	repo := templaterepo.New(pool)
+	ctx := context.Background()
+
+	tenantID := testhelper.CreateTestTenant(t, pool, "Suspended Tenant", "SUSTEN")
+	t.Cleanup(func() { testhelper.CleanupTenant(t, pool, tenantID) })
+
+	docTypeID := testhelper.CreateTestDocumentType(t, pool, tenantID,
+		"ENROLLMENT_CONFIRMATION", "Comprobante de Matricula")
+	t.Cleanup(func() { testhelper.CleanupDocumentType(t, pool, docTypeID) })
+
+	workspaceID := testhelper.CreateTestWorkspace(t, pool, &tenantID, "Suspended Campus",
+		entity.WorkspaceTypeClient)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, workspaceID) })
+	templateID := testhelper.CreateTestTemplate(t, pool, workspaceID, "Campus Comprobante", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, pool, templateID) })
+	testhelper.SetTemplateDocumentType(t, pool, templateID, docTypeID)
+	versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1.0",
+		entity.VersionStatusPublished)
+	t.Cleanup(func() { testhelper.CleanupTemplateVersion(t, pool, versionID) })
+
+	testhelper.UpdateWorkspaceStatus(t, pool, workspaceID, entity.WorkspaceStatusSuspended)
+
+	code := workspaceCode(t, pool, workspaceID)
+	published := true
+
+	resolved, err := repo.FindInternalTemplateContext(ctx, port.InternalTemplateContextQuery{
+		TenantCode:             "SUSTEN",
+		RequestedWorkspaceCode: code,
+		WorkspaceCodes:         []string{code},
+		DocumentType:           "ENROLLMENT_CONFIRMATION",
+		Published:              &published,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resolved)
+	require.NotNil(t, resolved.Version)
+	require.Equal(t, versionID, resolved.Version.ID,
+		"a suspended workspace should still serve its own template")
+}
