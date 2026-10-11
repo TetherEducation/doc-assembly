@@ -27,6 +27,12 @@ type Config struct {
 	// This is the public URL of your application's webhook endpoint.
 	WebhookURL string
 
+	// SequentialSigningOrder sets the envelope's signing order to SEQUENTIAL
+	// so Documenso invites recipients one at a time following each
+	// recipient's signingOrder. Off by default: Documenso then uses PARALLEL
+	// and the envelope-create payload is byte-identical to previous releases.
+	SequentialSigningOrder bool
+
 	// Embed customizes the embedded signing widget (theme, language,
 	// branding, signer-name prefill). Zero value keeps embedded URLs
 	// byte-identical to previous releases.

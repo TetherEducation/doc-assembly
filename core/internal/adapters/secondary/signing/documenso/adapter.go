@@ -104,7 +104,10 @@ func (a *Adapter) SubmitAttemptDocument(ctx context.Context, req *port.SubmitAtt
 }
 
 // buildEnvelopeBody builds the multipart form body for creating an envelope.
-func buildEnvelopeBody(title, externalRef string, pdf []byte) (*bytes.Buffer, string, error) {
+// When sequential is true the payload carries meta.signingOrder=SEQUENTIAL
+// (unconditionally: a single-signer envelope behaves the same either way);
+// when false no meta key is sent and Documenso defaults to PARALLEL.
+func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool) (*bytes.Buffer, string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -124,6 +127,9 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte) (*bytes.Buffer, st
 	if externalRef != "" {
 		payload["externalId"] = externalRef
 	}
+	if sequential {
+		payload["meta"] = map[string]any{"signingOrder": "SEQUENTIAL"}
+	}
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -141,7 +147,7 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte) (*bytes.Buffer, st
 
 // createEnvelope creates a new envelope with the PDF document.
 func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef string, pdf []byte) (string, error) {
-	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf)
+	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder)
 	if err != nil {
 		return "", err
 	}

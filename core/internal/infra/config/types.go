@@ -192,6 +192,10 @@ type SigningConfig struct {
 	WebhookSecret  string             `mapstructure:"webhook_secret"`
 	WebhookURL     string             `mapstructure:"webhook_url"` // Public URL for webhook endpoint
 	Embed          SigningEmbedConfig `mapstructure:"embed"`
+	// SequentialOrder makes the provider invite signers one at a time in
+	// signer order instead of all at once. Off by default (provider default,
+	// PARALLEL for Documenso).
+	SequentialOrder bool `mapstructure:"sequential_order"`
 }
 
 // SigningEmbedConfig customizes the provider's embedded signing widget so it

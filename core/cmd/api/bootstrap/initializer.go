@@ -523,6 +523,8 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
+
+			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 		})
 	}
 }
@@ -608,6 +610,8 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
+
+			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 		})
 		if err != nil {
 			return nil, err

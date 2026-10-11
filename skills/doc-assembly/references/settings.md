@@ -79,6 +79,8 @@ signing:
   base_url: "https://app.documenso.com"
   signing_base_url: "https://app.documenso.com"
   webhook_secret: ""
+  sequential_order: false                # true → Documenso emails signers one at a time, in signer order
+                                         # (envelope meta.signingOrder=SEQUENTIAL); false → all at once
   webhook_url: "https://app.example.com/webhooks/signing/documenso"
 
 storage:
@@ -195,6 +197,7 @@ These are the env vars the lib `Getenv`s explicitly — they always win over YAM
 | `DOC_ENGINE_SIGNING_BASE_URL` | `signing.base_url` | |
 | `DOC_ENGINE_SIGNING_SIGNING_BASE_URL` | `signing.signing_base_url` | |
 | `DOC_ENGINE_SIGNING_WEBHOOK_SECRET` | `signing.webhook_secret` | |
+| `DOC_ENGINE_SIGNING_SEQUENTIAL_ORDER` | `signing.sequential_order` | `true`/`false`; default `false` (all signers invited at once). |
 | `DOC_ENGINE_SIGNING_WEBHOOK_URL` | `signing.webhook_url` | |
 | `DOC_ENGINE_STORAGE_ENABLED` | `storage.enabled` | |
 | `DOC_ENGINE_STORAGE_PROVIDER` | `storage.provider` | |
