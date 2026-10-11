@@ -146,17 +146,23 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
 }
 
 /**
- * Get user info from OIDC provider
+ * Get user info from OIDC provider.
+ *
+ * Uses the stored token unless one is passed: a login reads the profile with
+ * its new token before storing it (see completeLogin).
  */
-export async function getUserInfo(): Promise<OIDCUserInfo> {
+export async function getUserInfo(
+  accessToken?: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<OIDCUserInfo> {
   const config = getConfig()
-  const { token } = useAuthStore.getState()
+  const token = accessToken ?? useAuthStore.getState().token
 
   if (!token) {
     throw new Error('No access token available')
   }
 
-  const response = await fetch(config.userinfoEndpoint, {
+  const response = await fetchImpl(config.userinfoEndpoint, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -175,32 +181,44 @@ export async function getUserInfo(): Promise<OIDCUserInfo> {
  * Logout from OIDC provider and clear local auth state
  */
 export async function logout(): Promise<void> {
-  const config = getConfig()
   const { refreshToken, clearAuth } = useAuthStore.getState()
 
   // Clear local auth state first (don't show "session expired" toast on manual logout)
   clearAuth(false)
 
-  // If we have a refresh token and a logout URL, try to invalidate it
-  if (refreshToken && config.endSessionEndpoint) {
-    try {
-      const params = new URLSearchParams({
-        client_id: config.clientId,
-        refresh_token: refreshToken,
-      })
+  if (refreshToken) {
+    await endSession(refreshToken)
+  }
+}
 
-      await fetch(config.endSessionEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-        signal: AbortSignal.timeout(10_000),
-      })
-    } catch (error) {
-      // Ignore logout errors - we've already cleared local state
-      console.warn('[Auth] Failed to logout from OIDC provider:', error)
-    }
+/**
+ * Ends the OIDC session behind a refresh token. Best effort: it never throws,
+ * since the caller has already dropped the session locally. Used by logout and
+ * by a login that is turned away (see completeLogin).
+ */
+export async function endSession(
+  refreshToken: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<void> {
+  const config = getConfig()
+  if (!refreshToken || !config.endSessionEndpoint) return
+
+  try {
+    const params = new URLSearchParams({
+      client_id: config.clientId,
+      refresh_token: refreshToken,
+    })
+
+    await fetchImpl(config.endSessionEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+      signal: AbortSignal.timeout(10_000),
+    })
+  } catch (error) {
+    console.warn('[Auth] Failed to end the OIDC session:', error)
   }
 }
 

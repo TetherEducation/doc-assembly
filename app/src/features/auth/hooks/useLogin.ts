@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { fetchMyRoles } from '@/features/auth/api/auth-api'
-import { loginWithCredentials, getUserInfo } from '@/lib/oidc'
-import { useAuthStore } from '@/stores/auth-store'
+import { completeLogin } from '@/features/auth/complete-login'
+import { loginWithCredentials } from '@/lib/oidc'
 
 export interface UseLoginResult {
   username: string
@@ -17,8 +16,8 @@ export interface UseLoginResult {
 }
 
 /**
- * The credential login flow: authenticate, store tokens, load the profile and
- * roles, then continue to tenant selection.
+ * The credential login flow: authenticate, then hand the tokens to completeLogin
+ * (access check, profile, roles, tokens last) and continue to tenant selection.
  *
  * Extracted from the login route so a wrapper can present its own login screen
  * without copying any of this. That matters because this path handles tokens
@@ -29,7 +28,6 @@ export interface UseLoginResult {
 export function useLogin(): UseLoginResult {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { setTokens, setUserProfile, setAllRoles } = useAuthStore()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -43,24 +41,20 @@ export function useLogin(): UseLoginResult {
 
     try {
       const tokens = await loginWithCredentials(username, password)
-      setTokens(tokens.access_token, tokens.refresh_token, tokens.expires_in)
+      const outcome = await completeLogin(tokens)
 
-      const userInfo = await getUserInfo()
-      setUserProfile({
-        id: userInfo.sub,
-        email: userInfo.email || '',
-        firstName: userInfo.given_name,
-        lastName: userInfo.family_name,
-        username: userInfo.preferred_username,
-      })
-
-      // Roles are not required to get in — a user without them still reaches the
-      // app, just with fewer features — so a failure here must not block login.
-      try {
-        const roles = await fetchMyRoles()
-        setAllRoles(roles)
-      } catch (rolesError) {
-        console.warn('[Auth] Failed to fetch roles:', rolesError)
+      if (outcome.kind === 'not-invited') {
+        setError(
+          t(
+            'login.notInvited',
+            "This account hasn't been added yet. Ask an administrator to invite you."
+          )
+        )
+        return
+      }
+      if (outcome.kind === 'rejected') {
+        setError(t('login.rejected', "Your sign-in couldn't be verified. Please try again."))
+        return
       }
 
       navigate({ to: '/select-tenant' })
