@@ -36,8 +36,9 @@ func NewDocumentService(
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	fieldResponseRepo port.DocumentFieldResponseRepository,
 	storageEnabled bool,
+	opts ...DocumentServiceOption,
 ) *DocumentService {
-	return &DocumentService{
+	svc := &DocumentService{
 		documentRepo:      documentRepo,
 		recipientRepo:     recipientRepo,
 		attemptRepo:       attemptRepo,
@@ -54,6 +55,21 @@ func NewDocumentService(
 		accessTokenRepo:   accessTokenRepo,
 		fieldResponseRepo: fieldResponseRepo,
 		storageEnabled:    storageEnabled,
+	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
+}
+
+// DocumentServiceOption configures optional DocumentService behaviour.
+type DocumentServiceOption func(*DocumentService)
+
+// WithDirectSend enables the opt-in direct-send policy for document creation
+// (see DirectSender). Without it, creation always stops in AWAITING_INPUT.
+func WithDirectSend(directSender *DirectSender) DocumentServiceOption {
+	return func(s *DocumentService) {
+		s.directSender = directSender
 	}
 }
 
@@ -75,11 +91,12 @@ type DocumentService struct {
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	fieldResponseRepo port.DocumentFieldResponseRepository
 	storageEnabled    bool
+	directSender      *DirectSender
 }
 
-// CreateAndSendDocument creates a document, generates the PDF, and sends it for signing.
-// If the template has interactive fields and exactly one unsigned signer, the document
-// is placed in AWAITING_INPUT status with an access token instead of rendering/uploading.
+// CreateAndSendDocument creates a document and its recipients and places it in
+// AWAITING_INPUT. When direct send is enabled (WithDirectSend) and the template has
+// no signer-fillable fields, it also starts the signing attempt immediately.
 func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documentuc.CreateDocumentCommand) (*entity.DocumentWithRecipients, error) {
 	if err := s.validateOperationType(ctx, cmd); err != nil {
 		return nil, err
@@ -119,6 +136,16 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 	// via the email-verification flow (DocumentAccessService).
 	if err := s.transitionToAwaitingInput(ctx, document); err != nil {
 		return nil, err
+	}
+
+	// Opt-in (signing.direct_send): with no signer-fillable fields there is
+	// nothing to collect, so start the signing attempt now instead of waiting
+	// for a signer to proceed from the public page.
+	if s.directSender.appliesTo(document, version.ContentStructure) {
+		if _, err := s.directSender.start(ctx, document, recipients); err != nil {
+			return nil, err
+		}
+		document = s.reloadAfterDirectSend(ctx, document)
 	}
 
 	s.notificationSvc.NotifyDocumentCreated(ctx, document.ID)
@@ -858,6 +885,22 @@ func (s *DocumentService) transitionToAwaitingInput(
 	)
 
 	return nil
+}
+
+// reloadAfterDirectSend re-reads the document so callers see the attempt
+// projection (status, active attempt) written by the signing unit of work.
+// The attempt is already committed, so a failed re-read only logs and returns
+// the in-memory copy rather than failing the request.
+func (s *DocumentService) reloadAfterDirectSend(ctx context.Context, document *entity.Document) *entity.Document {
+	reloaded, err := s.documentRepo.FindByID(ctx, document.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "direct send: reloading document after attempt creation failed",
+			slog.String("document_id", document.ID),
+			slog.String("error", err.Error()),
+		)
+		return document
+	}
+	return reloaded
 }
 
 // generateAccessToken creates a cryptographically random hex-encoded token (128 chars).

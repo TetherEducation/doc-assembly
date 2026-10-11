@@ -80,6 +80,9 @@ signing:
   signing_base_url: "https://app.documenso.com"
   webhook_secret: ""
   webhook_url: "https://app.example.com/webhooks/signing/documenso"
+  direct_send: false                     # DOC_ENGINE_SIGNING_DIRECT_SEND — true sends documents with no
+                                         # signer-fillable fields straight to the provider at creation
+                                         # (skips AWAITING_INPUT; the provider emails the signers)
 
 storage:
   enabled: true                          # If false, nothing is persisted; useful for stateless renders
@@ -196,6 +199,7 @@ These are the env vars the lib `Getenv`s explicitly — they always win over YAM
 | `DOC_ENGINE_SIGNING_SIGNING_BASE_URL` | `signing.signing_base_url` | |
 | `DOC_ENGINE_SIGNING_WEBHOOK_SECRET` | `signing.webhook_secret` | |
 | `DOC_ENGINE_SIGNING_WEBHOOK_URL` | `signing.webhook_url` | |
+| `DOC_ENGINE_SIGNING_DIRECT_SEND` | `signing.direct_send` | Default `false`. `true` skips `AWAITING_INPUT` for documents whose template has no interactive (signer-fillable) fields. |
 | `DOC_ENGINE_STORAGE_ENABLED` | `storage.enabled` | |
 | `DOC_ENGINE_STORAGE_PROVIDER` | `storage.provider` | |
 | `DOC_ENGINE_STORAGE_LOCAL_DIR` | `storage.local_dir` | |
