@@ -109,6 +109,9 @@ func (r *Repository) FindByIDWithAllVersions(ctx context.Context, id string) (*e
 	if err != nil {
 		return nil, err
 	}
+	if err := r.loadVersionDetails(ctx, result.Versions); err != nil {
+		return nil, err
+	}
 
 	result.Tags, _ = r.loadTemplateTags(ctx, id)
 	if template.FolderID != nil {
@@ -335,6 +338,110 @@ func (r *Repository) loadAllVersions(ctx context.Context, templateID string) ([]
 		versions = append(versions, &entity.TemplateVersionWithDetails{TemplateVersion: *v})
 	}
 	return versions, rows.Err()
+}
+
+// loadVersionDetails fills in the injectables and signer roles of every version, using
+// one query per kind for all versions together (not one per version).
+func (r *Repository) loadVersionDetails(ctx context.Context, versions []*entity.TemplateVersionWithDetails) error {
+	ids := versionIDs(versions)
+	if len(ids) == 0 {
+		return nil
+	}
+
+	injectables, err := r.loadInjectablesByVersionIDs(ctx, ids)
+	if err != nil {
+		return err
+	}
+	roles, err := r.loadSignerRolesByVersionIDs(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	attachVersionDetails(versions, injectables, roles)
+	return nil
+}
+
+// loadInjectablesByVersionIDs loads the injectables of several versions in one query.
+func (r *Repository) loadInjectablesByVersionIDs(ctx context.Context, versionIDs []string) ([]*entity.VersionInjectableWithDefinition, error) {
+	rows, err := r.pool.Query(ctx, queryInjectablesByVersionIDs, versionIDs)
+	if err != nil {
+		return nil, fmt.Errorf("querying version injectables: %w", err)
+	}
+	defer rows.Close()
+
+	var injectables []*entity.VersionInjectableWithDefinition
+	for rows.Next() {
+		iwd := &entity.VersionInjectableWithDefinition{
+			Definition: &entity.InjectableDefinition{},
+		}
+		if err := rows.Scan(
+			&iwd.ID, &iwd.TemplateVersionID, &iwd.InjectableDefinitionID,
+			&iwd.IsRequired, &iwd.DefaultValue, &iwd.CreatedAt,
+			&iwd.Definition.ID, &iwd.Definition.WorkspaceID, &iwd.Definition.Key,
+			&iwd.Definition.Label, &iwd.Definition.Description, &iwd.Definition.DataType,
+			&iwd.Definition.CreatedAt, &iwd.Definition.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning version injectable: %w", err)
+		}
+		injectables = append(injectables, iwd)
+	}
+	return injectables, rows.Err()
+}
+
+// loadSignerRolesByVersionIDs loads the signer roles of several versions in one query.
+func (r *Repository) loadSignerRolesByVersionIDs(ctx context.Context, versionIDs []string) ([]*entity.TemplateVersionSignerRole, error) {
+	rows, err := r.pool.Query(ctx, querySignerRolesByVersionIDs, versionIDs)
+	if err != nil {
+		return nil, fmt.Errorf("querying version signer roles: %w", err)
+	}
+	defer rows.Close()
+
+	var roles []*entity.TemplateVersionSignerRole
+	for rows.Next() {
+		role := &entity.TemplateVersionSignerRole{}
+		if err := rows.Scan(
+			&role.ID, &role.TemplateVersionID, &role.RoleName,
+			&role.AnchorString, &role.SignerOrder,
+			&role.CreatedAt, &role.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning version signer role: %w", err)
+		}
+		roles = append(roles, role)
+	}
+	return roles, rows.Err()
+}
+
+// versionIDs returns the IDs of the given versions, in order.
+func versionIDs(versions []*entity.TemplateVersionWithDetails) []string {
+	ids := make([]string, 0, len(versions))
+	for _, v := range versions {
+		ids = append(ids, v.ID)
+	}
+	return ids
+}
+
+// attachVersionDetails assigns batch-loaded injectables and signer roles to the version
+// they belong to, keeping the order they were loaded in. Rows for versions not in the
+// list are ignored.
+func attachVersionDetails(
+	versions []*entity.TemplateVersionWithDetails,
+	injectables []*entity.VersionInjectableWithDefinition,
+	roles []*entity.TemplateVersionSignerRole,
+) {
+	byID := make(map[string]*entity.TemplateVersionWithDetails, len(versions))
+	for _, v := range versions {
+		byID[v.ID] = v
+	}
+	for _, inj := range injectables {
+		if v, ok := byID[inj.TemplateVersionID]; ok {
+			v.Injectables = append(v.Injectables, inj)
+		}
+	}
+	for _, role := range roles {
+		if v, ok := byID[role.TemplateVersionID]; ok {
+			v.SignerRoles = append(v.SignerRoles, role)
+		}
+	}
 }
 
 // buildTemplateFilters builds filter query and args for template listing.
