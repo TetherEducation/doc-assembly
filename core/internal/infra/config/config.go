@@ -140,6 +140,9 @@ func setDefaults(v *viper.Viper) {
 	// Automation API defaults
 	v.SetDefault("automation.max_body_bytes", 16*1024*1024)
 
+	// Signing defaults
+	v.SetDefault("signing.direct_send", false)
+
 	// Worker defaults
 	v.SetDefault("worker.enabled", false)
 	v.SetDefault("worker.max_workers", 10)
@@ -220,6 +223,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
+	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_DIRECT_SEND"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.DirectSend = parsed
+		}
 	}
 	applySigningEmbedEnvOverrides(&cfg.Embed)
 }

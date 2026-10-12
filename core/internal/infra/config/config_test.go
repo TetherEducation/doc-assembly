@@ -188,3 +188,43 @@ func TestApplySigningEmbedEnvOverrides(t *testing.T) {
 		t.Errorf("malformed css_vars JSON must be ignored, got %v", cfg2.Embed.CSSVars)
 	}
 }
+
+func TestSigningDirectSend_DefaultsOff(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "app.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(`
+signing:
+  provider: mock
+`), 0o600))
+
+	cfg, err := LoadFromFile(configFile)
+
+	require.NoError(t, err)
+	assert.False(t, cfg.Signing.DirectSend)
+}
+
+func TestSigningDirectSend_YAMLAndEnvOverride(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "app.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(`
+signing:
+  direct_send: true
+`), 0o600))
+
+	cfg, err := LoadFromFile(configFile)
+	require.NoError(t, err)
+	assert.True(t, cfg.Signing.DirectSend, "yaml value must be honoured")
+
+	t.Setenv("DOC_ENGINE_SIGNING_DIRECT_SEND", "false")
+	cfg, err = LoadFromFile(configFile)
+	require.NoError(t, err)
+	assert.False(t, cfg.Signing.DirectSend, "env must override yaml")
+
+	t.Setenv("DOC_ENGINE_SIGNING_DIRECT_SEND", "true")
+	signing := SigningConfig{}
+	applySigningEnvOverrides(&signing)
+	assert.True(t, signing.DirectSend)
+
+	t.Setenv("DOC_ENGINE_SIGNING_DIRECT_SEND", "not-a-bool")
+	signing = SigningConfig{}
+	applySigningEnvOverrides(&signing)
+	assert.False(t, signing.DirectSend, "malformed values are ignored")
+}

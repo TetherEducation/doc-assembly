@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,6 +25,18 @@ type InternalDocumentService struct {
 	customResolver  port.TemplateResolver
 	defaultResolver port.TemplateResolver
 	searchAdapter   port.InternalTemplateContextSearchAdapter
+	directSender    *DirectSender
+}
+
+// InternalDocumentServiceOption configures optional InternalDocumentService behaviour.
+type InternalDocumentServiceOption func(*InternalDocumentService)
+
+// WithInternalDirectSend enables the opt-in direct-send policy for documents
+// created through the internal API (see DirectSender).
+func WithInternalDirectSend(directSender *DirectSender) InternalDocumentServiceOption {
+	return func(s *InternalDocumentService) {
+		s.directSender = directSender
+	}
 }
 
 // NewInternalDocumentService creates a new InternalDocumentService.
@@ -36,8 +49,9 @@ func NewInternalDocumentService(
 	templateRepo port.TemplateRepository,
 	versionRepo port.TemplateVersionRepository,
 	customResolver port.TemplateResolver,
+	opts ...InternalDocumentServiceOption,
 ) documentuc.InternalDocumentUseCase {
-	return &InternalDocumentService{
+	svc := &InternalDocumentService{
 		generator:       generator,
 		documentRepo:    documentRepo,
 		tenantRepo:      tenantRepo,
@@ -55,6 +69,10 @@ func NewInternalDocumentService(
 			versionRepo,
 		),
 	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
 }
 
 // CreateDocument creates or replays a document using the extension system.
@@ -154,6 +172,15 @@ func (s *InternalDocumentService) CreateDocument(
 		}
 	}
 
+	if txResult.IdempotentReplay {
+		stored, err = s.applyDirectSendToReplay(ctx, stored)
+	} else {
+		stored, err = s.applyDirectSend(ctx, stored, resolved.version.ContentStructure)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	result := &documentuc.InternalCreateResult{
 		Document:                     stored,
 		IdempotentReplay:             txResult.IdempotentReplay,
@@ -242,6 +269,11 @@ func (s *InternalDocumentService) findInternalCreateReplay(
 		"external_id", cmd.ExternalID,
 		"transactional_id", cmd.TransactionalID,
 	)
+
+	stored, err = s.applyDirectSendToReplay(ctx, stored)
+	if err != nil {
+		return nil, false, err
+	}
 	return &documentuc.InternalCreateResult{
 		Document:         stored,
 		IdempotentReplay: true,
@@ -434,4 +466,51 @@ func (s *InternalDocumentService) buildInternalDocument(
 	}
 
 	return doc, nil
+}
+
+// applyDirectSend starts the signing attempt for a freshly persisted internal
+// document when direct send applies (see DirectSender). Otherwise, including
+// when the policy is off, it returns stored unchanged.
+func (s *InternalDocumentService) applyDirectSend(
+	ctx context.Context,
+	stored *entity.DocumentWithRecipients,
+	content json.RawMessage,
+) (*entity.DocumentWithRecipients, error) {
+	if stored == nil || !s.directSender.appliesTo(&stored.Document, content) {
+		return stored, nil
+	}
+	if _, err := s.directSender.start(ctx, &stored.Document, stored.Recipients); err != nil {
+		return nil, err
+	}
+	reloaded, err := s.documentRepo.FindByIDWithRecipients(ctx, stored.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "direct send: reloading internal document after attempt creation failed",
+			"document_id", stored.ID,
+			"error", err.Error(),
+		)
+		return stored, nil
+	}
+	return reloaded, nil
+}
+
+// applyDirectSendToReplay finishes direct send for a replayed document that is
+// still awaiting input without an attempt, e.g. when the original request
+// failed to enqueue and the caller retried. It reads the document's own
+// template version, and only when the policy is on, so replays are untouched
+// (and cost no extra query) by default.
+func (s *InternalDocumentService) applyDirectSendToReplay(
+	ctx context.Context,
+	stored *entity.DocumentWithRecipients,
+) (*entity.DocumentWithRecipients, error) {
+	if stored == nil || !s.directSender.isEnabled() || !stored.IsAwaitingInput() {
+		return stored, nil
+	}
+	if stored.ActiveAttemptID != nil && *stored.ActiveAttemptID != "" {
+		return stored, nil
+	}
+	version, err := s.versionRepo.FindByID(ctx, stored.TemplateVersionID)
+	if err != nil {
+		return nil, fmt.Errorf("direct send: loading template version for replay: %w", err)
+	}
+	return s.applyDirectSend(ctx, stored, version.ContentStructure)
 }
