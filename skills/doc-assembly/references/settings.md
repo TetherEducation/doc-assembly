@@ -79,6 +79,8 @@ signing:
   base_url: "https://app.documenso.com"
   signing_base_url: "https://app.documenso.com"
   webhook_secret: ""
+  sequential_order: false                # true → Documenso emails signers one at a time, in signer order
+                                         # (envelope meta.signingOrder=SEQUENTIAL); false → all at once
   webhook_url: "https://app.example.com/webhooks/signing/documenso"
   direct_send: false                     # DOC_ENGINE_SIGNING_DIRECT_SEND — true sends documents with no
                                          # signer-fillable fields straight to the provider at creation
@@ -198,6 +200,7 @@ These are the env vars the lib `Getenv`s explicitly — they always win over YAM
 | `DOC_ENGINE_SIGNING_BASE_URL` | `signing.base_url` | |
 | `DOC_ENGINE_SIGNING_SIGNING_BASE_URL` | `signing.signing_base_url` | |
 | `DOC_ENGINE_SIGNING_WEBHOOK_SECRET` | `signing.webhook_secret` | |
+| `DOC_ENGINE_SIGNING_SEQUENTIAL_ORDER` | `signing.sequential_order` | `true`/`false`; default `false` (all signers invited at once). |
 | `DOC_ENGINE_SIGNING_WEBHOOK_URL` | `signing.webhook_url` | |
 | `DOC_ENGINE_SIGNING_DIRECT_SEND` | `signing.direct_send` | Default `false`. `true` skips `AWAITING_INPUT` for documents whose template has no interactive (signer-fillable) fields. |
 | `DOC_ENGINE_STORAGE_ENABLED` | `storage.enabled` | |

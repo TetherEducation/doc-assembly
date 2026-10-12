@@ -84,6 +84,7 @@ signing:
   base_url: ""                # DOC_ENGINE_SIGNING_BASE_URL (default: https://app.documenso.com/api/v2)
   signing_base_url: ""        # DOC_ENGINE_SIGNING_SIGNING_BASE_URL (base URL for signing links, without /api/v2)
   webhook_secret: ""          # DOC_ENGINE_SIGNING_WEBHOOK_SECRET
+  sequential_order: false     # DOC_ENGINE_SIGNING_SEQUENTIAL_ORDER (invite signers one at a time, in signer order)
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
   # Send documents with no signer-fillable fields straight to the provider at
   # creation, skipping the AWAITING_INPUT pre-signing step. Off by default.
