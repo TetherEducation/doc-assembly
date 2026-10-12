@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,8 +37,9 @@ func NewDocumentService(
 	accessTokenRepo port.DocumentAccessTokenRepository,
 	fieldResponseRepo port.DocumentFieldResponseRepository,
 	storageEnabled bool,
+	opts ...DocumentServiceOption,
 ) *DocumentService {
-	return &DocumentService{
+	svc := &DocumentService{
 		documentRepo:      documentRepo,
 		recipientRepo:     recipientRepo,
 		attemptRepo:       attemptRepo,
@@ -54,6 +56,21 @@ func NewDocumentService(
 		accessTokenRepo:   accessTokenRepo,
 		fieldResponseRepo: fieldResponseRepo,
 		storageEnabled:    storageEnabled,
+	}
+	for _, opt := range opts {
+		opt(svc)
+	}
+	return svc
+}
+
+// DocumentServiceOption configures optional DocumentService behaviour.
+type DocumentServiceOption func(*DocumentService)
+
+// WithDirectSend enables the opt-in direct-send policy for document creation
+// (see DirectSender). Without it, creation always stops in AWAITING_INPUT.
+func WithDirectSend(directSender *DirectSender) DocumentServiceOption {
+	return func(s *DocumentService) {
+		s.directSender = directSender
 	}
 }
 
@@ -75,11 +92,12 @@ type DocumentService struct {
 	accessTokenRepo   port.DocumentAccessTokenRepository
 	fieldResponseRepo port.DocumentFieldResponseRepository
 	storageEnabled    bool
+	directSender      *DirectSender
 }
 
-// CreateAndSendDocument creates a document, generates the PDF, and sends it for signing.
-// If the template has interactive fields and exactly one unsigned signer, the document
-// is placed in AWAITING_INPUT status with an access token instead of rendering/uploading.
+// CreateAndSendDocument creates a document and its recipients and places it in
+// AWAITING_INPUT. When direct send is enabled (WithDirectSend) and the template has
+// no signer-fillable fields, it also starts the signing attempt immediately.
 func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documentuc.CreateDocumentCommand) (*entity.DocumentWithRecipients, error) {
 	if err := s.validateOperationType(ctx, cmd); err != nil {
 		return nil, err
@@ -119,6 +137,16 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 	// via the email-verification flow (DocumentAccessService).
 	if err := s.transitionToAwaitingInput(ctx, document); err != nil {
 		return nil, err
+	}
+
+	// Opt-in (signing.direct_send): with no signer-fillable fields there is
+	// nothing to collect, so start the signing attempt now instead of waiting
+	// for a signer to proceed from the public page.
+	if s.directSender.appliesTo(document, version.ContentStructure) {
+		if _, err := s.directSender.start(ctx, document, recipients); err != nil {
+			return nil, err
+		}
+		document = s.reloadAfterDirectSend(ctx, document)
 	}
 
 	s.notificationSvc.NotifyDocumentCreated(ctx, document.ID)
@@ -361,10 +389,41 @@ func (s *DocumentService) RefreshDocumentStatus(ctx context.Context, documentID 
 	return s.documentRepo.FindByIDWithRecipients(ctx, documentID)
 }
 
+// defaultCancellationReason is what the panel has always written, and is kept as
+// the fallback so panel-initiated cancellations read exactly as they did before.
+const defaultCancellationReason = "cancelled by user"
+
+// resolveCancellationReason picks the reason to persist against a cancellation.
+//
+// A caller that supplies only whitespace has effectively supplied nothing, and
+// storing "   " would be worse than the default: it reads as a recorded reason
+// while carrying none.
+func resolveCancellationReason(reason *string) string {
+	if reason == nil {
+		return defaultCancellationReason
+	}
+	if trimmed := strings.TrimSpace(*reason); trimmed != "" {
+		return trimmed
+	}
+	return defaultCancellationReason
+}
+
 // CancelDocument cancels/voids a document that is pending signatures.
+func (s *DocumentService) CancelDocument(ctx context.Context, documentID string) error {
+	return s.CancelDocumentWithReason(ctx, documentID, nil)
+}
+
+// CancelDocumentWithReason cancels a pending document and records why.
+//
+// The reason is not decoration. Every envelope voided by hand during the August
+// 2026 cleanup had to have its justification reconstructed afterwards from
+// admission records, because "cancelled by user" is what the panel writes for
+// every cancellation regardless of cause. A service-to-service caller knows the
+// actual reason ("admission cancelled by campus"), and storing it is the
+// difference between an audit trail and a guess.
 //
 //nolint:nestif
-func (s *DocumentService) CancelDocument(ctx context.Context, documentID string) error {
+func (s *DocumentService) CancelDocumentWithReason(ctx context.Context, documentID string, reason *string) error {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
 		return fmt.Errorf("finding document: %w", err)
@@ -372,16 +431,21 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 
 	oldStatus := string(doc.Status)
 
+	// A completed document is terminal, so a signed contract can never be voided
+	// through this path - the legal record is immutable by construction, not by
+	// the caller remembering to check.
 	if doc.IsTerminal() {
 		return fmt.Errorf("cannot cancel document in terminal state: %s", doc.Status)
 	}
+
+	invalidationReason := resolveCancellationReason(reason)
 
 	if doc.ActiveAttemptID != nil && *doc.ActiveAttemptID != "" {
 		attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
 		if err != nil {
 			return fmt.Errorf("finding active attempt: %w", err)
 		}
-		if err := s.signingUOW.TerminateActiveAttempt(ctx, attempt, entity.SigningAttemptStatusCancelled, "cancelled by user", "ATTEMPT_CANCELLED"); err != nil {
+		if err := s.signingUOW.TerminateActiveAttempt(ctx, attempt, entity.SigningAttemptStatusCancelled, invalidationReason, "ATTEMPT_CANCELLED"); err != nil {
 			return fmt.Errorf("cancelling active attempt: %w", err)
 		}
 	} else {
@@ -393,9 +457,13 @@ func (s *DocumentService) CancelDocument(ctx context.Context, documentID string)
 		}
 	}
 
-	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentCancelled, entity.ActorUser, "", oldStatus, string(entity.DocumentStatusCancelled), nil)
+	cancelMetadata, _ := json.Marshal(map[string]any{"reason": invalidationReason})
+	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentCancelled, entity.ActorUser, "", oldStatus, string(entity.DocumentStatusCancelled), cancelMetadata)
 
-	slog.InfoContext(ctx, "document cancelled", slog.String("document_id", documentID))
+	slog.InfoContext(ctx, "document cancelled",
+		slog.String("document_id", documentID),
+		slog.String("reason", invalidationReason),
+	)
 
 	return nil
 }
@@ -858,6 +926,22 @@ func (s *DocumentService) transitionToAwaitingInput(
 	)
 
 	return nil
+}
+
+// reloadAfterDirectSend re-reads the document so callers see the attempt
+// projection (status, active attempt) written by the signing unit of work.
+// The attempt is already committed, so a failed re-read only logs and returns
+// the in-memory copy rather than failing the request.
+func (s *DocumentService) reloadAfterDirectSend(ctx context.Context, document *entity.Document) *entity.Document {
+	reloaded, err := s.documentRepo.FindByID(ctx, document.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "direct send: reloading document after attempt creation failed",
+			slog.String("document_id", document.ID),
+			slog.String("error", err.Error()),
+		)
+		return document
+	}
+	return reloaded
 }
 
 // generateAccessToken creates a cryptographically random hex-encoded token (128 chars).

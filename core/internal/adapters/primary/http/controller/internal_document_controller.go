@@ -65,7 +65,83 @@ func (c *InternalDocumentController) RegisterRoutes(api *gin.RouterGroup, authMi
 		internal.POST("/create", c.CreateDocument)
 		internal.POST("/reset", c.ResetDocument)
 		internal.POST("/:documentId/deprecate", c.DeprecateDocument)
+		internal.POST("/:documentId/cancel", c.CancelDocument)
 	}
+}
+
+// CancelDocument cancels an in-flight document via the internal API.
+//
+// The panel already exposes cancellation, but only behind operator OIDC, and
+// doc-assembly's identity store holds Tether staff alone. That left callers like
+// crm-admission - which knows an admission has been cancelled and holds only the
+// internal API key - with no way to invalidate the contract it issued. Seven
+// envelopes had to be voided by hand-run SQL in August 2026 for exactly this
+// reason, and HB-07 in the heartbeat has been counting more appear at roughly
+// three a day since.
+//
+// Deliberately distinct from deprecate: that path is for COMPLETED documents and
+// refuses anything else. This one is for documents still in flight, and refuses
+// terminal ones - so a signed contract cannot be voided through either.
+//
+// @Summary Cancel an in-flight document via internal API
+// @Description Cancels a document pending signatures and terminates its signing attempt, killing any live signing links. Refuses documents in a terminal state.
+// @Tags Internal
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "API Key for authentication"
+// @Param documentId path string true "Document ID"
+// @Param request body dto.InternalCancelDocumentRequest false "Cancellation request"
+// @Success 200 {object} dto.InternalCancelDocumentResponse
+// @Failure 400 {object} dto.InternalErrorResponse
+// @Failure 401 {object} dto.InternalErrorResponse
+// @Failure 404 {object} dto.InternalErrorResponse
+// @Failure 409 {object} dto.InternalErrorResponse
+// @Failure 500 {object} dto.InternalErrorResponse
+// @Router /api/v1/internal/documents/{documentId}/cancel [post]
+func (c *InternalDocumentController) CancelDocument(ctx *gin.Context) {
+	if c.documentUC == nil {
+		ctx.JSON(http.StatusInternalServerError, dto.InternalErrorResponse{
+			Error: "document use case is not configured",
+			Code:  "INTERNAL_ERROR",
+		})
+		return
+	}
+
+	documentID := ctx.Param("documentId")
+	req, ok := readInternalCancelRequest(ctx)
+	if !ok {
+		return
+	}
+
+	if err := c.documentUC.CancelDocumentWithReason(ctx.Request.Context(), documentID, req.Reason); err != nil {
+		HandleError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.InternalCancelDocumentResponse{
+		ID:     documentID,
+		Status: string(entity.DocumentStatusCancelled),
+	})
+}
+
+func readInternalCancelRequest(ctx *gin.Context) (dto.InternalCancelDocumentRequest, bool) {
+	var req dto.InternalCancelDocumentRequest
+	if ctx.Request.Body == nil {
+		return req, true
+	}
+	rawBody, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{Error: "failed to read request body", Code: "INVALID_BODY"})
+		return req, false
+	}
+	if len(rawBody) == 0 {
+		return req, true
+	}
+	if err := json.Unmarshal(rawBody, &req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.InternalErrorResponse{Error: "invalid request body", Code: "INVALID_BODY"})
+		return req, false
+	}
+	return req, true
 }
 
 // CreateDocument creates a document via internal API.
