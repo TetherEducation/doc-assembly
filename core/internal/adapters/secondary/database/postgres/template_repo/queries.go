@@ -36,6 +36,24 @@ const (
 		WHERE template_version_id = $1
 		ORDER BY signer_order`
 
+	// queryInjectablesByVersionIDs is queryVersionInjectables for many versions at once,
+	// so all-versions loads injectables in one round trip instead of one per version.
+	queryInjectablesByVersionIDs = `
+		SELECT
+			tvi.id, tvi.template_version_id, tvi.injectable_definition_id, tvi.is_required, tvi.default_value, tvi.created_at,
+			id.id, id.workspace_id, id.key, id.label, id.description, id.data_type, id.created_at, id.updated_at
+		FROM content.template_version_injectables tvi
+		JOIN content.injectable_definitions id ON tvi.injectable_definition_id = id.id
+		WHERE tvi.template_version_id = ANY($1)
+		ORDER BY tvi.template_version_id, id.key`
+
+	// querySignerRolesByVersionIDs is queryVersionSignerRoles for many versions at once.
+	querySignerRolesByVersionIDs = `
+		SELECT id, template_version_id, role_name, anchor_string, signer_order, created_at, updated_at
+		FROM content.template_version_signer_roles
+		WHERE template_version_id = ANY($1)
+		ORDER BY template_version_id, signer_order`
+
 	queryTemplateTags = `
 		SELECT t.id, t.workspace_id, t.name, t.color, t.created_at, t.updated_at
 		FROM organizer.tags t

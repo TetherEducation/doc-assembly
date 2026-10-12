@@ -774,6 +774,55 @@ func TestContentTemplateController_GetTemplateWithAllVersions(t *testing.T) {
 		assert.GreaterOrEqual(t, len(tplResp.Versions), 2)
 	})
 
+	// The Create Document wizard reads signerRoles and injectables from each version in
+	// this response; without them it shows "no signer roles defined" for every template.
+	t.Run("includes each version's signer roles and injectables", func(t *testing.T) {
+		templateID := testhelper.CreateTestTemplate(t, pool, workspaceID, "Roles Per Version Template", nil)
+		defer testhelper.CleanupTemplate(t, pool, templateID)
+
+		v1 := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+		defer testhelper.CleanupTemplateVersion(t, pool, v1)
+		v2 := testhelper.CreateTestTemplateVersion(t, pool, templateID, 2, "v2.0", entity.VersionStatusDraft)
+		defer testhelper.CleanupTemplateVersion(t, pool, v2)
+
+		injectableID := testhelper.CreateTestInjectable(t, pool, &workspaceID, "av_customer_name", "Customer Name", entity.InjectableDataTypeText)
+		defer testhelper.CleanupInjectable(t, pool, injectableID)
+		testhelper.CreateTestVersionInjectable(t, pool, v1, injectableID, true)
+
+		testhelper.CreateTestSignerRole(t, pool, v1, "Signer", "__sig_av_1__", 1)
+		testhelper.CreateTestSignerRole(t, pool, v1, "Co-Signer", "__sig_av_2__", 2)
+		testhelper.CreateTestSignerRole(t, pool, v2, "Approver", "__sig_av_3__", 1)
+
+		resp, body := client.
+			WithAuth(viewer.BearerHeader).
+			WithWorkspaceID(workspaceID).
+			GET(fmt.Sprintf("/api/v1/content/templates/%s/all-versions", templateID))
+
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var tplResp dto.TemplateWithAllVersionsResponse
+		require.NoError(t, json.Unmarshal(body, &tplResp))
+
+		byID := map[string]*dto.TemplateVersionSummaryResponse{}
+		for _, v := range tplResp.Versions {
+			byID[v.ID] = v
+		}
+		require.Contains(t, byID, v1)
+		require.Contains(t, byID, v2)
+
+		require.Len(t, byID[v1].SignerRoles, 2)
+		assert.Equal(t, "Signer", byID[v1].SignerRoles[0].RoleName)
+		assert.Equal(t, "Co-Signer", byID[v1].SignerRoles[1].RoleName)
+		require.Len(t, byID[v1].Injectables, 1)
+		assert.True(t, byID[v1].Injectables[0].IsRequired)
+		require.NotNil(t, byID[v1].Injectables[0].Definition)
+		assert.Equal(t, "av_customer_name", byID[v1].Injectables[0].Definition.Key)
+
+		require.Len(t, byID[v2].SignerRoles, 1)
+		assert.Equal(t, "Approver", byID[v2].SignerRoles[0].RoleName)
+		assert.Empty(t, byID[v2].Injectables)
+	})
+
 	t.Run("not found - non-existent ID", func(t *testing.T) {
 		resp, _ := client.
 			WithAuth(viewer.BearerHeader).
