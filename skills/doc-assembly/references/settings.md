@@ -56,6 +56,7 @@ auth:
     jwks_url: https://idp.example.com/realms/myrealm/protocol/openid-connect/certs
     audience: web-client
     client_id: web-client
+    authorization_endpoint: ""           # auto-filled from discovery; needed by the redirect (Google/SSO) login
     token_endpoint: ""                   # auto-filled from discovery
     userinfo_endpoint: ""                # auto-filled from discovery
     end_session_endpoint: ""             # auto-filled from discovery

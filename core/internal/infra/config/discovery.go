@@ -21,11 +21,12 @@ const (
 
 // discoveryResponse represents the OpenID Connect discovery document.
 type discoveryResponse struct {
-	Issuer             string `json:"issuer"`
-	JWKSURI            string `json:"jwks_uri"`
-	TokenEndpoint      string `json:"token_endpoint"`
-	UserinfoEndpoint   string `json:"userinfo_endpoint"`
-	EndSessionEndpoint string `json:"end_session_endpoint"`
+	Issuer                string `json:"issuer"`
+	JWKSURI               string `json:"jwks_uri"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+	UserinfoEndpoint      string `json:"userinfo_endpoint"`
+	EndSessionEndpoint    string `json:"end_session_endpoint"`
 }
 
 // DiscoverAll runs OIDC discovery for configured auth providers.
@@ -88,6 +89,9 @@ func discoverOIDC(ctx context.Context, provider *OIDCProvider) error {
 	}
 
 	// Set frontend endpoints if not configured
+	if provider.AuthorizationEndpoint == "" {
+		provider.AuthorizationEndpoint = doc.AuthorizationEndpoint
+	}
 	if provider.TokenEndpoint == "" {
 		provider.TokenEndpoint = doc.TokenEndpoint
 	}

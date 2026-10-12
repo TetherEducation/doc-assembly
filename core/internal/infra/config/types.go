@@ -157,10 +157,11 @@ type OIDCProvider struct {
 	Audience     string `mapstructure:"audience"`      // Optional audience (aud claim)
 
 	// Frontend OIDC endpoints (populated from discovery or manual config)
-	ClientID           string `mapstructure:"client_id"`            // OIDC client ID for frontend
-	TokenEndpoint      string `mapstructure:"token_endpoint"`       // Token endpoint URL
-	UserinfoEndpoint   string `mapstructure:"userinfo_endpoint"`    // Userinfo endpoint URL
-	EndSessionEndpoint string `mapstructure:"end_session_endpoint"` // Logout/end session endpoint URL
+	ClientID              string `mapstructure:"client_id"`              // OIDC client ID for frontend
+	AuthorizationEndpoint string `mapstructure:"authorization_endpoint"` // Authorization endpoint URL (redirect login)
+	TokenEndpoint         string `mapstructure:"token_endpoint"`         // Token endpoint URL
+	UserinfoEndpoint      string `mapstructure:"userinfo_endpoint"`      // Userinfo endpoint URL
+	EndSessionEndpoint    string `mapstructure:"end_session_endpoint"`   // Logout/end session endpoint URL
 }
 
 // InternalAPIConfig holds configuration for internal service-to-service API.

@@ -9,6 +9,8 @@ const API_BASE_URL = `${BASE_PATH}/api/v1`
 export interface PanelProvider {
   name: string
   issuer: string
+  /** Absent from backends that predate the redirect (authorization-code) login. */
+  authorizationEndpoint?: string
   tokenEndpoint: string
   userinfoEndpoint: string
   endSessionEndpoint: string
@@ -72,6 +74,7 @@ export async function getAuthConfig(): Promise<AuthConfig> {
  * Get OIDC configuration for login/token operations.
  */
 export function getOIDCConfig(config: AuthConfig): {
+  authorizationEndpoint: string
   tokenEndpoint: string
   userinfoEndpoint: string
   endSessionEndpoint: string
@@ -80,6 +83,7 @@ export function getOIDCConfig(config: AuthConfig): {
   const panel = config.panelProvider
 
   return {
+    authorizationEndpoint: panel?.authorizationEndpoint || '',
     tokenEndpoint: panel?.tokenEndpoint || '',
     userinfoEndpoint: panel?.userinfoEndpoint || '',
     endSessionEndpoint: panel?.endSessionEndpoint || '',
