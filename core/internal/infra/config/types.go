@@ -192,6 +192,16 @@ type SigningConfig struct {
 	WebhookSecret  string             `mapstructure:"webhook_secret"`
 	WebhookURL     string             `mapstructure:"webhook_url"` // Public URL for webhook endpoint
 	Embed          SigningEmbedConfig `mapstructure:"embed"`
+	// DirectSend skips the AWAITING_INPUT pre-signing step for documents whose
+	// template has no signer-fillable (interactive) fields: creation starts the
+	// signing attempt at once, so the provider envelope is created and the
+	// provider notifies the signers. Off by default; documents with fillable
+	// fields always keep the pre-signing step.
+	DirectSend bool `mapstructure:"direct_send"`
+	// SequentialOrder makes the provider invite signers one at a time in
+	// signer order instead of all at once. Off by default (provider default,
+	// PARALLEL for Documenso).
+	SequentialOrder bool `mapstructure:"sequential_order"`
 }
 
 // SigningEmbedConfig customizes the provider's embedded signing widget so it

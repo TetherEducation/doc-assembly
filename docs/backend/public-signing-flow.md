@@ -158,6 +158,22 @@ sequenceDiagram
 - `core/internal/core/service/document/notification_service.go` — `NotifyDocumentCreated()`, `buildSigningURL()`
 - `core/internal/core/service/document/templates/signing_request.html` — email template
 
+### Opt-in: direct send (`signing.direct_send`)
+
+With `DOC_ENGINE_SIGNING_DIRECT_SEND=true`, a document whose template has **no interactive
+(signer-fillable) fields** does not wait for a signer to proceed. Right after
+`transitionToAwaitingInput()` (same `DOCUMENT_CREATED` event), creation calls
+`SigningExecutionUnitOfWork.CreateAttemptAndEnqueueRender()` — the call `ProceedToSigning()`
+makes in Flow 3 — so the attempt, the `PREPARING_SIGNATURE` projection, the `ATTEMPT_CREATED`
+event and the River render job commit together, and the provider envelope (with every
+recipient in signer order) is created and distributed by the worker. The same applies to
+batch creation and to `POST /internal/documents/create` (including an idempotent replay of a
+document that is still awaiting input without an attempt). If the enqueue fails, the request
+returns an error and the document stays in `AWAITING_INPUT`. Templates with interactive fields,
+and every document when the setting is off (the default), follow the flow above unchanged.
+
+Code: `core/internal/core/service/document/direct_send.go`.
+
 ---
 
 ## Flow 2: Email Verification Gate

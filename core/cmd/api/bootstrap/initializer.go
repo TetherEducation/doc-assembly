@@ -278,6 +278,10 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	}
 	signingUOW := riverSvc.SigningExecutionUOW()
 
+	// Opt-in (signing.direct_send): documents without signer-fillable fields
+	// skip AWAITING_INPUT and start signing at creation. Inert when off.
+	directSender := documentsvc.NewDirectSender(cfg.Signing.DirectSend, signingUOW, templateVersionSignerRoleRepo)
+
 	documentSvcConcrete := documentsvc.NewDocumentService(
 		documentRepo, documentRecipientRepo, signingAttemptRepo, signingUOW, templateRepo, templateVersionRepo, templateVersionSignerRoleRepo,
 		pdfRenderer, signingProvider, storageAdapter,
@@ -285,6 +289,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		cfg.Scheduler.ExpirationDays,
 		documentAccessTokenRepo, documentFieldResponseRepo,
 		cfg.Storage.Enabled,
+		documentsvc.WithDirectSend(directSender),
 	)
 
 	var documentSvc documentuc.DocumentUseCase = documentSvcConcrete
@@ -302,6 +307,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		templateRepo,
 		templateVersionRepo,
 		e.templateResolver,
+		documentsvc.WithInternalDirectSend(directSender),
 	)
 	preSigningSvc := documentsvc.NewPreSigningService(
 		documentAccessTokenRepo, documentFieldResponseRepo,
@@ -539,6 +545,8 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
+
+			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 		})
 	}
 }
@@ -624,6 +632,8 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 			WebhookSecret:  cfg.Signing.WebhookSecret,
 			WebhookURL:     cfg.Signing.WebhookURL,
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
+
+			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 		})
 		if err != nil {
 			return nil, err
