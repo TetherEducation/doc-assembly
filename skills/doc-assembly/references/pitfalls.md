@@ -20,6 +20,13 @@ Every `Set*`/`Register*`/`Use*`/`On*` must be called BEFORE `engine.Run()`. Ther
 
 Do not call `engine.RunMigrations()` from the same process that also calls `engine.Run()`. Use a dedicated CLI subcommand (`go run . migrate`) so your deploy can apply migrations in a controlled step before rolling out the new binary. The scaffolded `main.go` already does this.
 
+Preflight enforces that order. `Run()` reads `schema_migrations` and refuses to start in three cases:
+- the database is behind the newest migration the engine embeds: `database schema is at version N, but this engine requires M`;
+- that newest migration is dirty;
+- nothing has been migrated yet.
+
+A database *ahead* of the engine starts with a warning, even when a newer migration is dirty, so an old revision keeps serving while a release migrates and after a rollback. Only additive migrations keep that safe. Never roll back by running a down migration.
+
 ## Sharing the database with another app
 
 The lib **owns** its schema. Do not point a separate service at the same Postgres database. `RunMigrations` is destructive in the sense that it adds tables, indexes, and triggers it expects to control. If you need the same data, expose it through the engine's API or a read-replica ETL — not by sharing tables.

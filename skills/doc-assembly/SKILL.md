@@ -53,7 +53,7 @@ If you find yourself reaching for `core/internal/...`, stop — that is a privat
 1. `loadConfig()` — `settings/app.yaml` (or path passed to `NewWithConfig`); env overrides via `DOC_ENGINE_*`.
 2. `configureDefaultLogger()` — JSON `slog` with the configured level + `ContextHandler`.
 3. `entity.InitEnvironmentAliases()` — applies `environment_aliases` from config.
-4. `preflightChecks()` — verifies DB connectivity, Typst binary, signing config, etc.
+4. `preflightChecks()` — verifies DB connectivity, schema version (refuses a database behind the engine's migrations), Typst binary, signing config, etc.
 5. `initialize()` — manual DI: builds repos, services, controllers, River workers, scheduler, HTTP server.
 6. `OnStart` hooks (in registration order).
 7. Scheduler + River workers start, then HTTP server.

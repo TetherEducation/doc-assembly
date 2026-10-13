@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres"
 	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
+	"github.com/TetherEducation/doc-assembly/core/internal/migrations"
 )
 
 // preflightChecks runs all startup validations.
@@ -24,9 +26,9 @@ func (e *Engine) preflightChecks(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	pool.Close()
+	defer pool.Close()
 
-	if err := checkSchema(ctx, e); err != nil {
+	if err := checkSchema(ctx, pool); err != nil {
 		return err
 	}
 
@@ -94,31 +96,62 @@ func checkDatabase(ctx context.Context, e *Engine) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// checkSchema verifies the database schema is initialized.
-func checkSchema(ctx context.Context, e *Engine) error {
-	pool, err := postgres.NewPool(ctx, &e.config.Database)
+// checkSchema refuses to serve a database this engine's migrations have not
+// brought up to date. Checking for one table was not enough: a schema one
+// migration behind passed, and failed later at query time.
+func checkSchema(ctx context.Context, pool *pgxpool.Pool) error {
+	latest, err := migrations.Latest()
 	if err != nil {
 		return err
 	}
-	defer pool.Close()
-
-	var exists bool
-	err = pool.QueryRow(ctx,
-		`SELECT EXISTS (
-			SELECT FROM information_schema.tables
-			WHERE table_schema = 'tenancy' AND table_name = 'tenants'
-		)`,
-	).Scan(&exists)
-
-	if err != nil || !exists {
-		return fmt.Errorf(`database schema not initialized
-
-Run migrations first:
-  go run ./core/cmd/api migrate`)
+	state, err := migrations.ReadState(ctx, pool)
+	if err != nil {
+		return fmt.Errorf("reading schema_migrations: %w", err)
 	}
 
-	slog.InfoContext(ctx, "database schema OK")
+	ahead, err := evaluateSchema(state, latest)
+	if err != nil {
+		return err
+	}
+	if ahead {
+		slog.WarnContext(ctx, "database schema is ahead of this engine; expected while a release migrates or after a rollback",
+			slog.Uint64("schema_version", uint64(state.Version)),
+			slog.Bool("dirty", state.Dirty),
+			slog.Uint64("engine_schema_version", uint64(latest)),
+		)
+		return nil
+	}
+	slog.InfoContext(ctx, "database schema OK", slog.Uint64("schema_version", uint64(state.Version)))
 	return nil
+}
+
+// evaluateSchema decides whether an engine whose newest migration is latest may
+// serve a database in state.
+//
+// A database ahead of the engine is served (ahead=true), dirty or not:
+// migrations are additive, and golang-migrate marks a migration dirty while it
+// runs, so during a release the old revision must keep starting while the new
+// image's migrations apply, and again after a rollback. A dirty database at the
+// engine's own version is refused: that migration is half-applied.
+func evaluateSchema(state migrations.State, latest uint) (ahead bool, err error) {
+	const runMigrations = "\n\nRun migrations first:\n  go run ./core/cmd/api migrate   (in a wrapper: go run . migrate)"
+	switch {
+	case !state.Initialized:
+		return false, errors.New("database schema not initialized" + runMigrations)
+	case state.Version < latest:
+		dirty := ""
+		if state.Dirty {
+			dirty = " (dirty)"
+		}
+		return false, fmt.Errorf("database schema is at version %d%s, but this engine requires %d%s",
+			state.Version, dirty, latest, runMigrations)
+	case state.Version == latest && state.Dirty:
+		return false, fmt.Errorf("migration %d is dirty: it failed or is still running.\n\n"+
+			"Wait for a running migration to finish; after a failure, repair the schema and force the version", latest)
+	case state.Version > latest:
+		return true, nil
+	}
+	return false, nil
 }
 
 // checkAuth checks auth configuration and logs dummy mode warning.
