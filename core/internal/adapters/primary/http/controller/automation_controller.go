@@ -126,24 +126,66 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 	ws.PATCH("/workspaces/:workspaceId/templates/:templateId", ctrl.updateTemplate)
 
 	// Template process fields
-	g.PUT("/templates/:templateId/process", ctrl.setProcessFields)
+	templates := g.Group("/templates/:templateId")
+	templates.Use(ctrl.requireTemplateAccess)
+	templates.PUT("/process", ctrl.setProcessFields)
 
 	// Document Types
 	g.GET("/document-types", ctrl.listDocumentTypes)
 	g.POST("/document-types", ctrl.createDocumentType)
-	g.POST("/templates/:templateId/document-type", ctrl.assignDocumentType)
+	templates.POST("/document-type", ctrl.assignDocumentType)
 
 	// Versions
-	g.GET("/templates/:templateId/versions", ctrl.listVersions)
-	g.POST("/templates/:templateId/versions", ctrl.createVersion)
-	g.GET("/templates/:templateId/versions/:versionId", ctrl.getVersion)
-	g.PATCH("/templates/:templateId/versions/:versionId", ctrl.updateVersion)
-	g.POST("/templates/:templateId/versions/:versionId/publish", ctrl.publishVersion)
-	g.POST("/templates/:templateId/versions/:versionId/archive", ctrl.archiveVersion)
-	g.GET("/templates/:templateId/versions/:versionId/content", ctrl.getVersionContent)
-	g.PUT("/templates/:templateId/versions/:versionId/content", ctrl.updateVersionContent)
-	g.POST("/templates/:templateId/versions/:versionId/source-document", ctrl.storeUploadedPDF)
-	g.PUT("/templates/:templateId/versions/:versionId/placements", ctrl.replacePlacements)
+	templates.GET("/versions", ctrl.listVersions)
+	templates.POST("/versions", ctrl.createVersion)
+	templates.GET("/versions/:versionId", ctrl.getVersion)
+	templates.PATCH("/versions/:versionId", ctrl.updateVersion)
+	templates.POST("/versions/:versionId/publish", ctrl.publishVersion)
+	templates.POST("/versions/:versionId/archive", ctrl.archiveVersion)
+	templates.GET("/versions/:versionId/content", ctrl.getVersionContent)
+	templates.PUT("/versions/:versionId/content", ctrl.updateVersionContent)
+	templates.POST("/versions/:versionId/source-document", ctrl.storeUploadedPDF)
+	templates.PUT("/versions/:versionId/placements", ctrl.replacePlacements)
+}
+
+// requireTemplateAccess resolves ownership from storage, never from caller
+// headers. It also prevents a version from being addressed under another template.
+func (ctrl *AutomationController) requireTemplateAccess(c *gin.Context) {
+	tmpl, err := ctrl.templateUC.GetTemplate(c.Request.Context(), c.Param("templateId"))
+	if err != nil {
+		HandleError(c, err)
+		c.Abort()
+		return
+	}
+	workspace, err := ctrl.workspaceUC.GetWorkspace(c.Request.Context(), tmpl.WorkspaceID)
+	if err != nil {
+		HandleError(c, err)
+		c.Abort()
+		return
+	}
+	if workspace.TenantID == nil && len(middleware.GetAutomationAllowedTenants(c)) > 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "template has no accessible tenant"})
+		c.Abort()
+		return
+	}
+	if workspace.TenantID != nil && !ctrl.checkTenantAccess(c, *workspace.TenantID) {
+		c.Abort()
+		return
+	}
+	if versionID := c.Param("versionId"); versionID != "" {
+		version, err := ctrl.templateVersionUC.GetVersion(c.Request.Context(), versionID)
+		if err != nil {
+			HandleError(c, err)
+			c.Abort()
+			return
+		}
+		if version.TemplateID != tmpl.ID {
+			HandleError(c, entity.ErrVersionDoesNotBelongToTemplate)
+			c.Abort()
+			return
+		}
+	}
+	c.Next()
 }
 
 // checkTenantAccess verifies the API key has access to the given tenant.
