@@ -1,5 +1,24 @@
 # Matriz de Permisos por Endpoint
 
+## API de automatización: PDFs y alcance de tenant
+
+Todas las rutas `/api/v1/automation/templates/{templateId}/*` resuelven el
+workspace y tenant del template antes de leer o modificar contenido. Una API key
+limitada a tenants recibe 403 al acceder a otro tenant o a un template global.
+Las rutas con `versionId` también verifican que la versión pertenece al template
+de la URL. Estas comprobaciones preceden al almacenamiento y a la publicación.
+
+| Método | Endpoint | Autorización |
+|---|---|---|
+| POST | `/api/v1/automation/document-types` | `X-Automation-Key` válida y tenant permitido en el body |
+| POST | `/api/v1/automation/templates/{templateId}/versions/{versionId}/source-document` | Key válida, tenant del template permitido, versión propia en DRAFT; multipart `file`, PDF de hasta 12 MiB |
+| PUT | `/api/v1/automation/templates/{templateId}/versions/{versionId}/placements` | Mismo alcance; posiciones en puntos PDF con origen abajo a la izquierda |
+
+Las rutas de wrappers registradas mediante `Engine.RegisterRoutes` no heredan
+autenticación. Tether Signing verifica el bearer del caller con
+`GET /api/v1/workspace`, exige tenant/workspace coincidentes y rol OPERATOR o
+superior antes de usar su key de automatización para crear un envelope.
+
 ## Resumen del Sistema de Roles
 
 El sistema tiene **3 niveles de roles** jerárquicos:

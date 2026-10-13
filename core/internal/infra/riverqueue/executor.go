@@ -31,6 +31,7 @@ type SigningAttemptExecutor struct {
 	recipientRepo     port.DocumentRecipientRepository
 	attemptRepo       port.SigningAttemptRepository
 	versionRepo       port.TemplateVersionRepository
+	sourceRepo        port.UploadedSourceRepository
 	signerRoleRepo    port.TemplateVersionSignerRoleRepository
 	fieldResponseRepo port.DocumentFieldResponseRepository
 	pdfRenderer       port.PDFRenderer
@@ -48,6 +49,7 @@ type SigningAttemptExecutorConfig struct {
 	RecipientRepo     port.DocumentRecipientRepository
 	AttemptRepo       port.SigningAttemptRepository
 	VersionRepo       port.TemplateVersionRepository
+	SourceRepo        port.UploadedSourceRepository
 	SignerRoleRepo    port.TemplateVersionSignerRoleRepository
 	FieldResponseRepo port.DocumentFieldResponseRepository
 	PDFRenderer       port.PDFRenderer
@@ -66,6 +68,7 @@ func NewSigningAttemptExecutor(cfg SigningAttemptExecutorConfig) *SigningAttempt
 		recipientRepo:     cfg.RecipientRepo,
 		attemptRepo:       cfg.AttemptRepo,
 		versionRepo:       cfg.VersionRepo,
+		sourceRepo:        cfg.SourceRepo,
 		signerRoleRepo:    cfg.SignerRoleRepo,
 		fieldResponseRepo: cfg.FieldResponseRepo,
 		pdfRenderer:       cfg.PDFRenderer,
@@ -98,17 +101,17 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		return err
 	}
 
-	renderResult, signerRoles, portableDoc, err := e.renderPDF(ctx, doc)
+	pdfBytes, sigFields, err := e.renderAttemptArtifacts(ctx, doc)
 	if err != nil {
 		return e.failPermanent(ctx, attempt, old, entity.ProviderSubmitPhaseBeforeRequest, err)
 	}
 
-	checksumBytes := sha256.Sum256(renderResult.PDF)
+	checksumBytes := sha256.Sum256(pdfBytes)
 	checksum := hex.EncodeToString(checksumBytes[:])
 	algo := "sha256"
 	storagePath := fmt.Sprintf("documents/%s/%s/attempts/%s/pre-signed.pdf", doc.WorkspaceID, doc.ID, attempt.ID)
 	if e.storageEnabled {
-		if err := e.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storagePath, Data: renderResult.PDF, ContentType: "application/pdf", Environment: entity.EnvironmentProd}); err != nil {
+		if err := e.storageAdapter.Upload(ctx, &port.StorageUploadRequest{Key: storagePath, Data: pdfBytes, ContentType: "application/pdf", Environment: entity.EnvironmentProd}); err != nil {
 			return err
 		}
 	}
@@ -116,17 +119,6 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		return failpointErr(failpointRenderAfterStoreBeforeCommit)
 	}
 
-	sigFields, err := mapSignatureFieldPositions(renderResult.SignatureFields, signerRoles, portableDoc.SignerRoles)
-	if err != nil {
-		return e.failPermanent(ctx, attempt, old, entity.ProviderSubmitPhaseBeforeRequest, err)
-	}
-	if len(sigFields) == 0 {
-		recipients, recErr := e.recipientRepo.FindByDocumentID(ctx, doc.ID)
-		if recErr != nil {
-			return recErr
-		}
-		sigFields = buildDefaultSignatureFieldPositions(recipients)
-	}
 	sigJSON, _ := json.Marshal(sigFields)
 	payload := map[string]any{
 		"title":           documentTitle(doc),
@@ -624,6 +616,49 @@ func (e *SigningAttemptExecutor) loadActiveAttempt(ctx context.Context, attemptI
 		}
 	}
 	return attempt, doc, false, nil
+}
+
+func (e *SigningAttemptExecutor) renderAttemptArtifacts(ctx context.Context, doc *entity.Document) ([]byte, []port.SignatureFieldPosition, error) {
+	if e.sourceRepo != nil {
+		source, err := e.sourceRepo.FindByVersionID(ctx, doc.TemplateVersionID)
+		if err != nil && !errors.Is(err, entity.ErrUploadedSourceNotFound) {
+			return nil, nil, err
+		}
+		if source != nil {
+			return e.renderUploadedPDF(ctx, source)
+		}
+	}
+	renderResult, signerRoles, portableDoc, err := e.renderPDF(ctx, doc)
+	if err != nil {
+		return nil, nil, err
+	}
+	sigFields, err := mapSignatureFieldPositions(renderResult.SignatureFields, signerRoles, portableDoc.SignerRoles)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(sigFields) == 0 {
+		recipients, recErr := e.recipientRepo.FindByDocumentID(ctx, doc.ID)
+		if recErr != nil {
+			return nil, nil, recErr
+		}
+		sigFields = buildDefaultSignatureFieldPositions(recipients)
+	}
+	return renderResult.PDF, sigFields, nil
+}
+
+func (e *SigningAttemptExecutor) renderUploadedPDF(ctx context.Context, source *entity.UploadedSource) ([]byte, []port.SignatureFieldPosition, error) {
+	if !e.storageEnabled || e.storageAdapter == nil {
+		return nil, nil, fmt.Errorf("uploaded PDF requires storage")
+	}
+	pdf, err := e.storageAdapter.Download(ctx, &port.StorageRequest{Key: source.ObjectKey, Environment: entity.EnvironmentProd})
+	if err != nil {
+		return nil, nil, fmt.Errorf("download uploaded PDF: %w", err)
+	}
+	fields, err := positionsFromPlacedFields(source.Fields, source.PageSizes)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pdf, fields, nil
 }
 
 func (e *SigningAttemptExecutor) renderPDF(ctx context.Context, doc *entity.Document) (*port.RenderPreviewResult, []*entity.TemplateVersionSignerRole, *portabledoc.Document, error) {

@@ -17,6 +17,7 @@ import (
 
 // ReadOnlyViewService implements expiring public read-only document views.
 type ReadOnlyViewService struct {
+	uploadedSources   port.UploadedSourceRepository
 	documentRepo      port.DocumentRepository
 	workspaceRepo     port.WorkspaceRepository
 	documentTypeRepo  port.DocumentTypeRepository
@@ -371,8 +372,13 @@ func (s *ReadOnlyViewService) GetReadOnlyView(ctx context.Context, token string)
 		return nil, entity.ErrDocumentNotFound
 	}
 
+	mode, err := s.resolveReadOnlyViewMode(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+
 	response := &documentuc.ReadOnlyViewResponse{
-		Mode:           readOnlyViewMode(doc.Status),
+		Mode:           mode,
 		DocumentID:     doc.ID,
 		DocumentTitle:  documentTitle(doc),
 		DocumentStatus: doc.Status,
@@ -419,6 +425,17 @@ func (s *ReadOnlyViewService) GetReadOnlyViewPDF(ctx context.Context, token stri
 		entity.DocumentStatusReadyToSign,
 		entity.DocumentStatusSigning:
 		return s.renderReadOnlyViewPreviewPDF(ctx, doc)
+	case entity.DocumentStatusDraft, entity.DocumentStatusAwaitingInput:
+		// An authored document is shown as content until signing starts; only an
+		// uploaded PDF has a PDF to show this early.
+		pdf, uploaded, err := loadUploadedPDF(ctx, s.uploadedSources, s.storageAdapter, doc.TemplateVersionID)
+		if err != nil {
+			return nil, "", err
+		}
+		if !uploaded {
+			return nil, "", errors.New("PDF is not available")
+		}
+		return pdf, readOnlyViewPDFFilename(doc, ""), nil
 	default:
 		return nil, "", errors.New("PDF is not available")
 	}
@@ -449,6 +466,23 @@ func (s *ReadOnlyViewService) validateReadOnlyViewToken(ctx context.Context, tok
 	}
 
 	return accessToken, nil
+}
+
+// resolveReadOnlyViewMode shows an uploaded PDF as a PDF even before signing
+// starts: an uploaded version has no authored content to show instead.
+func (s *ReadOnlyViewService) resolveReadOnlyViewMode(ctx context.Context, doc *entity.Document) (documentuc.ReadOnlyViewMode, error) {
+	mode := readOnlyViewMode(doc.Status)
+	if mode != documentuc.ReadOnlyViewModeContent {
+		return mode, nil
+	}
+	source, err := findUploadedSource(ctx, s.uploadedSources, doc.TemplateVersionID)
+	if err != nil {
+		return "", err
+	}
+	if source != nil {
+		return documentuc.ReadOnlyViewModePDF, nil
+	}
+	return mode, nil
 }
 
 func readOnlyViewMode(status entity.DocumentStatus) documentuc.ReadOnlyViewMode {
@@ -679,6 +713,15 @@ func (s *ReadOnlyViewService) getPrintPDF(
 // renderBlankPrintPDF renders the document's template version with no injected
 // values, signer values, or field responses: an empty form for hand completion.
 func (s *ReadOnlyViewService) renderBlankPrintPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	// An uploaded PDF never carries injected values, so its blank print is the
+	// uploaded file itself.
+	pdf, uploaded, err := loadUploadedPDF(ctx, s.uploadedSources, s.storageAdapter, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", err
+	}
+	if uploaded {
+		return pdf, printPDFFilename(doc, true), nil
+	}
 	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
 		return nil, "", err
 	}
@@ -727,6 +770,13 @@ func printPDFFilename(doc *entity.Document, blank bool) string {
 }
 
 func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, doc *entity.Document) ([]byte, string, error) {
+	pdf, uploaded, err := loadUploadedPDF(ctx, s.uploadedSources, s.storageAdapter, doc.TemplateVersionID)
+	if err != nil {
+		return nil, "", err
+	}
+	if uploaded {
+		return pdf, readOnlyViewPDFFilename(doc, ""), nil
+	}
 	if err := s.validateReadOnlyViewPreviewPDFDependencies(); err != nil {
 		return nil, "", err
 	}
@@ -783,6 +833,12 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 	}
 
 	return renderResult.PDF, readOnlyViewPDFFilename(doc, renderResult.Filename), nil
+}
+
+// SetUploadedSourceRepository enables previews of versions backed by an uploaded PDF.
+func (s *ReadOnlyViewService) SetUploadedSourceRepository(repo port.UploadedSourceRepository) *ReadOnlyViewService {
+	s.uploadedSources = repo
+	return s
 }
 
 func readOnlyViewPDFFilename(doc *entity.Document, rendererFilename string) string {

@@ -259,6 +259,8 @@ type SignatureFieldPosition struct {
 	PositionY float64
 	Width     float64
 	Height    float64
+	// Type is SIGNATURE, DATE, TEXT, or INITIALS. Empty means SIGNATURE.
+	Type string `json:"type,omitempty"`
 }
 
 // SigningRecipient represents a person who needs to sign the document.

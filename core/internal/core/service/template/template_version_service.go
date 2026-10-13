@@ -3,6 +3,7 @@ package template
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -24,6 +25,7 @@ func NewTemplateVersionService(
 	tagRepo port.TemplateTagRepository,
 	contentValidator port.ContentValidator,
 	workspaceRepo port.WorkspaceRepository,
+	sourceRepo port.UploadedSourceRepository,
 ) templateuc.TemplateVersionUseCase {
 	return &TemplateVersionService{
 		versionRepo:          versionRepo,
@@ -34,6 +36,7 @@ func NewTemplateVersionService(
 		tagRepo:              tagRepo,
 		contentValidator:     contentValidator,
 		workspaceRepo:        workspaceRepo,
+		sourceRepo:           sourceRepo,
 	}
 }
 
@@ -47,6 +50,7 @@ type TemplateVersionService struct {
 	tagRepo              port.TemplateTagRepository
 	contentValidator     port.ContentValidator
 	workspaceRepo        port.WorkspaceRepository
+	sourceRepo           port.UploadedSourceRepository
 }
 
 // CreateVersion creates a new version for a template.
@@ -200,6 +204,16 @@ func (s *TemplateVersionService) PublishVersion(ctx context.Context, id string, 
 	template, err := s.templateRepo.FindByID(ctx, version.TemplateID)
 	if err != nil {
 		return fmt.Errorf("finding template: %w", err)
+	}
+
+	if s.sourceRepo != nil {
+		source, sourceErr := s.sourceRepo.FindByVersionID(ctx, id)
+		if sourceErr != nil && !errors.Is(sourceErr, entity.ErrUploadedSourceNotFound) {
+			return fmt.Errorf("finding uploaded source: %w", sourceErr)
+		}
+		if source != nil {
+			return s.publishUploadedVersion(ctx, version, userID, source)
+		}
 	}
 
 	result := s.contentValidator.ValidateForPublish(ctx, template.WorkspaceID, version.ID, version.ContentStructure)
@@ -765,6 +779,45 @@ func (s *TemplateVersionService) applyVersionUpdates(ctx context.Context, versio
 		version.ContentStructure = cmd.ContentStructure
 	}
 
+	return nil
+}
+
+// publishUploadedVersion publishes a version whose PDF was uploaded.
+// Signer roles already exist and must not be replaced from Typst content.
+func (s *TemplateVersionService) publishUploadedVersion(ctx context.Context, version *entity.TemplateVersion, userID string, source *entity.UploadedSource) error {
+	roles, err := s.signerRoleRepo.FindByVersionID(ctx, version.ID)
+	if err != nil {
+		return fmt.Errorf("finding signer roles: %w", err)
+	}
+	if len(roles) == 0 || len(source.Fields) == 0 {
+		return entity.ErrInvalidSignerRole
+	}
+	roleIDs := make(map[string]struct{}, len(roles))
+	for _, role := range roles {
+		roleIDs[role.ID] = struct{}{}
+	}
+	covered := map[string]struct{}{}
+	for _, field := range source.Fields {
+		if _, ok := roleIDs[field.RoleID]; !ok {
+			return fmt.Errorf("%w: field role %s", entity.ErrInvalidPlacedField, field.RoleID)
+		}
+		covered[field.RoleID] = struct{}{}
+	}
+	if len(covered) != len(roles) {
+		return fmt.Errorf("%w: every signer needs a field", entity.ErrInvalidPlacedField)
+	}
+	if err := s.archiveCurrentPublished(ctx, version.TemplateID, version.ID, userID); err != nil {
+		return err
+	}
+	version.Publish(userID)
+	if err := s.versionRepo.Update(ctx, version); err != nil {
+		return fmt.Errorf("publishing version: %w", err)
+	}
+	slog.InfoContext(ctx, "uploaded template version published",
+		slog.String("version_id", version.ID),
+		slog.Int("signers", len(roles)),
+		slog.Int("fields", len(source.Fields)),
+	)
 	return nil
 }
 
