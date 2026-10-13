@@ -262,6 +262,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		docRepo, docRecipientRepo, signingAttemptRepo, riverSvc.SigningExecutionUOW(), templateVersionRepo, templateVersionSignerRoleRepo,
 		mockPDFRenderer, mockSigningAdapter, storageAdapter, true, eventEmitter,
 		testPublicURL,
+		uploadedSourceRepo,
 	)
 
 	// Internal create service infrastructure
@@ -348,7 +349,7 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 		false,
 		48,
 		testPublicURL,
-	)
+	).SetUploadedSourceRepository(uploadedSourceRepo)
 	documentController := controller.NewDocumentController(documentService, preSigningService, readOnlyViewService, eventEmitter)
 	// Document access service (email-verification gate)
 	documentAccessService := documentsvc.NewDocumentAccessService(

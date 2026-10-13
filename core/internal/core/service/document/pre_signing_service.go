@@ -35,6 +35,7 @@ type PreSigningService struct {
 	pdfRenderer       port.PDFRenderer
 	signingProvider   port.SigningProvider
 	storageAdapter    port.StorageAdapter
+	uploadedSources   port.UploadedSourceRepository
 	storageEnabled    bool
 	eventEmitter      *EventEmitter
 	publicURL         string
@@ -56,6 +57,7 @@ func NewPreSigningService(
 	storageEnabled bool,
 	eventEmitter *EventEmitter,
 	publicURL string,
+	uploadedSources port.UploadedSourceRepository,
 ) documentuc.PreSigningUseCase {
 	return &PreSigningService{
 		accessTokenRepo:   accessTokenRepo,
@@ -69,6 +71,7 @@ func NewPreSigningService(
 		pdfRenderer:       pdfRenderer,
 		signingProvider:   signingProvider,
 		storageAdapter:    storageAdapter,
+		uploadedSources:   uploadedSources,
 		storageEnabled:    storageEnabled,
 		eventEmitter:      eventEmitter,
 		publicURL:         publicURL,
@@ -305,6 +308,9 @@ func (s *PreSigningService) RenderPreviewPDF(ctx context.Context, token string) 
 	}
 	if wasUsed && !doc.IsCompleted() && !doc.IsDeclined() {
 		return nil, fmt.Errorf("access token has already been used")
+	}
+	if pdf, uploaded, err := loadUploadedPDF(ctx, s.uploadedSources, s.storageAdapter, doc.TemplateVersionID); uploaded || err != nil {
+		return pdf, err
 	}
 
 	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)

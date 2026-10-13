@@ -306,7 +306,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	preSigningSvc := documentsvc.NewPreSigningService(
 		documentAccessTokenRepo, documentFieldResponseRepo,
 		documentRepo, documentRecipientRepo, signingAttemptRepo, signingUOW, templateVersionRepo, templateVersionSignerRoleRepo,
-		pdfRenderer, signingProvider, storageAdapter, cfg.Storage.Enabled, eventEmitter, publicURL,
+		pdfRenderer, signingProvider, storageAdapter, cfg.Storage.Enabled, eventEmitter, publicURL, uploadedSourceRepo,
 	)
 	signingSessionSvc := documentsvc.NewSigningSessionService(
 		documentRepo,
@@ -387,7 +387,8 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		readOnlyViewPublicURL(cfg.Server),
 	).SetWorkspaceRepository(workspaceRepo).
 		SetDocumentTypeRepository(documentTypeRepo).
-		SetCompletedPDFProvider(signingProvider, signingAttemptRepo)
+		SetCompletedPDFProvider(signingProvider, signingAttemptRepo).
+		SetUploadedSourceRepository(uploadedSourceRepo)
 	e.readOnlyViewUseCase = readOnlyViewSvc
 	documentCtrl := controller.NewDocumentController(documentSvc, preSigningSvc, readOnlyViewSvc, eventEmitter)
 	publicDocAccessCtrl := controller.NewPublicDocumentAccessController(documentAccessSvc)
