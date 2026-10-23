@@ -243,7 +243,7 @@ handler := func(ctx context.Context, ev sdk.DocumentCompletedEvent) error {
 go test -C core -tags=integration -run TestRiver -v -count=1 ./internal/infra/riverqueue/
 ```
 
-Coverage includes atomic attempt creation/enqueue, concurrent active-attempt idempotency, supersede cleanup enqueue, active-attempt same-document constraint, provider uniqueness, stale completion no-op, failpoints, retry/reconciliation, and completion dispatch.
+Coverage includes atomic attempt creation/enqueue, concurrent active-attempt idempotency, supersede cleanup enqueue, active-attempt same-document constraint, provider uniqueness, stale completion no-op, failpoints, retry/reconciliation, completion dispatch, and a provider webhook (`DOCUMENT_CREATED`) landing mid-submission without stranding the attempt.
 
 **Documentation:** [`docs/backend/worker-queue-guide.md`](docs/backend/worker-queue-guide.md)
 

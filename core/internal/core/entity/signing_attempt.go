@@ -136,6 +136,64 @@ func (a *SigningAttempt) IsTerminal() bool {
 	return a.Status.IsTerminal()
 }
 
+// IsSubmissionInFlight returns true while the worker still owns the render and
+// provider submission, i.e. before it has fetched signing references and moved
+// the attempt to SIGNING_READY itself.
+func (s SigningAttemptStatus) IsSubmissionInFlight() bool {
+	switch s {
+	case SigningAttemptStatusCreated,
+		SigningAttemptStatusRendering,
+		SigningAttemptStatusPDFReady,
+		SigningAttemptStatusReadyToSubmit,
+		SigningAttemptStatusSubmittingProvider,
+		SigningAttemptStatusProviderRetryWaiting,
+		SigningAttemptStatusSubmissionUnknown,
+		SigningAttemptStatusReconcilingProvider:
+		return true
+	default:
+		return false
+	}
+}
+
+// ProviderReport is what one provider webhook says about a signing attempt.
+type ProviderReport struct {
+	Status         *SigningAttemptStatus
+	CorrelationKey string
+	DocumentID     string
+}
+
+// ApplyProviderReport merges a provider webhook into the attempt and returns
+// true when the attempt status changed. Apply it to the row as it stands under
+// lock: saving a copy read before the lock carries worker progress backwards.
+//
+// Providers echo the worker's own submission steps (Documenso sends
+// DOCUMENT_CREATED as soon as the envelope exists, before recipients, fields
+// and distribution), so a non-terminal status never moves an attempt whose
+// submission is still in flight. Terminal statuses are the provider's final
+// word and always apply. Identifiers only fill gaps; the worker's values win.
+func (a *SigningAttempt) ApplyProviderReport(report ProviderReport, now time.Time) bool {
+	if report.CorrelationKey != "" && a.ProviderCorrelationKey == nil {
+		key := report.CorrelationKey
+		a.ProviderCorrelationKey = &key
+	}
+	if report.DocumentID != "" && a.ProviderDocumentID == nil {
+		id := report.DocumentID
+		a.ProviderDocumentID = &id
+	}
+	if report.Status == nil || *report.Status == a.Status {
+		return false
+	}
+	if !report.Status.IsTerminal() && a.Status.IsSubmissionInFlight() {
+		return false
+	}
+	a.Status = *report.Status
+	if a.Status.IsTerminal() {
+		terminalAt := now
+		a.TerminalAt = &terminalAt
+	}
+	return true
+}
+
 // CanRetryAutomatically returns true for non-terminal worker-owned retry/reconciliation states.
 func (a *SigningAttempt) CanRetryAutomatically() bool {
 	if a == nil || a.IsTerminal() {

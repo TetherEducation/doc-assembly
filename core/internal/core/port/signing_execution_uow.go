@@ -26,4 +26,14 @@ type SigningExecutionUnitOfWork interface {
 	Transition(ctx context.Context, attempt *entity.SigningAttempt, eventType string) error
 	TerminateActiveAttempt(ctx context.Context, attempt *entity.SigningAttempt, status entity.SigningAttemptStatus, reason, eventType string) error
 	SupersedeActiveAndCreateAttempt(ctx context.Context, documentID, expectedOldAttemptID, reason string, recipients []*entity.DocumentRecipient, signerOrders map[string]int) (*entity.SigningAttempt, error)
+	// ApplyProviderWebhook merges a provider report into the attempt row read under
+	// lock, never into a copy the caller loaded earlier.
+	ApplyProviderWebhook(ctx context.Context, attemptID string, report entity.ProviderReport) (ProviderWebhookResult, error)
+}
+
+// ProviderWebhookResult describes what applying a provider webhook did to an attempt.
+type ProviderWebhookResult struct {
+	OldStatus     entity.SigningAttemptStatus
+	NewStatus     entity.SigningAttemptStatus
+	StatusChanged bool
 }
