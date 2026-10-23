@@ -244,6 +244,72 @@ func (u *SigningExecutionUnitOfWork) transition(ctx context.Context, attempt *en
 	return nil
 }
 
+// ApplyProviderWebhook merges a provider webhook into the attempt row read under
+// lock. A webhook must not save a copy of the attempt it loaded before taking the
+// lock: the worker may have advanced the provider submission in between, and
+// writing that copy back leaves the next phase job a phase or status it does not
+// own, so it exits as a no-op and the attempt never reaches SIGNING_READY.
+//
+// Historical attempts keep an audit trail only; they never touch the active
+// document projection or enqueue completion, and an active attempt that is
+// already terminal ignores late webhooks.
+func (u *SigningExecutionUnitOfWork) ApplyProviderWebhook(ctx context.Context, attemptID string, report entity.ProviderReport) (port.ProviderWebhookResult, error) {
+	tx, err := u.pool.Begin(ctx)
+	if err != nil {
+		return port.ProviderWebhookResult{}, fmt.Errorf("begin provider webhook tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	current, err := u.lockAttemptTx(ctx, tx, attemptID)
+	if err != nil {
+		return port.ProviderWebhookResult{}, err
+	}
+	result := port.ProviderWebhookResult{OldStatus: current.Status, NewStatus: current.Status}
+	var activeAttemptID *string
+	if err := tx.QueryRow(ctx, `SELECT active_attempt_id FROM execution.documents WHERE id = $1`, current.DocumentID).Scan(&activeAttemptID); err != nil {
+		return port.ProviderWebhookResult{}, fmt.Errorf("checking active attempt projection: %w", err)
+	}
+	active := activeAttemptID != nil && *activeAttemptID == current.ID
+	if active && current.IsTerminal() {
+		return result, nil
+	}
+
+	result.StatusChanged = current.ApplyProviderReport(report, time.Now().UTC())
+	result.NewStatus = current.Status
+	if err := u.attemptRepo.UpdateTx(ctx, tx, current); err != nil {
+		return port.ProviderWebhookResult{}, err
+	}
+	if active && result.StatusChanged {
+		if err := u.recordActiveWebhookStatusTx(ctx, tx, current, result.OldStatus); err != nil {
+			return port.ProviderWebhookResult{}, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return port.ProviderWebhookResult{}, fmt.Errorf("commit provider webhook tx: %w", err)
+	}
+	return result, nil
+}
+
+// recordActiveWebhookStatusTx projects a webhook status change of the active
+// attempt onto its document, audits it, and enqueues completion dispatch.
+func (u *SigningExecutionUnitOfWork) recordActiveWebhookStatusTx(ctx context.Context, tx pgx.Tx, attempt *entity.SigningAttempt, oldStatus entity.SigningAttemptStatus) error {
+	if err := u.setDocumentProjectionIfActiveTx(ctx, tx, attempt); err != nil {
+		return err
+	}
+	completed := attempt.Status == entity.SigningAttemptStatusCompleted
+	eventType := "ATTEMPT_WEBHOOK_STATUS_UPDATED"
+	if completed {
+		eventType = "ATTEMPT_COMPLETED"
+	}
+	if err := u.insertEventTx(ctx, tx, attempt, &oldStatus, attempt.Status, eventType); err != nil {
+		return err
+	}
+	if !completed {
+		return nil
+	}
+	return u.enqueueTx(ctx, tx, port.SigningJobPhaseDispatchCompletion, attempt)
+}
+
 func (u *SigningExecutionUnitOfWork) createAttemptInTx(ctx context.Context, tx pgx.Tx, documentID string, recipients []*entity.DocumentRecipient, signerOrders map[string]int) (*entity.SigningAttempt, error) {
 	seq, err := u.attemptRepo.NextSequenceTx(ctx, tx, documentID)
 	if err != nil {

@@ -530,40 +530,23 @@ func reasonString(reason *string) string {
 
 // HandleWebhookEvent processes an incoming webhook event from the signing provider.
 //
-//nolint:gocognit,gocyclo,nestif,funlen
+// The attempt loaded here only identifies the row. Its state is merged under lock
+// by ApplyProviderWebhook, because the worker can advance the provider submission
+// between this read and the write (Documenso sends DOCUMENT_CREATED while the
+// worker is still adding recipients and fields).
 func (s *DocumentService) HandleWebhookEvent(ctx context.Context, event *port.WebhookEvent) error {
 	attempt, err := s.findAttemptForWebhook(ctx, event)
 	if err != nil {
 		return fmt.Errorf("finding signing attempt for webhook: %w", err)
 	}
-	doc, err := s.documentRepo.FindByID(ctx, attempt.DocumentID)
-	if err != nil {
-		return fmt.Errorf("finding webhook document: %w", err)
-	}
 
 	slog.InfoContext(ctx, "processing attempt webhook event",
 		slog.String("event_type", event.EventType),
-		slog.String("document_id", doc.ID),
+		slog.String("document_id", attempt.DocumentID),
 		slog.String("attempt_id", attempt.ID),
 		slog.String("provider_document_id", event.ProviderDocumentID),
 	)
 
-	newStatus := attempt.Status
-	oldStatus := attempt.Status
-	if event.DocumentStatus != nil {
-		newStatus = *event.DocumentStatus
-		attempt.Status = newStatus
-	}
-	if event.ProviderCorrelationKey != "" {
-		attempt.ProviderCorrelationKey = &event.ProviderCorrelationKey
-	}
-	if event.ProviderDocumentID != "" {
-		attempt.ProviderDocumentID = &event.ProviderDocumentID
-	}
-	if event.DocumentStatus != nil && attempt.Status.IsTerminal() {
-		now := time.Now().UTC()
-		attempt.TerminalAt = &now
-	}
 	if event.ProviderRecipientID != "" && event.RecipientStatus != nil {
 		if err := s.updateAttemptRecipientFromWebhook(ctx, attempt.ID, event.ProviderRecipientID, *event.RecipientStatus); err != nil {
 			slog.WarnContext(ctx, "failed to update attempt recipient from webhook", slog.String("error", err.Error()))
@@ -575,26 +558,23 @@ func (s *DocumentService) HandleWebhookEvent(ctx context.Context, event *port.We
 		}
 	}
 
-	// Historical attempts are auditable only; they must never mutate the active document projection.
-	if doc.ActiveAttemptID == nil || *doc.ActiveAttemptID != attempt.ID {
-		if err := s.attemptRepo.Update(ctx, attempt); err != nil {
-			return fmt.Errorf("updating historical webhook attempt: %w", err)
-		}
-		_ = s.attemptRepo.InsertEvent(ctx, &entity.SigningAttemptEvent{AttemptID: attempt.ID, DocumentID: attempt.DocumentID, EventType: "ATTEMPT_WEBHOOK_RECEIVED", OldStatus: &oldStatus, NewStatus: &newStatus, ProviderName: &event.ProviderName, ProviderDocumentID: &event.ProviderDocumentID, CorrelationKey: &event.ProviderCorrelationKey, RawPayload: event.RawPayload})
-		return nil
+	result, err := s.signingUOW.ApplyProviderWebhook(ctx, attempt.ID, entity.ProviderReport{
+		Status:         event.DocumentStatus,
+		CorrelationKey: event.ProviderCorrelationKey,
+		DocumentID:     event.ProviderDocumentID,
+	})
+	if err != nil {
+		return fmt.Errorf("persisting webhook onto signing attempt: %w", err)
 	}
-	if event.DocumentStatus != nil {
-		if *event.DocumentStatus == entity.SigningAttemptStatusCompleted {
-			if err := s.signingUOW.TransitionAndEnqueue(ctx, attempt, port.SigningJobPhaseDispatchCompletion, "ATTEMPT_COMPLETED"); err != nil {
-				return fmt.Errorf("persisting completed attempt from webhook: %w", err)
-			}
-		} else if err := s.signingUOW.Transition(ctx, attempt, "ATTEMPT_WEBHOOK_STATUS_UPDATED"); err != nil {
-			return fmt.Errorf("persisting active attempt from webhook: %w", err)
-		}
-	} else if err := s.attemptRepo.Update(ctx, attempt); err != nil {
-		return fmt.Errorf("updating active webhook attempt: %w", err)
+	if event.DocumentStatus != nil && !result.StatusChanged && *event.DocumentStatus != result.NewStatus {
+		slog.InfoContext(ctx, "webhook status left to the signing worker",
+			slog.String("event_type", event.EventType),
+			slog.String("attempt_id", attempt.ID),
+			slog.String("reported_status", string(*event.DocumentStatus)),
+			slog.String("attempt_status", string(result.NewStatus)),
+		)
 	}
-	_ = s.attemptRepo.InsertEvent(ctx, &entity.SigningAttemptEvent{AttemptID: attempt.ID, DocumentID: attempt.DocumentID, EventType: "ATTEMPT_WEBHOOK_RECEIVED", OldStatus: &oldStatus, NewStatus: &newStatus, ProviderName: &event.ProviderName, ProviderDocumentID: &event.ProviderDocumentID, CorrelationKey: &event.ProviderCorrelationKey, RawPayload: event.RawPayload})
+	_ = s.attemptRepo.InsertEvent(ctx, &entity.SigningAttemptEvent{AttemptID: attempt.ID, DocumentID: attempt.DocumentID, EventType: "ATTEMPT_WEBHOOK_RECEIVED", OldStatus: &result.OldStatus, NewStatus: &result.NewStatus, ProviderName: &event.ProviderName, ProviderDocumentID: &event.ProviderDocumentID, CorrelationKey: &event.ProviderCorrelationKey, RawPayload: event.RawPayload})
 	return nil
 }
 

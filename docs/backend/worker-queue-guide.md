@@ -137,18 +137,27 @@ sequenceDiagram
 
     Provider->>Webhook: completed / declined / recipient event
     Webhook->>Repo: Lookup by provider_name + provider_document_id or correlation key
-    Repo-->>Webhook: attempt + document
+    Repo-->>Webhook: attempt id
+    Webhook->>UOW: ApplyProviderWebhook(attempt id, provider report)
+    UOW->>PG: lock attempt row FOR UPDATE, merge the report into it
 
     alt attempt is historical
-        Webhook->>Repo: Insert event only
-    else attempt is active
-        Webhook->>UOW: Apply webhook transition
-        UOW->>PG: update attempt + recipients + document projection
+        UOW->>PG: update attempt only (audit)
+    else attempt is active and not terminal
+        UOW->>PG: update attempt + document projection when the status changed
         UOW->>PG: enqueue dispatch_attempt_completion when completed
         River->>PG: Load active completed attempt + document
         River->>SDK: handler(ctx, DocumentCompletedEvent)
     end
+    Webhook->>Repo: Insert ATTEMPT_WEBHOOK_RECEIVED event
 ```
+
+The webhook never saves the attempt it looked up. The worker can advance the provider submission between that read and the write, and saving the old copy strands the attempt: the next phase job finds a status or phase it does not own and completes as a no-op. `ApplyProviderWebhook` merges the report into the row read under lock instead (`SigningAttempt.ApplyProviderReport`):
+
+- Providers echo the worker's own steps. Documenso sends `DOCUMENT_CREATED` as soon as the envelope exists, before recipients, fields and distribution. A non-terminal reported status (`SIGNING_READY`, `SIGNING`) therefore does not move an attempt whose submission is still in flight (`CREATED` through `RECONCILING_PROVIDER`); the worker sets `SIGNING_READY` itself after fetching signing references.
+- Terminal statuses (`COMPLETED`, `DECLINED`, ...) always apply. A repeated status is not a change, so a duplicate `DOCUMENT_COMPLETED` enqueues completion once.
+- Provider identifiers only fill gaps; the worker's values win.
+- An active attempt that is already terminal ignores late webhooks.
 
 The dispatch worker always verifies `document.active_attempt_id == attempt_id` before invoking the SDK handler. Stale completion jobs complete as no-ops.
 
