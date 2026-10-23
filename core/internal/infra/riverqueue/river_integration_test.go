@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ import (
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/storage/local"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
+	documentsvc "github.com/TetherEducation/doc-assembly/core/internal/core/service/document"
 	"github.com/TetherEducation/doc-assembly/core/internal/infra/config"
 	"github.com/TetherEducation/doc-assembly/core/internal/infra/riverqueue"
 	"github.com/TetherEducation/doc-assembly/core/internal/testing/testhelper"
@@ -543,6 +545,140 @@ func TestSigningAttemptExecutor_AdvanceProviderSubmissionResumesAfterProviderSte
 			require.Nil(t, finalAttempt.ProviderSubmitPhase)
 		})
 	}
+}
+
+// Documenso sends DOCUMENT_CREATED as soon as the envelope exists, while the worker
+// is still adding recipients and fields. In production the webhook read the attempt,
+// the worker committed the next phase, and the webhook then saved its copy back as
+// SIGNING_READY: the next phase job found a status it does not own, exited as a
+// no-op, and the signer waited on "preparing document" forever.
+func TestProviderWebhook_DocumentCreatedDuringSubmissionDoesNotStrandAttempt(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	provider := signingmock.New()
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+
+	// The worker creates the envelope and commits ADD_RECIPIENTS.
+	require.NoError(t, executor.AdvanceProviderSubmissionForPhase(ctx, attempt.ID, entity.ProviderSubmitPhaseCreateProviderDocument))
+
+	// The webhook reads the attempt, the worker adds recipients and commits
+	// CREATE_FIELDS, and only then does the webhook persist.
+	attempts := &advanceAfterWebhookReadRepo{SigningAttemptRepository: fx.attemptRepo}
+	attempts.afterRead = func() {
+		require.True(t, fx.runNextQueuedAdvanceJob(t, ctx, executor, attempt.ID), "expected the ADD_RECIPIENTS job to be queued")
+	}
+	svc := fx.newWebhookService(t, ctx, attempts)
+	signingReady := entity.SigningAttemptStatusSigningReady
+	require.NoError(t, svc.HandleWebhookEvent(ctx, &port.WebhookEvent{
+		EventType:              "DOCUMENT_CREATED",
+		ProviderName:           provider.ProviderName(),
+		ProviderCorrelationKey: *attempt.ProviderCorrelationKey,
+		DocumentStatus:         &signingReady,
+	}))
+	require.True(t, attempts.read, "webhook did not look the attempt up by correlation key")
+
+	for fx.runNextQueuedAdvanceJob(t, ctx, executor, attempt.ID) {
+	}
+
+	final := fx.mustAttempt(t, ctx, attempt.ID)
+	if final.ProviderSubmitPhase != nil {
+		t.Fatalf("provider submission stranded at phase %s with status %s", *final.ProviderSubmitPhase, final.Status)
+	}
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, final.Status)
+	require.NotNil(t, final.ProviderDocumentID)
+	recipients, err := fx.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	require.NoError(t, err)
+	require.Len(t, recipients, 1)
+	require.NotNil(t, recipients[0].ProviderRecipientID)
+}
+
+func TestProviderWebhook_SigningAndCompletionStillApplyAfterSubmission(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	provider := signingmock.New()
+	executor, storage, _ := newProviderSubmissionExecutor(t, ctx, fx, provider, nil)
+	attempt := fx.createProviderReadyAttempt(t, ctx, provider, storage)
+	require.NoError(t, executor.AdvanceProviderSubmissionForPhase(ctx, attempt.ID, entity.ProviderSubmitPhaseCreateProviderDocument))
+	for fx.runNextQueuedAdvanceJob(t, ctx, executor, attempt.ID) {
+	}
+	require.Equal(t, entity.SigningAttemptStatusSigningReady, fx.mustAttempt(t, ctx, attempt.ID).Status)
+
+	svc := fx.newWebhookService(t, ctx, fx.attemptRepo)
+	deliver := func(eventType string, status entity.SigningAttemptStatus) {
+		t.Helper()
+		require.NoError(t, svc.HandleWebhookEvent(ctx, &port.WebhookEvent{
+			EventType:              eventType,
+			ProviderName:           provider.ProviderName(),
+			ProviderCorrelationKey: *attempt.ProviderCorrelationKey,
+			DocumentStatus:         &status,
+		}))
+	}
+
+	deliver("DOCUMENT_OPENED", entity.SigningAttemptStatusSigning)
+	require.Equal(t, entity.SigningAttemptStatusSigning, fx.mustAttempt(t, ctx, attempt.ID).Status)
+
+	deliver("DOCUMENT_COMPLETED", entity.SigningAttemptStatusCompleted)
+	deliver("DOCUMENT_COMPLETED", entity.SigningAttemptStatusCompleted)
+	final := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusCompleted, final.Status)
+	require.NotNil(t, final.TerminalAt)
+
+	var docStatus entity.DocumentStatus
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT status FROM execution.documents WHERE id=$1`, fx.documentID).Scan(&docStatus))
+	require.Equal(t, entity.DocumentStatusCompleted, docStatus)
+	var dispatchJobs int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='dispatch_attempt_completion' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&dispatchJobs))
+	require.Equal(t, 1, dispatchJobs, "a repeated DOCUMENT_COMPLETED must not dispatch completion twice")
+}
+
+// advanceAfterWebhookReadRepo lets the worker advance between the webhook's read of
+// the attempt and its write, reproducing the production interleaving.
+type advanceAfterWebhookReadRepo struct {
+	port.SigningAttemptRepository
+	afterRead func()
+	read      bool
+}
+
+func (r *advanceAfterWebhookReadRepo) FindByProviderCorrelationKey(ctx context.Context, providerName, correlationKey string) (*entity.SigningAttempt, error) {
+	attempt, err := r.SigningAttemptRepository.FindByProviderCorrelationKey(ctx, providerName, correlationKey)
+	if err == nil && !r.read {
+		r.read = true
+		if r.afterRead != nil {
+			r.afterRead()
+		}
+	}
+	return attempt, err
+}
+
+func (f *attemptFixture) newWebhookService(t *testing.T, ctx context.Context, attempts port.SigningAttemptRepository) *documentsvc.DocumentService {
+	t.Helper()
+	riverSvc, err := riverqueue.New(ctx, f.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: f.docRepo, AttemptRepo: f.attemptRepo})
+	require.NoError(t, err)
+	return documentsvc.NewDocumentService(f.docRepo, nil, attempts, riverSvc.SigningExecutionUOW(), nil, nil, nil, nil, nil, nil, nil, nil, 0, nil, nil, false)
+}
+
+// runNextQueuedAdvanceJob runs the oldest available advance_provider_submission job
+// for the attempt with the phase it was enqueued for, as River would, and reports
+// whether there was one. A phase job that finds the attempt in a state it does not
+// own completes without enqueuing anything, so the chain stops here too.
+func (f *attemptFixture) runNextQueuedAdvanceJob(t *testing.T, ctx context.Context, executor *riverqueue.SigningAttemptExecutor, attemptID string) bool {
+	t.Helper()
+	var jobID int64
+	var phase string
+	err := f.pool.QueryRow(ctx, `
+		SELECT id, COALESCE(args->>'provider_submit_phase', '')
+		FROM river_job
+		WHERE kind='advance_provider_submission' AND args->>'attempt_id'=$1 AND state='available'
+		ORDER BY id LIMIT 1`, attemptID).Scan(&jobID, &phase)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false
+	}
+	require.NoError(t, err)
+	require.NoError(t, executor.AdvanceProviderSubmissionForPhase(ctx, attemptID, entity.ProviderSubmitPhase(phase)))
+	_, err = f.pool.Exec(ctx, `UPDATE river_job SET state='completed', finalized_at=now() WHERE id=$1`, jobID)
+	require.NoError(t, err)
+	return true
 }
 
 type transientRecipientsProvider struct {
