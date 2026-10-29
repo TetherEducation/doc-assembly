@@ -726,6 +726,84 @@ func TestDocumentController_Sandbox_ListAndCreateIsolation(t *testing.T) {
 			assert.NotEqual(t, sbxDoc.ID, d.ID, "sandbox doc must not appear in prod list")
 		}
 	})
+
+	t.Run("each mode reads only its own documents by ID", func(t *testing.T) {
+		createResp, createBody := sandboxOperator.POST("/api/v1/documents", sandboxReq)
+		require.Equal(t, http.StatusCreated, createResp.StatusCode, string(createBody))
+		var sbxDoc entity.DocumentWithRecipients
+		require.NoError(t, json.Unmarshal(createBody, &sbxDoc))
+		t.Cleanup(func() { testhelper.CleanupDocument(t, testhelper.GetTestPool(t), sbxDoc.ID) })
+
+		resp, body := sandboxViewer.GET("/api/v1/documents/" + sbxDoc.ID)
+		assert.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+		resp, body = sandboxViewer.GET("/api/v1/documents/" + prodDoc.ID)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, "prod doc must not be readable in sandbox mode: %s", string(body))
+
+		resp, body = env.viewerClient().GET("/api/v1/documents/" + sbxDoc.ID)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, "sandbox doc must not be readable in production mode: %s", string(body))
+	})
+}
+
+// TestDocumentController_DocumentFromAnotherWorkspace_NotFound covers
+// documentInWorkspace: an operator who is also a member of a second workspace in
+// the same tenant cannot read or act on the first workspace's document by its ID,
+// through any route that names a document.
+func TestDocumentController_DocumentFromAnotherWorkspace_NotFound(t *testing.T) {
+	env := setupDocumentEnv(t)
+	pool := testhelper.GetTestPool(t)
+	doc := env.createDocument(t, "Workspace Scope Doc")
+	recipientID := doc.Recipients[0].ID
+
+	otherWorkspaceID := testhelper.CreateTestWorkspace(t, pool, &env.tenantID, "Other Workspace", entity.WorkspaceTypeClient)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, otherWorkspaceID) })
+	testhelper.CreateTestWorkspaceMember(t, pool, otherWorkspaceID, env.operator.ID, entity.WorkspaceRoleOperator, nil)
+	fromOtherWorkspace := env.client.WithAuth(env.operator.BearerHeader).WithWorkspaceID(otherWorkspaceID)
+
+	routes := []struct{ method, path string }{
+		{http.MethodGet, ""},
+		{http.MethodGet, "/recipients"},
+		{http.MethodGet, "/events"},
+		{http.MethodGet, "/recipients/" + recipientID + "/signing-url"},
+		{http.MethodGet, "/pdf"},
+		{http.MethodPost, "/refresh"},
+		{http.MethodPost, "/cancel"},
+		{http.MethodPost, "/deprecate"},
+		{http.MethodPost, "/remind"},
+		{http.MethodPost, "/invalidate-tokens"},
+	}
+	for _, route := range routes {
+		t.Run(route.method+" "+route.path, func(t *testing.T) {
+			resp, body := fromOtherWorkspace.Do(route.method, "/api/v1/documents/"+doc.ID+route.path, nil)
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+		})
+	}
+
+	// view-link and print-pdf keep their own check in ReadOnlyViewService, which
+	// answers 403.
+	for _, route := range []struct{ method, path string }{
+		{http.MethodPost, "/view-link"},
+		{http.MethodGet, "/print-pdf"},
+	} {
+		t.Run(route.method+" "+route.path+" is refused by its own check", func(t *testing.T) {
+			resp, body := fromOtherWorkspace.Do(route.method, "/api/v1/documents/"+doc.ID+route.path, nil)
+			assert.Equal(t, http.StatusForbidden, resp.StatusCode, string(body))
+		})
+	}
+
+	t.Run("the document is untouched and still readable from its own workspace", func(t *testing.T) {
+		resp, body := env.viewerClient().GET("/api/v1/documents/" + doc.ID)
+		require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+		var got entity.DocumentWithRecipients
+		require.NoError(t, json.Unmarshal(body, &got))
+		assert.Equal(t, doc.Status, got.Status, "the cancel attempted from the other workspace must not have run")
+	})
+
+	t.Run("an ID that is not a UUID answers 404", func(t *testing.T) {
+		resp, body := env.viewerClient().GET("/api/v1/documents/not-a-uuid")
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+	})
 }
 
 func TestDocumentController_Sandbox_BadRequestForSystemWorkspace(t *testing.T) {
