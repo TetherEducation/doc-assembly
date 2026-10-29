@@ -57,6 +57,42 @@ func NewDocumentController(
 	}
 }
 
+// documentInWorkspace aborts a request whose :documentId does not belong to the
+// caller's workspace (after sandbox resolution). Document lookups select by ID
+// alone, and WorkspaceContext only checks the caller's role in the workspace the
+// header names, so without this a member of any workspace could read or act on
+// another workspace's document by its ID. A mismatch answers 404, the same as a
+// missing document, so IDs from other workspaces cannot be probed.
+func (c *DocumentController) documentInWorkspace(ctx *gin.Context) {
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok || strings.TrimSpace(workspaceID) == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		ctx.Abort()
+		return
+	}
+
+	documentID := ctx.Param("documentId")
+	if _, err := uuid.Parse(documentID); err != nil {
+		HandleError(ctx, entity.ErrDocumentNotFound)
+		ctx.Abort()
+		return
+	}
+
+	doc, err := c.documentUC.GetDocument(ctx.Request.Context(), documentID)
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+	if doc == nil || doc.WorkspaceID != workspaceID {
+		HandleError(ctx, entity.ErrDocumentNotFound)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
 // RegisterRoutes registers all document routes.
 func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...DocumentRouteOption) {
 	routeOptions := documentRouteOptions{}
@@ -83,20 +119,27 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 		// Batch create documents
 		docs.POST("/batch", middleware.RequireOperator(), c.CreateDocumentsBatch)
 
+		// Every route below names one document. documentInWorkspace runs after the
+		// role check and before the handler, so the document must belong to the
+		// caller's workspace whatever the handler does with it. view-link and
+		// print-pdf are the exception: their service already checks the
+		// workspace (ReadOnlyViewService), and they are also registered outside
+		// this group when a wrapper supplies its own authentication.
+
 		// Get single document
-		docs.GET("/:documentId", middleware.RequireViewer(), c.GetDocument)
+		docs.GET("/:documentId", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocument)
 
 		// Get document recipients
-		docs.GET("/:documentId/recipients", middleware.RequireViewer(), c.GetRecipients)
+		docs.GET("/:documentId/recipients", middleware.RequireViewer(), c.documentInWorkspace, c.GetRecipients)
 
 		// Get document events (audit trail)
-		docs.GET("/:documentId/events", middleware.RequireViewer(), c.GetDocumentEvents)
+		docs.GET("/:documentId/events", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentEvents)
 
 		// Get signing URL for recipient
-		docs.GET("/:documentId/recipients/:recipientId/signing-url", middleware.RequireViewer(), c.GetSigningURL)
+		docs.GET("/:documentId/recipients/:recipientId/signing-url", middleware.RequireViewer(), c.documentInWorkspace, c.GetSigningURL)
 
 		// Download signed PDF
-		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.GetDocumentPDF)
+		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentPDF)
 
 		if !routeOptions.skipReadOnlyViewLink {
 			// Create public read-only view link
@@ -109,19 +152,19 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 		}
 
 		// Refresh document status from provider
-		docs.POST("/:documentId/refresh", middleware.RequireOperator(), c.RefreshStatus)
+		docs.POST("/:documentId/refresh", middleware.RequireOperator(), c.documentInWorkspace, c.RefreshStatus)
 
 		// Cancel document
-		docs.POST("/:documentId/cancel", middleware.RequireOperator(), c.CancelDocument)
+		docs.POST("/:documentId/cancel", middleware.RequireOperator(), c.documentInWorkspace, c.CancelDocument)
 
 		// Deprecate completed document
-		docs.POST("/:documentId/deprecate", middleware.RequireOperator(), c.DeprecateDocument)
+		docs.POST("/:documentId/deprecate", middleware.RequireOperator(), c.documentInWorkspace, c.DeprecateDocument)
 
 		// Send reminder to pending recipients
-		docs.POST("/:documentId/remind", middleware.RequireOperator(), c.SendReminder)
+		docs.POST("/:documentId/remind", middleware.RequireOperator(), c.documentInWorkspace, c.SendReminder)
 
 		// Regenerate pre-signing access token
-		docs.POST("/:documentId/invalidate-tokens", middleware.RequireOperator(), c.InvalidateTokens)
+		docs.POST("/:documentId/invalidate-tokens", middleware.RequireOperator(), c.documentInWorkspace, c.InvalidateTokens)
 	}
 }
 
