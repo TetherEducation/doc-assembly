@@ -26,6 +26,16 @@ type DocumentController struct {
 	preSigningUC   documentuc.PreSigningUseCase
 	readOnlyViewUC documentuc.ReadOnlyViewUseCase
 	eventEmitter   *documentsvc.EventEmitter
+	// pdfSendUC backs POST /documents/from-pdf; nil (signing.pdf_send off)
+	// leaves the route unregistered.
+	pdfSendUC documentuc.PDFSendUseCase
+}
+
+// SetPDFSendUseCase turns on POST /documents/from-pdf ("Send a PDF"). Call it
+// before RegisterRoutes.
+func (c *DocumentController) SetPDFSendUseCase(uc documentuc.PDFSendUseCase) *DocumentController {
+	c.pdfSendUC = uc
+	return c
 }
 
 type documentRouteOptions struct {
@@ -118,6 +128,12 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 
 		// Batch create documents
 		docs.POST("/batch", middleware.RequireOperator(), c.CreateDocumentsBatch)
+
+		// Send an uploaded PDF (signing.pdf_send). OPERATOR, like creating a
+		// document: the one-off template it builds serves only this document.
+		if c.pdfSendUC != nil {
+			docs.POST("/from-pdf", middleware.RequireOperator(), c.SendPDF)
+		}
 
 		// Every route below names one document. documentInWorkspace runs after the
 		// role check and before the handler, so the document must belong to the

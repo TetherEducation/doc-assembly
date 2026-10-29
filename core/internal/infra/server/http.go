@@ -470,6 +470,8 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 		Gallery bool `json:"gallery"`
 		// PublicDocLink: the panel may offer the engine's /public/doc/{id} link.
 		PublicDocLink bool `json:"publicDocLink"`
+		// PDFSend: the panel offers "Send a PDF" (POST /documents/from-pdf).
+		PDFSend bool `json:"pdfSend"`
 	}
 
 	type clientConfig struct {
@@ -498,6 +500,7 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 		Features: features{
 			Gallery:       cfg.Storage.Enabled,
 			PublicDocLink: !cfg.Signing.HidePublicDocLink,
+			PDFSend:       cfg.Signing.PDFSend,
 		},
 	}
 

@@ -272,6 +272,16 @@ func TestDocumentController_CreateDocument_DuplicateRecipientRole(t *testing.T) 
 	assert.Contains(t, string(body), entity.ErrDuplicateRecipientRole.Error())
 }
 
+// With signing.pdf_send off (the default, and the test server's setup) the
+// "Send a PDF" route does not exist.
+func TestDocumentController_SendPDF_AbsentWhenOff(t *testing.T) {
+	env := setupDocumentEnv(t)
+
+	resp, body := env.operatorClient().POST("/api/v1/documents/from-pdf", nil)
+
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+}
+
 func TestDocumentController_GetDocument(t *testing.T) {
 	env := setupDocumentEnv(t)
 
