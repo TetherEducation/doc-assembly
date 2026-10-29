@@ -202,6 +202,11 @@ type SigningConfig struct {
 	// signer order instead of all at once. Off by default (provider default,
 	// PARALLEL for Documenso).
 	SequentialOrder bool `mapstructure:"sequential_order"`
+	// HidePublicDocLink hides the engine's own public signing link
+	// (/public/doc/{id}) in the panel, for deployments where signers cannot use
+	// that page and reach documents only through the provider's links (its
+	// emails, or the per-signer links the panel copies). Off by default.
+	HidePublicDocLink bool `mapstructure:"hide_public_doc_link"`
 }
 
 // SigningEmbedConfig customizes the provider's embedded signing widget so it

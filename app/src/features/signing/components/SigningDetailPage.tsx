@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/use-toast'
 import { useAppContextStore } from '@/stores/app-context-store'
 import { usePermission } from '@/features/auth/hooks/usePermission'
+import { useClientFeatures } from '@/lib/use-client-features'
 import { SigningDocumentStatus } from '../types'
 import { signingApi } from '../api/signing-api'
 import {
@@ -66,6 +67,10 @@ export function SigningDetailPage() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const { hasPermission, Permission } = usePermission()
+  const clientFeatures = useClientFeatures()
+  // Hidden only where the deployment says signers can't use the engine's own
+  // page (they sign through the provider's links instead).
+  const showPublicDocLink = clientFeatures?.publicDocLink !== false
   const navigate = useNavigate()
   const { currentWorkspace } = useAppContextStore()
 
@@ -423,7 +428,7 @@ export function SigningDetailPage() {
             </div>
 
             {/* Public Document Link (AWAITING_INPUT) */}
-            {isAwaitingInput && (
+            {isAwaitingInput && showPublicDocLink && (
               <div className="border border-amber-500/30 bg-amber-500/5 p-6">
                 <h2 className="mb-4 flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-widest text-amber-600 dark:text-amber-400">
                   <Link size={12} />
@@ -549,7 +554,9 @@ export function SigningDetailPage() {
               </div>
               <RecipientTable
                 documentId={documentId}
+                documentStatus={document.status}
                 recipients={document.recipients}
+                canShareLinks={hasPermission(Permission.DOCUMENT_CREATE)}
               />
             </div>
 

@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { AxiosError, AxiosHeaders } from 'axios'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RecipientTable } from './RecipientTable'
+import { signingApi } from '../api/signing-api'
 import type { SigningRecipient } from '../types'
 
 // Mock react-i18next
@@ -11,8 +13,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock useToast
+const toast = vi.fn()
 vi.mock('@/components/ui/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({ toast }),
 }))
 
 // Mock signing API
@@ -36,19 +39,33 @@ const makeRecipient = (
   ...overrides,
 })
 
+// Defaults: a document out for signature, seen by someone who may send.
+const renderTable = (
+  props: Partial<React.ComponentProps<typeof RecipientTable>> = {},
+) =>
+  render(
+    <RecipientTable
+      documentId="doc-1"
+      documentStatus="SIGNING"
+      recipients={[makeRecipient()]}
+      canShareLinks
+      {...props}
+    />,
+  )
+
 describe('RecipientTable', () => {
+  beforeEach(() => {
+    vi.mocked(signingApi.getSigningURL).mockReset()
+    toast.mockReset()
+  })
+
   it('shows empty state when no recipients', () => {
-    render(<RecipientTable documentId="doc-1" recipients={[]} />)
+    renderTable({ recipients: [] })
     expect(screen.getByText('No recipients')).toBeDefined()
   })
 
   it('renders table headers', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[makeRecipient()]}
-      />,
-    )
+    renderTable()
     expect(screen.getByText('Name')).toBeDefined()
     expect(screen.getByText('Email')).toBeDefined()
     expect(screen.getByText('Role')).toBeDefined()
@@ -58,84 +75,112 @@ describe('RecipientTable', () => {
   })
 
   it('renders recipient name, email, and role', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[
-          makeRecipient({
-            name: 'Alice Smith',
-            email: 'alice@example.com',
-            roleName: 'Approver',
-          }),
-        ]}
-      />,
-    )
+    renderTable({
+      recipients: [
+        makeRecipient({
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          roleName: 'Approver',
+        }),
+      ],
+    })
     expect(screen.getByText('Alice Smith')).toBeDefined()
     expect(screen.getByText('alice@example.com')).toBeDefined()
     expect(screen.getByText('Approver')).toBeDefined()
   })
 
   it('renders recipient status badge', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[makeRecipient({ status: 'SIGNED' })]}
-      />,
-    )
+    renderTable({ recipients: [makeRecipient({ status: 'SIGNED' })] })
     expect(screen.getByText('Signed')).toBeDefined()
   })
 
   it('renders multiple recipients', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[
-          makeRecipient({ id: 'r1', name: 'Alice', email: 'alice@test.com' }),
-          makeRecipient({ id: 'r2', name: 'Bob', email: 'bob@test.com' }),
-          makeRecipient({ id: 'r3', name: 'Charlie', email: 'charlie@test.com' }),
-        ]}
-      />,
-    )
+    renderTable({
+      recipients: [
+        makeRecipient({ id: 'r1', name: 'Alice', email: 'alice@test.com' }),
+        makeRecipient({ id: 'r2', name: 'Bob', email: 'bob@test.com' }),
+        makeRecipient({ id: 'r3', name: 'Charlie', email: 'charlie@test.com' }),
+      ],
+    })
     expect(screen.getByText('Alice')).toBeDefined()
     expect(screen.getByText('Bob')).toBeDefined()
     expect(screen.getByText('Charlie')).toBeDefined()
   })
 
-  it('shows "Copy URL" button for each recipient', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[
-          makeRecipient({ id: 'r1', name: 'Alice' }),
-          makeRecipient({ id: 'r2', name: 'Bob' }),
-        ]}
-      />,
+  it('offers a signing link only to signers who still have to sign', () => {
+    renderTable({
+      recipients: [
+        makeRecipient({ id: 'r1', name: 'Alice', status: 'SIGNED' }),
+        makeRecipient({ id: 'r2', name: 'Bob', status: 'SENT' }),
+        makeRecipient({ id: 'r3', name: 'Cleo', status: 'DECLINED' }),
+        makeRecipient({ id: 'r4', name: 'Dan', status: 'PENDING' }),
+      ],
+    })
+    expect(screen.getAllByText('Copy signing link')).toHaveLength(2)
+  })
+
+  it.each(['DRAFT', 'AWAITING_INPUT', 'PREPARING_SIGNATURE', 'COMPLETED', 'CANCELLED'])(
+    'offers no link while the document is %s',
+    (documentStatus) => {
+      renderTable({ documentStatus })
+      expect(screen.queryByText('Copy signing link')).toBeNull()
+    },
+  )
+
+  it('offers no link to someone who cannot send documents', () => {
+    renderTable({ canShareLinks: false })
+    expect(screen.queryByText('Copy signing link')).toBeNull()
+  })
+
+  it("copies the signer's link", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    // happy-dom's navigator.clipboard is a getter, so redefine it.
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    vi.mocked(signingApi.getSigningURL).mockResolvedValue({
+      signingUrl: 'https://sign.example.test/sign/tok-1',
+    })
+
+    renderTable()
+    fireEvent.click(screen.getByText('Copy signing link'))
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith('https://sign.example.test/sign/tok-1'),
     )
-    const copyButtons = screen.getAllByText('Copy URL')
-    expect(copyButtons).toHaveLength(2)
+    expect(signingApi.getSigningURL).toHaveBeenCalledWith('doc-1', 'r1')
+  })
+
+  it('says when the link is not ready yet (409)', async () => {
+    vi.mocked(signingApi.getSigningURL).mockRejectedValue(
+      new AxiosError('conflict', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 409,
+        statusText: 'Conflict',
+        data: {},
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      }),
+    )
+
+    renderTable()
+    fireEvent.click(screen.getByText('Copy signing link'))
+
+    await waitFor(() => expect(toast).toHaveBeenCalled())
+    expect(toast.mock.calls[0][0].description).toContain("isn't ready yet")
   })
 
   it('shows formatted signedAt date when available', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[
-          makeRecipient({ signedAt: '2026-02-15T14:30:00Z' }),
-        ]}
-      />,
-    )
+    renderTable({
+      recipients: [makeRecipient({ signedAt: '2026-02-15T14:30:00Z' })],
+    })
     // The formatted date should be present (locale-dependent, just check it's not "-")
     const cells = screen.queryAllByText('-')
     expect(cells).toHaveLength(0) // no dash since signedAt is provided
   })
 
   it('shows dash when signedAt is not available', () => {
-    render(
-      <RecipientTable
-        documentId="doc-1"
-        recipients={[makeRecipient({ signedAt: undefined })]}
-      />,
-    )
+    renderTable({ recipients: [makeRecipient({ signedAt: undefined })] })
     expect(screen.getByText('-')).toBeDefined()
   })
 })

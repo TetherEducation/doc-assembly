@@ -1749,7 +1749,11 @@
       "fieldResponses": "Respuestas de Campos",
       "copyReadOnlyLink": "Copiar enlace de solo lectura",
       "readOnlyLinkCopied": "Enlace de solo lectura copiado al portapapeles",
-      "readOnlyLinkCopyError": "No se pudo crear el enlace de solo lectura"
+      "readOnlyLinkCopyError": "No se pudo crear el enlace de solo lectura",
+      "copySigningLink": "Copiar enlace de firma",
+      "copySigningLinkHint": "Copia el enlace de firma de este firmante para enviárselo directamente",
+      "signingLinkCopied": "Enlace de firma copiado. Cualquiera que lo tenga puede firmar como este firmante.",
+      "signingLinkNotReady": "El enlace de este firmante aún no está listo. Actualiza el documento en un momento."
     },
     "cancel": {
       "title": "Cancelar Documento",
