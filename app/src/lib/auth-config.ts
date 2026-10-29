@@ -20,6 +20,8 @@ export interface AuthConfig {
   panelProvider?: PanelProvider
   features?: {
     gallery?: boolean
+    /** False when signers can't use the engine's own /public/doc page here. */
+    publicDocLink?: boolean
   }
 }
 

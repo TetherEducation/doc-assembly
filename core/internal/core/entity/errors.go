@@ -247,6 +247,9 @@ var (
 	ErrDocumentNotTerminal              = errors.New("related document must be in a terminal state for AMEND")
 	ErrRelatedDocumentRequired          = errors.New("related document ID is required for RENEW/AMEND operations")
 	ErrRelatedDocumentSameWorkspace     = errors.New("related document must belong to the same workspace")
+	// ErrSignedPDFNotAvailable: the document is in a state that should have a
+	// signed PDF, but neither storage nor the provider has one.
+	ErrSignedPDFNotAvailable = errors.New("signed PDF not available for this document")
 )
 
 // Signing Provider errors.
@@ -260,6 +263,10 @@ var (
 	ErrSigningCancelFailed          = errors.New("failed to cancel document")
 	ErrInvalidWebhookSignature      = errors.New("invalid webhook signature")
 	ErrWebhookProcessingFailed      = errors.New("webhook processing failed")
+
+	// ErrSigningURLNotReady: the signer's link exists only once the provider
+	// holds the envelope and has returned the recipient's token.
+	ErrSigningURLNotReady = errors.New("signing link not available yet")
 )
 
 // Validation errors.

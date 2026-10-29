@@ -1,11 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isAxiosError } from 'axios'
 import { Copy, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { signingApi } from '../api/signing-api'
+import { SigningDocumentStatus } from '../types'
 import type { SigningRecipient, RecipientStatus } from '../types'
+
+// The provider holds the envelope, so each signer has a link of their own.
+const LINK_STATUSES: string[] = [
+  SigningDocumentStatus.READY_TO_SIGN,
+  SigningDocumentStatus.SIGNING,
+]
+
+// A signer who has signed or declined has no use for a link.
+const FINISHED_RECIPIENT_STATUSES: string[] = ['SIGNED', 'DECLINED']
 
 const RECIPIENT_STATUS_CONFIG: Record<
   string,
@@ -68,16 +79,27 @@ function formatDate(dateString?: string): string {
 
 interface RecipientTableProps {
   documentId: string
+  documentStatus: string
   recipients: SigningRecipient[]
+  /**
+   * Whether the viewer may copy signers' links. A link lets whoever holds it
+   * sign as that signer, so the API requires OPERATOR or higher.
+   */
+  canShareLinks: boolean
 }
 
 export function RecipientTable({
   documentId,
+  documentStatus,
   recipients,
+  canShareLinks,
 }: RecipientTableProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const linksAvailable =
+    canShareLinks && LINK_STATUSES.includes(documentStatus)
 
   const handleCopySigningURL = async (recipientId: string) => {
     try {
@@ -85,17 +107,23 @@ export function RecipientTable({
       await navigator.clipboard.writeText(response.signingUrl)
       setCopiedId(recipientId)
       toast({
-        title: t('signing.detail.urlCopied', 'Signing URL copied to clipboard'),
+        title: t(
+          'signing.detail.signingLinkCopied',
+          'Signing link copied. Anyone with it can sign as this signer.',
+        ),
       })
       setTimeout(() => setCopiedId(null), 2000)
-    } catch {
+    } catch (error) {
+      const notReady = isAxiosError(error) && error.response?.status === 409
       toast({
         variant: 'destructive',
         title: t('common.error', 'Error'),
-        description: t(
-          'signing.detail.urlCopyError',
-          'Failed to copy signing URL',
-        ),
+        description: notReady
+          ? t(
+              'signing.detail.signingLinkNotReady',
+              "This signer's link isn't ready yet. Refresh the document in a moment.",
+            )
+          : t('signing.detail.urlCopyError', 'Failed to copy signing URL'),
       })
     }
   }
@@ -155,21 +183,24 @@ export function RecipientTable({
                 {formatDate(recipient.signedAt)}
               </td>
               <td className="border-b border-border py-4 pr-4 text-right">
-                <button
-                  onClick={() => handleCopySigningURL(recipient.id)}
-                  className="inline-flex items-center gap-1.5 rounded-none border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-                  title={t(
-                    'signing.detail.copySigningUrl',
-                    'Copy signing URL',
+                {linksAvailable &&
+                  !FINISHED_RECIPIENT_STATUSES.includes(recipient.status) && (
+                    <button
+                      onClick={() => handleCopySigningURL(recipient.id)}
+                      className="inline-flex items-center gap-1.5 rounded-none border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                      title={t(
+                        'signing.detail.copySigningLinkHint',
+                        "Copy this signer's own signing link to send them directly",
+                      )}
+                    >
+                      {copiedId === recipient.id ? (
+                        <Check size={12} />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      {t('signing.detail.copySigningLink', 'Copy signing link')}
+                    </button>
                   )}
-                >
-                  {copiedId === recipient.id ? (
-                    <Check size={12} />
-                  ) : (
-                    <Copy size={12} />
-                  )}
-                  {t('signing.detail.copyUrl', 'Copy URL')}
-                </button>
               </td>
             </tr>
           ))}

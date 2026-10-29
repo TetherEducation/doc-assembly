@@ -1749,7 +1749,11 @@
       "fieldResponses": "Field Responses",
       "copyReadOnlyLink": "Copy Read-only Link",
       "readOnlyLinkCopied": "Read-only link copied to clipboard",
-      "readOnlyLinkCopyError": "Failed to create read-only link"
+      "readOnlyLinkCopyError": "Failed to create read-only link",
+      "copySigningLink": "Copy signing link",
+      "copySigningLinkHint": "Copy this signer's own signing link to send them directly",
+      "signingLinkCopied": "Signing link copied. Anyone with it can sign as this signer.",
+      "signingLinkNotReady": "This signer's link isn't ready yet. Refresh the document in a moment."
     },
     "cancel": {
       "title": "Cancel Document",

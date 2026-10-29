@@ -375,50 +375,47 @@ func (s *DocumentService) ListDocumentTypeFilterOptions(ctx context.Context, wor
 	return s.documentRepo.ListDistinctDocumentTypesForWorkspace(ctx, workspaceID)
 }
 
-// GetSigningURL retrieves the signing URL for a specific recipient.
+// GetSigningURL returns a recipient's own provider signing link (for Documenso,
+// {signing_base_url}/sign/{token}), as stored on the active attempt when the
+// provider accepted the envelope. Staff hand it to the signer directly, so it is
+// the plain link, not the embed URL meant for an iframe, and reading it costs no
+// provider call. Whoever holds the link can sign as that recipient, so the route
+// requires OPERATOR.
 func (s *DocumentService) GetSigningURL(ctx context.Context, documentID, recipientID string) (string, error) {
 	doc, err := s.documentRepo.FindByIDWithRecipients(ctx, documentID)
 	if err != nil {
 		return "", fmt.Errorf("finding document: %w", err)
 	}
+	if !hasRecipient(doc.Recipients, recipientID) {
+		return "", entity.ErrDocumentRecipientNotFound
+	}
 	if doc.ActiveAttemptID == nil || *doc.ActiveAttemptID == "" {
 		return "", entity.ErrSigningAttemptNotFound
 	}
-	// Keep embed prefill consistent with the public signing path.
-	recipientName := ""
-	for _, rec := range doc.Recipients {
-		if rec != nil && rec.ID == recipientID {
-			recipientName = rec.Name
-			break
-		}
-	}
-	attempt, err := s.attemptRepo.FindByID(ctx, *doc.ActiveAttemptID)
-	if err != nil {
-		return "", fmt.Errorf("finding active signing attempt: %w", err)
-	}
-	if attempt.ProviderDocumentID == nil || *attempt.ProviderDocumentID == "" {
-		return "", fmt.Errorf("signing provider document is not ready")
-	}
-	attemptRecipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
+	attemptRecipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, *doc.ActiveAttemptID)
 	if err != nil {
 		return "", fmt.Errorf("finding attempt recipients: %w", err)
 	}
 	for _, r := range attemptRecipients {
-		if r.DocumentRecipientID == nil || *r.DocumentRecipientID != recipientID || r.ProviderRecipientID == nil {
+		if r.DocumentRecipientID == nil || *r.DocumentRecipientID != recipientID {
 			continue
 		}
-		result, err := s.signingProvider.GetAttemptRecipientEmbeddedURL(ctx, &port.GetAttemptRecipientEmbeddedURLRequest{
-			ProviderDocumentID:  *attempt.ProviderDocumentID,
-			ProviderRecipientID: *r.ProviderRecipientID,
-			Environment:         entity.EnvironmentProd,
-			RecipientName:       recipientName,
-		})
-		if err != nil {
-			return "", fmt.Errorf("getting attempt signing URL: %w", err)
+		if r.SigningURL == nil || strings.TrimSpace(*r.SigningURL) == "" {
+			return "", entity.ErrSigningURLNotReady
 		}
-		return result.EmbeddedURL, nil
+		return *r.SigningURL, nil
 	}
-	return "", entity.ErrRecordNotFound
+	// The recipient is on the document but not yet on its active attempt.
+	return "", entity.ErrSigningURLNotReady
+}
+
+func hasRecipient(recipients []*entity.DocumentRecipient, recipientID string) bool {
+	for _, r := range recipients {
+		if r != nil && r.ID == recipientID {
+			return true
+		}
+	}
+	return false
 }
 
 // RefreshDocumentStatus requests an attempt-scoped River refresh and returns the current projection.
@@ -791,11 +788,17 @@ func (s *DocumentService) GetDocumentStatistics(ctx context.Context, workspaceID
 	}, nil
 }
 
-// GetDocumentPDF returns the signed PDF for a completed document.
+// GetDocumentPDF returns the signed PDF for a completed document. A document
+// that was never completed answers ErrInvalidDocumentState (409) before any
+// storage or provider call. INVALIDATED is allowed because deprecating a
+// completed document invalidates it, and its signed PDF stays downloadable.
 func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string) ([]byte, string, error) {
 	doc, err := s.documentRepo.FindByID(ctx, documentID)
 	if err != nil {
 		return nil, "", fmt.Errorf("finding document: %w", err)
+	}
+	if doc.Status != entity.DocumentStatusCompleted && doc.Status != entity.DocumentStatusInvalidated {
+		return nil, "", fmt.Errorf("document is %s, not completed: %w", doc.Status, entity.ErrInvalidDocumentState)
 	}
 	if !s.storageEnabled {
 		return nil, "", fmt.Errorf("signed PDF storage is disabled")
@@ -813,7 +816,7 @@ func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string)
 	}
 	if storageKey == "" {
 		if completedAttempt == nil {
-			return nil, "", fmt.Errorf("signed PDF not available for this document")
+			return nil, "", entity.ErrSignedPDFNotAvailable
 		}
 		result, err := s.downloadProviderCompletedPDF(ctx, completedAttempt)
 		if err != nil {
@@ -832,10 +835,10 @@ func (s *DocumentService) GetDocumentPDF(ctx context.Context, documentID string)
 
 func (s *DocumentService) downloadProviderCompletedPDF(ctx context.Context, attempt *entity.SigningAttempt) (*port.DownloadCompletedPDFResult, error) {
 	if s.signingProvider == nil || !s.signingProvider.ProviderCapabilities().CanDownloadCompletedPDF {
-		return nil, fmt.Errorf("signed PDF not available for this document")
+		return nil, entity.ErrSignedPDFNotAvailable
 	}
 	if attempt.ProviderDocumentID == nil || *attempt.ProviderDocumentID == "" {
-		return nil, fmt.Errorf("signed PDF not available for this document")
+		return nil, entity.ErrSignedPDFNotAvailable
 	}
 	result, err := s.signingProvider.DownloadCompletedPDF(ctx, &port.DownloadCompletedPDFRequest{
 		ProviderDocumentID: *attempt.ProviderDocumentID,
@@ -845,7 +848,7 @@ func (s *DocumentService) downloadProviderCompletedPDF(ctx context.Context, atte
 		return nil, fmt.Errorf("downloading completed PDF from provider: %w", err)
 	}
 	if len(result.PDF) == 0 {
-		return nil, fmt.Errorf("signed PDF not available for this document")
+		return nil, entity.ErrSignedPDFNotAvailable
 	}
 	return result, nil
 }

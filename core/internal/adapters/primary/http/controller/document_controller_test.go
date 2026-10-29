@@ -599,14 +599,39 @@ func TestDocumentController_GetSigningURL(t *testing.T) {
 	t.Run("no active attempt", func(t *testing.T) {
 		recipientID := doc.Recipients[0].ID
 
-		resp, body := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + recipientID + "/signing-url")
+		resp, body := env.operatorClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + recipientID + "/signing-url")
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		assert.Contains(t, string(body), "signing attempt not found")
+	})
+
+	t.Run("recipient not on the document", func(t *testing.T) {
+		resp, body := env.operatorClient().GET("/api/v1/documents/" + doc.ID + "/recipients/00000000-0000-0000-0000-000000000000/signing-url")
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		assert.Contains(t, string(body), "document recipient not found")
+	})
+
+	t.Run("forbidden for viewer", func(t *testing.T) {
+		// The link lets whoever holds it sign as the recipient.
+		resp, _ := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + doc.Recipients[0].ID + "/signing-url")
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 }
 
 func TestDocumentController_GetDocumentPDF(t *testing.T) {
-	t.Skip("completed PDF download is attempt-owned and covered by signing-attempt River/live validation")
+	env := setupDocumentEnv(t)
+	doc := env.createDocument(t, "PDF Doc")
+
+	t.Run("a document that never completed answers 409", func(t *testing.T) {
+		resp, body := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/pdf")
+		assert.Equal(t, http.StatusConflict, resp.StatusCode, string(body))
+	})
+
+	t.Run("a completed document without a stored or provider PDF answers 404", func(t *testing.T) {
+		setDocumentStatusForDocumentController(t, doc.ID, entity.DocumentStatusCompleted)
+
+		resp, body := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/pdf")
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
+	})
 }
 
 func TestDocumentController_SendReminder(t *testing.T) {

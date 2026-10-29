@@ -89,6 +89,9 @@ signing:
   # Send documents with no signer-fillable fields straight to the provider at
   # creation, skipping the AWAITING_INPUT pre-signing step. Off by default.
   direct_send: false          # DOC_ENGINE_SIGNING_DIRECT_SEND
+  # Hide the engine's own public signing link (/public/doc/{id}) in the panel,
+  # for deployments where signers only use the provider's links. Off by default.
+  hide_public_doc_link: false # DOC_ENGINE_SIGNING_HIDE_PUBLIC_DOC_LINK
   # Embedded signing widget options (Documenso). Appended to /embed/sign/{token}
   # as a URL fragment; unknown keys are ignored by the provider. Off by default.
   embed:

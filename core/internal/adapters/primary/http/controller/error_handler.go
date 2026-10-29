@@ -30,6 +30,8 @@ var notFoundErrors = []error{
 	entity.ErrSystemRoleNotFound,
 	entity.ErrDocumentTypeNotFound,
 	entity.ErrDocumentNotFound,
+	entity.ErrDocumentRecipientNotFound,
+	entity.ErrSignedPDFNotAvailable,
 	entity.ErrSigningAttemptNotFound,
 	entity.ErrProcessNotFound,
 	entity.ErrAPIKeyNotFound,
@@ -57,6 +59,7 @@ var conflictErrors = []error{
 	entity.ErrDocumentTypeAlreadyAssigned,
 	entity.ErrProcessCodeExists,
 	entity.ErrInvalidDocumentState,
+	entity.ErrSigningURLNotReady,
 }
 
 var badRequestErrors = []error{

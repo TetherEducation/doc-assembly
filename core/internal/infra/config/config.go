@@ -234,6 +234,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 			cfg.DirectSend = parsed
 		}
 	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_HIDE_PUBLIC_DOC_LINK"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.HidePublicDocLink = parsed
+		}
+	}
 	applySigningEmbedEnvOverrides(&cfg.Embed)
 }
 

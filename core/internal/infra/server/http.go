@@ -468,6 +468,8 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 
 	type features struct {
 		Gallery bool `json:"gallery"`
+		// PublicDocLink: the panel may offer the engine's /public/doc/{id} link.
+		PublicDocLink bool `json:"publicDocLink"`
 	}
 
 	type clientConfig struct {
@@ -494,7 +496,8 @@ func clientConfigHandler(cfg *config.Config) gin.HandlerFunc {
 		BasePath:      cfg.Server.NormalizedBasePath(),
 		PanelProvider: panelProvider,
 		Features: features{
-			Gallery: cfg.Storage.Enabled,
+			Gallery:       cfg.Storage.Enabled,
+			PublicDocLink: !cfg.Signing.HidePublicDocLink,
 		},
 	}
 
