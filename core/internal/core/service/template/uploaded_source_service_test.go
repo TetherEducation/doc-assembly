@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
@@ -66,6 +67,73 @@ func TestReplacePlacementsRejectsBoxOutsidePage(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected box to be rejected")
+	}
+}
+
+func TestReplacePlacementsRejectsInvalidSigners(t *testing.T) {
+	sig := entity.PlacedField{Type: "SIGNATURE", Page: 1, X: 10, Y: 20, Width: 50, Height: 20}
+	date := entity.PlacedField{Type: "DATE", Page: 1, X: 10, Y: 60, Width: 50, Height: 20}
+
+	tests := []struct {
+		name    string
+		signers []templateuc.SignerPlacement
+	}{
+		{"a signer with only a date box", []templateuc.SignerPlacement{
+			{Name: "Ada", Order: 1, Fields: []entity.PlacedField{sig}},
+			{Name: "Ben", Order: 2, Fields: []entity.PlacedField{date}},
+		}},
+		{"two signers with the same name", []templateuc.SignerPlacement{
+			{Name: "Ada", Order: 1, Fields: []entity.PlacedField{sig}},
+			{Name: " ada ", Order: 2, Fields: []entity.PlacedField{sig}},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version := &entity.TemplateVersion{ID: "ver-1", TemplateID: "tpl-1", Status: entity.VersionStatusDraft}
+			sources := &memSources{source: &entity.UploadedSource{
+				VersionID: "ver-1",
+				PageSizes: []entity.PageSize{{Width: 200, Height: 400}},
+			}}
+			svc := NewUploadedSourceService(&memVersions{version: version}, &memRoles{}, sources, &memStorage{})
+
+			_, err := svc.ReplacePlacements(context.Background(), templateuc.ReplacePlacementsCommand{
+				TemplateID: "tpl-1", VersionID: "ver-1", Signers: tt.signers,
+			})
+
+			if !errors.Is(err, entity.ErrInvalidPlacedField) {
+				t.Fatalf("err = %v, want ErrInvalidPlacedField", err)
+			}
+			if sources.fields != nil {
+				t.Fatalf("fields were stored: %+v", sources.fields)
+			}
+		})
+	}
+}
+
+func TestReplacePlacementsAcceptsMixedFieldsWithASignature(t *testing.T) {
+	version := &entity.TemplateVersion{ID: "ver-1", TemplateID: "tpl-1", Status: entity.VersionStatusDraft}
+	sources := &memSources{source: &entity.UploadedSource{
+		VersionID: "ver-1",
+		PageSizes: []entity.PageSize{{Width: 200, Height: 400}},
+	}}
+	svc := NewUploadedSourceService(&memVersions{version: version}, &memRoles{}, sources, &memStorage{})
+
+	_, err := svc.ReplacePlacements(context.Background(), templateuc.ReplacePlacementsCommand{
+		TemplateID: "tpl-1", VersionID: "ver-1",
+		Signers: []templateuc.SignerPlacement{{
+			Name: "Ada", Order: 1,
+			Fields: []entity.PlacedField{
+				{Type: "date", Page: 1, X: 10, Y: 60, Width: 50, Height: 20},
+				{Type: "initials", Page: 1, X: 70, Y: 60, Width: 30, Height: 20},
+				{Type: "signature", Page: 1, X: 10, Y: 20, Width: 50, Height: 20},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sources.fields) != 3 {
+		t.Fatalf("stored %d fields, want 3", len(sources.fields))
 	}
 }
 

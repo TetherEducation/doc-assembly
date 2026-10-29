@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
@@ -946,6 +947,94 @@ func TestEnsureProviderFieldsCreatesOnlyMissingRequiredSignatureFields(t *testin
 	}
 	if createdFields[0].RecipientID != 456 || createdFields[0].Type != "SIGNATURE" {
 		t.Fatalf("created field = %+v", createdFields[0])
+	}
+}
+
+// ensureFieldsAgainstExisting runs EnsureProviderFields for one signer whose
+// envelope already holds existingTypes (a retry after a lost create-many
+// response) and returns what it posted.
+func ensureFieldsAgainstExisting(t *testing.T, existingTypes []string, wanted []string) []fieldPayload {
+	t.Helper()
+	var created []fieldPayload
+
+	existing := make([]map[string]any, 0, len(existingTypes))
+	for i, typ := range existingTypes {
+		existing = append(existing, map[string]any{"id": i + 1, "recipientId": 123, "type": typ})
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/envelope/env_mixed":
+			writeJSON(t, w, map[string]any{
+				"id":         "env_mixed",
+				"externalId": "doc-id:attempt-id",
+				"status":     "DRAFT",
+				"recipients": []map[string]any{},
+				"fields":     existing,
+			})
+		case "/api/v2/envelope/field/create-many":
+			var req fieldsRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decoding create-many request: %v", err)
+			}
+			created = req.Data
+			writeJSON(t, w, map[string]any{"data": []map[string]any{{"id": 99}}})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	adapter, err := New(&Config{APIKey: "api_test", BaseURL: server.URL})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	fields := make([]port.SignatureFieldPosition, 0, len(wanted))
+	for _, typ := range wanted {
+		fields = append(fields, port.SignatureFieldPosition{RoleID: "signer", Page: 1, Type: typ})
+	}
+	if _, err := adapter.EnsureProviderFields(context.Background(), &port.EnsureProviderFieldsRequest{
+		ProviderDocumentID: "env_mixed",
+		CorrelationKey:     "doc-id:attempt-id",
+		Recipients:         []port.RecipientResult{{RoleID: "signer", ProviderRecipientID: "123"}},
+		SignatureFields:    fields,
+		Environment:        entity.EnvironmentProd,
+	}); err != nil {
+		t.Fatalf("EnsureProviderFields() error = %v", err)
+	}
+	return created
+}
+
+func createdTypes(fields []fieldPayload) []string {
+	types := make([]string, 0, len(fields))
+	for _, f := range fields {
+		types = append(types, f.Type)
+	}
+	return types
+}
+
+// A retry must only add the fields of each type that are still missing.
+// Uploaded PDFs mix types; before this, the existing SIGNATURE was spent on
+// whichever wanted field came first, whatever its type.
+func TestEnsureProviderFieldsMatchesExistingFieldsByType(t *testing.T) {
+	tests := []struct {
+		name     string
+		existing []string
+		wanted   []string
+		want     []string
+	}{
+		{"only the missing text field is created", []string{"SIGNATURE", "DATE"}, []string{"SIGNATURE", "DATE", "TEXT"}, []string{"TEXT"}},
+		{"a date listed first does not use up the signature", []string{"SIGNATURE"}, []string{"DATE", "SIGNATURE"}, []string{"DATE"}},
+		{"an existing date does not count as the signature", []string{"DATE"}, []string{"SIGNATURE", "DATE"}, []string{"SIGNATURE"}},
+		{"two initials, one there already", []string{"INITIALS", "SIGNATURE"}, []string{"SIGNATURE", "INITIALS", "INITIALS"}, []string{"INITIALS"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := createdTypes(ensureFieldsAgainstExisting(t, tt.existing, tt.wanted))
+			if strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("created %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

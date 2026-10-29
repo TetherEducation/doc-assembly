@@ -216,10 +216,18 @@ func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd docu
 		roleMap[role.ID] = role
 	}
 
+	seen := make(map[string]struct{}, len(cmd.Recipients))
 	for _, r := range cmd.Recipients {
 		if _, ok := roleMap[r.RoleID]; !ok {
 			return nil, nil, fmt.Errorf("invalid role ID: %s", r.RoleID)
 		}
+		// With as many recipients as roles, a repeated role leaves another
+		// role unfilled. The database's unique index would reject it with a
+		// 500; this is the caller's mistake, so answer 400.
+		if _, ok := seen[r.RoleID]; ok {
+			return nil, nil, fmt.Errorf("%w: %s", entity.ErrDuplicateRecipientRole, r.RoleID)
+		}
+		seen[r.RoleID] = struct{}{}
 	}
 
 	return version, roleMap, nil

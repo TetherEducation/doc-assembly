@@ -83,6 +83,7 @@ var badRequestErrors = []error{
 	entity.ErrInvalidVersionNumber,
 	entity.ErrInvalidPDF,
 	entity.ErrInvalidPlacedField,
+	entity.ErrDuplicateRecipientRole,
 	entity.ErrScheduledTimeInPast,
 	entity.ErrInvalidSignerRole,
 	entity.ErrFolderHasChildren,

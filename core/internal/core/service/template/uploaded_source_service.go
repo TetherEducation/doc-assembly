@@ -168,6 +168,7 @@ func validatePlacements(signers []templateuc.SignerPlacement, pages []entity.Pag
 		return fmt.Errorf("%w: at least one signer is required", entity.ErrInvalidPlacedField)
 	}
 	orders := map[int]struct{}{}
+	names := map[string]struct{}{}
 	for _, signer := range signers {
 		name := strings.TrimSpace(signer.Name)
 		if name == "" || signer.Order < 1 {
@@ -177,12 +178,26 @@ func validatePlacements(signers []templateuc.SignerPlacement, pages []entity.Pag
 			return entity.ErrDuplicateSignerOrder
 		}
 		orders[signer.Order] = struct{}{}
+		// Role names are unique per version in the database; say so here
+		// rather than let the insert fail.
+		if _, ok := names[strings.ToLower(name)]; ok {
+			return fmt.Errorf("%w: two signers are named %s", entity.ErrInvalidPlacedField, name)
+		}
+		names[strings.ToLower(name)] = struct{}{}
 		if len(signer.Fields) == 0 {
 			return fmt.Errorf("%w: signer %s has no fields", entity.ErrInvalidPlacedField, name)
 		}
+		// Every signer must sign: Documenso needs a signature field per
+		// signer, and a signer with only date or text boxes would not be
+		// asked to sign at all.
+		hasSignature := false
 		for _, field := range signer.Fields {
-			if _, err := entity.NormalizeFieldType(field.Type); err != nil {
+			fieldType, err := entity.NormalizeFieldType(field.Type)
+			if err != nil {
 				return err
+			}
+			if fieldType == "SIGNATURE" {
+				hasSignature = true
 			}
 			if field.Page < 1 || field.Page > len(pages) {
 				return fmt.Errorf("%w: page %d is outside the PDF", entity.ErrInvalidPlacedField, field.Page)
@@ -192,6 +207,9 @@ func validatePlacements(signers []templateuc.SignerPlacement, pages []entity.Pag
 				field.X+field.Width > page.Width+0.5 || field.Y+field.Height > page.Height+0.5 {
 				return fmt.Errorf("%w: box is outside page %d", entity.ErrInvalidPlacedField, field.Page)
 			}
+		}
+		if !hasSignature {
+			return fmt.Errorf("%w: signer %s has no signature box", entity.ErrInvalidPlacedField, name)
 		}
 	}
 	return nil
