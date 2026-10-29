@@ -956,6 +956,13 @@ func missingSigningRecipientRoles(env *envelopeDetailResponse, expected []port.S
 	return missing
 }
 
+// buildMissingSignatureFieldPayloads returns the fields the envelope still
+// lacks. A retry after a lost create-many response finds some fields already
+// there, so each wanted field is matched against an existing one of the same
+// recipient and the same type. Matching on the recipient alone would let a
+// SIGNATURE stand in for a DATE (or the reverse), creating duplicates of one
+// and leaving the other missing; with SIGNATURE-only envelopes both rules give
+// the same result.
 func buildMissingSignatureFieldPayloads(env *envelopeDetailResponse, signatureFields []port.SignatureFieldPosition, recipients []port.RecipientResult) []fieldPayload {
 	recipientIDByRole := make(map[string]int, len(recipients))
 	for _, recipient := range recipients {
@@ -970,21 +977,23 @@ func buildMissingSignatureFieldPayloads(env *envelopeDetailResponse, signatureFi
 		recipientIDByRole[roleID] = providerRecipientID
 	}
 
-	existingByRecipient := countExistingSignatureFieldsByRecipient(env)
+	existing := countExistingFieldsByRecipientAndType(env)
 	fieldPayloads := make([]fieldPayload, 0, len(signatureFields))
 	for _, sf := range signatureFields {
 		providerRecipientID, ok := recipientIDByRole[sf.RoleID]
 		if !ok {
 			continue
 		}
-		if existingByRecipient[providerRecipientID] > 0 {
-			existingByRecipient[providerRecipientID]--
+		fieldType := providerFieldType(sf.Type)
+		key := recipientFieldKey{recipientID: providerRecipientID, fieldType: fieldType}
+		if existing[key] > 0 {
+			existing[key]--
 			continue
 		}
 
 		fieldPayloads = append(fieldPayloads, fieldPayload{
 			RecipientID: providerRecipientID,
-			Type:        providerFieldType(sf.Type),
+			Type:        fieldType,
 			Page:        sf.Page,
 			PositionX:   sf.PositionX,
 			PositionY:   sf.PositionY,
@@ -1037,37 +1046,43 @@ func countEnvelopeSignatureFields(env *envelopeDetailResponse) int {
 	return count
 }
 
-func countExistingSignatureFieldsByRecipient(env *envelopeDetailResponse) map[int]int {
-	counts := make(map[int]int)
+// recipientFieldKey identifies existing provider fields by recipient and type.
+type recipientFieldKey struct {
+	recipientID int
+	fieldType   string
+}
+
+// countExistingFieldsByRecipientAndType counts the envelope's fields per
+// recipient and type. Fields listed under a recipient without their own
+// recipient ID count for that recipient.
+func countExistingFieldsByRecipientAndType(env *envelopeDetailResponse) map[recipientFieldKey]int {
+	counts := make(map[recipientFieldKey]int)
 	if env == nil {
 		return counts
 	}
 
 	for _, field := range env.Fields {
-		if isSignatureField(field) && field.RecipientID != 0 {
-			counts[field.RecipientID]++
+		if field.RecipientID != 0 {
+			counts[recipientFieldKey{recipientID: field.RecipientID, fieldType: normalizedFieldType(field.Type)}]++
 		}
 	}
 	for _, recipient := range env.Recipients {
 		for _, field := range recipient.Fields {
-			incrementSignatureFieldCount(counts, field, recipient.ID)
+			recipientID := field.RecipientID
+			if recipientID == 0 {
+				recipientID = recipient.ID
+			}
+			if recipientID != 0 {
+				counts[recipientFieldKey{recipientID: recipientID, fieldType: normalizedFieldType(field.Type)}]++
+			}
 		}
 	}
 
 	return counts
 }
 
-func incrementSignatureFieldCount(counts map[int]int, field fieldResponse, fallbackRecipientID int) {
-	if !isSignatureField(field) {
-		return
-	}
-	recipientID := field.RecipientID
-	if recipientID == 0 {
-		recipientID = fallbackRecipientID
-	}
-	if recipientID != 0 {
-		counts[recipientID]++
-	}
+func normalizedFieldType(raw string) string {
+	return strings.ToUpper(strings.TrimSpace(raw))
 }
 
 func isSignatureField(field fieldResponse) bool {

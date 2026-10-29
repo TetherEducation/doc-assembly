@@ -260,6 +260,18 @@ func TestDocumentController_CreateDocument(t *testing.T) {
 	})
 }
 
+func TestDocumentController_CreateDocument_DuplicateRecipientRole(t *testing.T) {
+	env := setupDocumentEnv(t)
+	req := env.createDocumentReq("Duplicate Role")
+	// Two recipients for the first role leave the second role unfilled.
+	req.Recipients[1].RoleID = env.signerRole1
+
+	resp, body := env.operatorClient().POST("/api/v1/documents", req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, string(body))
+	assert.Contains(t, string(body), entity.ErrDuplicateRecipientRole.Error())
+}
+
 func TestDocumentController_GetDocument(t *testing.T) {
 	env := setupDocumentEnv(t)
 
