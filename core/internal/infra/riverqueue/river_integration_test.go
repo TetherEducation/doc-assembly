@@ -21,6 +21,7 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_recipient_repo"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
 	signingmock "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/signing/mock"
@@ -52,6 +53,71 @@ func TestSigningAttemptUOW_CreateAttemptEnqueuesRenderAtomically(t *testing.T) {
 	var jobs int
 	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind = 'render_attempt_pdf' AND args->>'attempt_id' = $1`, attempt.ID).Scan(&jobs))
 	require.Equal(t, 1, jobs)
+}
+
+// Direct send at creation: the document, its recipients, the attempt and the
+// render job commit together.
+func TestSigningAttemptUOW_CreateDocumentAndStartSigningCommitsTogether(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	uow := fx.documentCreationUOW(t, ctx)
+
+	doc := fx.newUnsavedDocument("direct-send-commit")
+	recipients := fx.newUnsavedRecipients()
+	attempt, err := uow.CreateDocumentAndStartSigning(ctx, doc, recipients, fx.signerOrders())
+	require.NoError(t, err)
+	require.NotEmpty(t, doc.ID)
+	require.Equal(t, doc.ID, attempt.DocumentID)
+	require.NotEmpty(t, recipients[0].ID)
+	require.Equal(t, doc.ID, recipients[0].DocumentID)
+
+	var status entity.DocumentStatus
+	var activeAttemptID string
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT status, active_attempt_id FROM execution.documents WHERE id=$1`, doc.ID).Scan(&status, &activeAttemptID))
+	require.Equal(t, entity.DocumentStatusPreparingSignature, status)
+	require.Equal(t, attempt.ID, activeAttemptID)
+
+	var documentRecipients, linkedAttemptRecipients, renderJobs, createdEvents int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM execution.document_recipients WHERE document_id=$1`, doc.ID).Scan(&documentRecipients))
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM execution.signing_attempt_recipients WHERE attempt_id=$1 AND document_recipient_id=$2`, attempt.ID, recipients[0].ID).Scan(&linkedAttemptRecipients))
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind='render_attempt_pdf' AND args->>'attempt_id'=$1`, attempt.ID).Scan(&renderJobs))
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM execution.signing_attempt_events WHERE attempt_id=$1 AND event_type='ATTEMPT_CREATED'`, attempt.ID).Scan(&createdEvents))
+	require.Equal(t, 1, documentRecipients)
+	require.Equal(t, 1, linkedAttemptRecipients, "the attempt recipient must link to the persisted document recipient")
+	require.Equal(t, 1, renderJobs)
+	require.Equal(t, 1, createdEvents)
+}
+
+// Direct send's partial-success bug (2026-10-13 review, P2): the River insert
+// fails after the document rows are written. Nothing may survive the failure,
+// and the caller's retry must end with one document and one active attempt.
+func TestSigningAttemptUOW_CreateDocumentAndStartSigningRollsBackWhenEnqueueFails(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	uow := fx.documentCreationUOW(t, ctx)
+	const title = "direct-send-rollback"
+
+	fx.failRenderJobInserts(t, ctx)
+	doc := fx.newUnsavedDocument(title)
+	recipients := fx.newUnsavedRecipients()
+	_, err := uow.CreateDocumentAndStartSigning(ctx, doc, recipients, fx.signerOrders())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "injected render job insert failure")
+	require.Empty(t, doc.ID, "a failed creation leaves the caller's document unchanged")
+	require.Empty(t, recipients[0].ID)
+	require.Equal(t, 0, fx.countDocumentsTitled(t, ctx, title), "a failed start must not leave the document behind")
+
+	fx.allowRenderJobInserts(t, ctx)
+	retryDoc := fx.newUnsavedDocument(title)
+	attempt, err := uow.CreateDocumentAndStartSigning(ctx, retryDoc, fx.newUnsavedRecipients(), fx.signerOrders())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, fx.countDocumentsTitled(t, ctx, title), "the retry must leave exactly one document")
+	var attempts, active int
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM execution.signing_attempts WHERE document_id=$1`, retryDoc.ID).Scan(&attempts))
+	require.NoError(t, fx.pool.QueryRow(ctx, `SELECT count(*) FROM execution.documents WHERE id=$1 AND active_attempt_id=$2`, retryDoc.ID, attempt.ID).Scan(&active))
+	require.Equal(t, 1, attempts)
+	require.Equal(t, 1, active)
 }
 
 func TestSigningAttemptUOW_TransitionSubmitPhaseEnqueuesAdvanceProviderSubmission(t *testing.T) {
@@ -789,6 +855,82 @@ func (f *attemptFixture) recipients() []*entity.DocumentRecipient {
 		Name:                  "Signer",
 		Status:                entity.RecipientStatusPending,
 	}}
+}
+
+// documentCreationUOW returns a unit of work that can create documents
+// (direct send at creation), wired as the API does.
+func (f *attemptFixture) documentCreationUOW(t *testing.T, ctx context.Context) port.SigningExecutionUnitOfWork {
+	t.Helper()
+	riverSvc, err := riverqueue.New(ctx, f.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{
+		DocumentRepo:     f.docRepo,
+		AttemptRepo:      f.attemptRepo,
+		DocumentCreator:  documentrepo.NewConcrete(f.pool),
+		RecipientCreator: documentrecipientrepo.NewConcrete(f.pool),
+	})
+	require.NoError(t, err)
+	return riverSvc.SigningExecutionUOW()
+}
+
+// newUnsavedDocument builds a document the way creation hands it to the unit of
+// work: in AWAITING_INPUT, not yet persisted.
+func (f *attemptFixture) newUnsavedDocument(title string) *entity.Document {
+	doc := entity.NewDocument(f.workspaceID, f.versionID)
+	doc.DocumentTypeID = f.documentTypeID
+	doc.Status = entity.DocumentStatusAwaitingInput
+	doc.SetTitle(title)
+	doc.SetTransactionalID(fmt.Sprintf("%s-%d", title, time.Now().UnixNano()))
+	return doc
+}
+
+func (f *attemptFixture) newUnsavedRecipients() []*entity.DocumentRecipient {
+	return []*entity.DocumentRecipient{entity.NewDocumentRecipient("", f.roleID, "Signer", "signer@example.com")}
+}
+
+func (f *attemptFixture) countDocumentsTitled(t *testing.T, ctx context.Context, title string) int {
+	t.Helper()
+	var n int
+	require.NoError(t, f.pool.QueryRow(ctx, `SELECT count(*) FROM execution.documents WHERE workspace_id=$1 AND title=$2`, f.workspaceID, title).Scan(&n))
+	return n
+}
+
+// failRenderJobInserts makes the database reject render_attempt_pdf jobs for
+// this fixture's documents, the way a failed River insert aborts the enqueue
+// after the document rows are written. Jobs for other workspaces are untouched.
+func (f *attemptFixture) failRenderJobInserts(t *testing.T, ctx context.Context) {
+	t.Helper()
+	name := f.renderFailTriggerName()
+	f.allowRenderJobInserts(t, ctx)
+	_, err := f.pool.Exec(ctx, fmt.Sprintf(`
+		CREATE FUNCTION %s() RETURNS trigger AS $$
+		BEGIN
+			IF NEW.kind = 'render_attempt_pdf' AND EXISTS (
+				SELECT 1
+				FROM execution.signing_attempts a
+				JOIN execution.documents d ON d.id = a.document_id
+				WHERE a.id::text = NEW.args->>'attempt_id' AND d.workspace_id::text = '%s'
+			) THEN
+				RAISE EXCEPTION 'injected render job insert failure';
+			END IF;
+			RETURN NEW;
+		END
+		$$ LANGUAGE plpgsql`, name, f.workspaceID))
+	require.NoError(t, err)
+	_, err = f.pool.Exec(ctx, fmt.Sprintf(`CREATE TRIGGER %[1]s BEFORE INSERT ON river_job FOR EACH ROW EXECUTE FUNCTION %[1]s()`, name))
+	require.NoError(t, err)
+	t.Cleanup(func() { f.allowRenderJobInserts(t, context.Background()) })
+}
+
+func (f *attemptFixture) allowRenderJobInserts(t *testing.T, ctx context.Context) {
+	t.Helper()
+	name := f.renderFailTriggerName()
+	_, err := f.pool.Exec(ctx, fmt.Sprintf(`DROP TRIGGER IF EXISTS %s ON river_job`, name))
+	require.NoError(t, err)
+	_, err = f.pool.Exec(ctx, fmt.Sprintf(`DROP FUNCTION IF EXISTS %s()`, name))
+	require.NoError(t, err)
+}
+
+func (f *attemptFixture) renderFailTriggerName() string {
+	return "test_fail_render_" + strings.ReplaceAll(f.workspaceID, "-", "_")
 }
 
 func (f *attemptFixture) createDocumentRecipient(t *testing.T, ctx context.Context) string {

@@ -22,6 +22,11 @@ const (
 // SigningExecutionUnitOfWork performs attempt state transitions and River enqueue atomically.
 type SigningExecutionUnitOfWork interface {
 	CreateAttemptAndEnqueueRender(ctx context.Context, documentID string, recipients []*entity.DocumentRecipient, signerOrders map[string]int) (*entity.SigningAttempt, error)
+	// CreateDocumentAndStartSigning persists a new document, its recipients and its
+	// first signing attempt in one transaction, so either all of them exist
+	// afterwards or none does. On success document.ID and every recipient's ID and
+	// DocumentID hold the persisted values; on error the arguments are unchanged.
+	CreateDocumentAndStartSigning(ctx context.Context, document *entity.Document, recipients []*entity.DocumentRecipient, signerOrders map[string]int) (*entity.SigningAttempt, error)
 	TransitionAndEnqueue(ctx context.Context, attempt *entity.SigningAttempt, nextPhase SigningJobPhase, eventType string) error
 	Transition(ctx context.Context, attempt *entity.SigningAttempt, eventType string) error
 	TerminateActiveAttempt(ctx context.Context, attempt *entity.SigningAttempt, status entity.SigningAttemptStatus, reason, eventType string) error

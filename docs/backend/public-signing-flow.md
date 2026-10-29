@@ -161,16 +161,26 @@ sequenceDiagram
 ### Opt-in: direct send (`signing.direct_send`)
 
 With `DOC_ENGINE_SIGNING_DIRECT_SEND=true`, a document whose template has **no interactive
-(signer-fillable) fields** does not wait for a signer to proceed. Right after
-`transitionToAwaitingInput()` (same `DOCUMENT_CREATED` event), creation calls
-`SigningExecutionUnitOfWork.CreateAttemptAndEnqueueRender()` — the call `ProceedToSigning()`
-makes in Flow 3 — so the attempt, the `PREPARING_SIGNATURE` projection, the `ATTEMPT_CREATED`
-event and the River render job commit together, and the provider envelope (with every
-recipient in signer order) is created and distributed by the worker. The same applies to
-batch creation and to `POST /internal/documents/create` (including an idempotent replay of a
-document that is still awaiting input without an attempt). If the enqueue fails, the request
-returns an error and the document stays in `AWAITING_INPUT`. Templates with interactive fields,
-and every document when the setting is off (the default), follow the flow above unchanged.
+(signer-fillable) fields** does not wait for a signer to proceed. The signing attempt starts at
+creation: the attempt, the `PREPARING_SIGNATURE` projection, the `ATTEMPT_CREATED` event and the
+River render job commit together, and the provider envelope (with every recipient in signer
+order) is created and distributed by the worker. Where the attempt is created depends on the
+entry point:
+
+- **Panel and batch creation** (`CreateAndSendDocument`, `CreateDocumentsBatch`) write the
+  document (in `AWAITING_INPUT`, same `DOCUMENT_CREATED` event), its recipients and the attempt
+  in **one transaction**: `SigningExecutionUnitOfWork.CreateDocumentAndStartSigning()`. These
+  paths have no idempotency key, so if the start fails nothing is persisted and the request
+  returns an error; a retry creates one document, not two. A failed batch item reports an error
+  and no document.
+- **`POST /internal/documents/create`** persists the document first (`InternalCreateOrReplay`)
+  and then calls `CreateAttemptAndEnqueueRender()`, the call `ProceedToSigning()` makes in
+  Flow 3. If that fails, the request returns an error and the document stays in
+  `AWAITING_INPUT`; the caller's idempotent retry (same transactional ID) replays the document
+  and finishes the send.
+
+Templates with interactive fields, and every document when the setting is off (the default),
+follow the flow above unchanged.
 
 Code: `core/internal/core/service/document/direct_send.go`.
 

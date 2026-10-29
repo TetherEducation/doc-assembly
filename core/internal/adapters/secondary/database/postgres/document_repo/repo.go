@@ -18,6 +18,7 @@ import (
 // query implementations across regular and transactional paths.
 type DBTX interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 // New creates a new document repository.
@@ -133,8 +134,18 @@ func scanDocumentListItem(row pgx.Row) (*entity.DocumentListItem, error) {
 
 // Create creates a new document.
 func (r *Repository) Create(ctx context.Context, document *entity.Document) (string, error) {
+	return r.createWith(ctx, r.pool, document)
+}
+
+// CreateTx creates a new document within an existing transaction.
+func (r *Repository) CreateTx(ctx context.Context, tx pgx.Tx, document *entity.Document) (string, error) {
+	return r.createWith(ctx, tx, document)
+}
+
+// createWith is the shared implementation for both Create and CreateTx.
+func (r *Repository) createWith(ctx context.Context, db DBTX, document *entity.Document) (string, error) {
 	var id string
-	err := r.pool.QueryRow(ctx, queryCreate,
+	err := db.QueryRow(ctx, queryCreate,
 		document.WorkspaceID,
 		document.TemplateVersionID,
 		document.DocumentTypeID,

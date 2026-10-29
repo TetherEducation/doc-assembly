@@ -127,6 +127,9 @@ type attemptCall struct {
 	documentID   string
 	recipients   []*entity.DocumentRecipient
 	signerOrders map[string]int
+	// withDocument is true for CreateDocumentAndStartSigning, which persists the
+	// document in the same transaction as the attempt.
+	withDocument bool
 }
 
 // directSendUOW mimics riverqueue.SigningExecutionUnitOfWork: on success the
@@ -136,6 +139,30 @@ type directSendUOW struct {
 	docs  *directSendDocRepo
 	calls []attemptCall
 	err   error
+	// failNext fails the next calls in order (a nil entry succeeds), so a test
+	// can fail one call and let the retry through.
+	failNext []error
+}
+
+func (u *directSendUOW) nextErr() error {
+	if u.err != nil {
+		return u.err
+	}
+	if len(u.failNext) > 0 {
+		err := u.failNext[0]
+		u.failNext = u.failNext[1:]
+		return err
+	}
+	return nil
+}
+
+func (u *directSendUOW) newAttempt(documentID string) *entity.SigningAttempt {
+	return &entity.SigningAttempt{
+		ID:         fmt.Sprintf("attempt-%d", len(u.calls)),
+		DocumentID: documentID,
+		Sequence:   1,
+		Status:     entity.SigningAttemptStatusCreated,
+	}
 }
 
 func (u *directSendUOW) CreateAttemptAndEnqueueRender(
@@ -145,19 +172,45 @@ func (u *directSendUOW) CreateAttemptAndEnqueueRender(
 	signerOrders map[string]int,
 ) (*entity.SigningAttempt, error) {
 	u.calls = append(u.calls, attemptCall{documentID: documentID, recipients: recipients, signerOrders: signerOrders})
-	if u.err != nil {
-		return nil, u.err
+	if err := u.nextErr(); err != nil {
+		return nil, err
 	}
-	attempt := &entity.SigningAttempt{
-		ID:         fmt.Sprintf("attempt-%d", len(u.calls)),
-		DocumentID: documentID,
-		Sequence:   1,
-		Status:     entity.SigningAttemptStatusCreated,
-	}
+	attempt := u.newAttempt(documentID)
 	doc := u.docs.docs[documentID]
 	doc.ActiveAttemptID = &attempt.ID
 	doc.Status = entity.ProjectDocumentStatusFromAttempt(attempt.Status)
 	return attempt, nil
+}
+
+// CreateDocumentAndStartSigning mimics the riverqueue transaction: on success it
+// stores the document, its recipients and the attempt projection; on error it
+// stores nothing, as the rolled-back transaction would.
+func (u *directSendUOW) CreateDocumentAndStartSigning(
+	_ context.Context,
+	doc *entity.Document,
+	recipients []*entity.DocumentRecipient,
+	signerOrders map[string]int,
+) (*entity.SigningAttempt, error) {
+	u.calls = append(u.calls, attemptCall{documentID: doc.ID, recipients: recipients, signerOrders: signerOrders, withDocument: true})
+	if err := u.nextErr(); err != nil {
+		return nil, err
+	}
+	attempt := u.newAttempt(doc.ID)
+	stored := *doc
+	stored.ActiveAttemptID = &attempt.ID
+	stored.Status = entity.ProjectDocumentStatusFromAttempt(attempt.Status)
+	u.docs.docs[doc.ID] = &stored
+	u.docs.recipients[doc.ID] = append(u.docs.recipients[doc.ID], recipients...)
+	return attempt, nil
+}
+
+// failingSignerRoleRepo fails the signer-role read the direct-send policy makes.
+type failingSignerRoleRepo struct {
+	port.TemplateVersionSignerRoleRepository
+}
+
+func (failingSignerRoleRepo) FindByVersionID(context.Context, string) ([]*entity.TemplateVersionSignerRole, error) {
+	return nil, errors.New("signer roles unavailable")
 }
 
 type directSendEventRepo struct {
@@ -273,6 +326,7 @@ func TestCreateAndSendDocument_DirectSendOn_NoFillableFields_StartsSigning(t *te
 
 	require.Len(t, env.uow.calls, 1, "exactly one signing attempt must be enqueued")
 	call := env.uow.calls[0]
+	assert.True(t, call.withDocument, "the document and its attempt must be created in one transaction")
 	assert.Equal(t, got.ID, call.documentID)
 	require.Len(t, call.recipients, 2)
 	assert.Equal(t, "role-tether", call.recipients[0].TemplateVersionRoleID)
@@ -301,7 +355,7 @@ func TestCreateAndSendDocument_DirectSendOn_WithFillableFields_EntersAwaitingInp
 	assert.Empty(t, env.uow.calls, "signer-fillable fields need the pre-signing form")
 }
 
-func TestCreateAndSendDocument_DirectSendOn_EnqueueFailure_ReturnsError(t *testing.T) {
+func TestCreateAndSendDocument_DirectSendOn_StartFailure_PersistsNothing(t *testing.T) {
 	env := newDirectSendEnv(contentWithoutFields, true)
 	env.uow.err = errors.New("river unavailable")
 
@@ -310,13 +364,83 @@ func TestCreateAndSendDocument_DirectSendOn_EnqueueFailure_ReturnsError(t *testi
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "river unavailable")
 
-	// The attempt transaction rolled back, so the document stays in the
-	// normal-path AWAITING_INPUT state (recoverable via the signer flow).
-	require.Len(t, env.docs.docs, 1)
+	// The document, its recipients and the attempt share one transaction, so a
+	// failed start leaves nothing behind for a retry to duplicate.
+	assert.Empty(t, env.docs.docs, "no document may be persisted when the start fails")
+	assert.Empty(t, env.docs.recipients)
+	assert.Empty(t, env.events.events, "DOCUMENT_CREATED is only recorded for a document that exists")
+	assert.Empty(t, env.notifier.sent)
+}
+
+// A failed start followed by the caller's retry must end with one document and
+// one active attempt (panel creation has no idempotency key to replay).
+func TestCreateAndSendDocument_DirectSendOn_FailureThenRetry_OneDocumentOneAttempt(t *testing.T) {
+	env := newDirectSendEnv(contentWithoutFields, true)
+	env.uow.failNext = []error{errors.New("river unavailable")}
+
+	_, err := env.svc.CreateAndSendDocument(context.Background(), directSendCreateCmd())
+	require.Error(t, err)
+	assert.Empty(t, env.docs.docs)
+
+	got, err := env.svc.CreateAndSendDocument(context.Background(), directSendCreateCmd())
+	require.NoError(t, err)
+
+	require.Len(t, env.docs.docs, 1, "the retry must not leave a second document")
+	stored := env.docs.docs[got.ID]
+	require.NotNil(t, stored)
+	require.NotNil(t, stored.ActiveAttemptID)
+	require.NotNil(t, got.ActiveAttemptID)
+	assert.Equal(t, *stored.ActiveAttemptID, *got.ActiveAttemptID)
+	assert.Equal(t, entity.DocumentStatusPreparingSignature, got.Status)
+	assert.Len(t, env.docs.recipients[got.ID], 2)
+	assert.Equal(t, []string{entity.EventDocumentCreated}, eventTypes(env.events.events))
+	assert.Len(t, env.notifier.sent, 2)
+}
+
+// The signer-order read happens before anything is written, so its failure
+// persists nothing either.
+func TestCreateAndSendDocument_DirectSendOn_SignerRoleReadFailure_PersistsNothing(t *testing.T) {
+	env := newDirectSendEnv(contentWithoutFields, true)
+	env.svc.directSender = NewDirectSender(true, env.uow, failingSignerRoleRepo{})
+
+	got, err := env.svc.CreateAndSendDocument(context.Background(), directSendCreateCmd())
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "signer roles unavailable")
+	assert.Empty(t, env.docs.docs)
+	assert.Empty(t, env.uow.calls)
+	assert.Empty(t, env.events.events)
+}
+
+func TestCreateDocumentsBatch_DirectSendOn_FailedItemPersistsNothing_RetryCreatesOne(t *testing.T) {
+	env := newDirectSendEnv(contentWithoutFields, true)
+	env.uow.failNext = []error{nil, errors.New("river unavailable"), nil}
+
+	results, err := env.svc.CreateDocumentsBatch(context.Background(), []documentuc.CreateDocumentCommand{
+		directSendCreateCmd(), directSendCreateCmd(), directSendCreateCmd(),
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 3)
+	require.NoError(t, results[0].Error)
+	require.Error(t, results[1].Error)
+	assert.Nil(t, results[1].Document, "a failed item reports no document because none was created")
+	require.NoError(t, results[2].Error)
+	assert.Len(t, env.docs.docs, 2, "only the items that succeeded may exist")
+
+	// Retrying the failed item creates exactly one more document.
+	retry, err := env.svc.CreateDocumentsBatch(context.Background(), []documentuc.CreateDocumentCommand{directSendCreateCmd()})
+	require.NoError(t, err)
+	require.Len(t, retry, 1)
+	require.NoError(t, retry[0].Error)
+
+	require.Len(t, env.docs.docs, 3)
+	activeAttempts := map[string]bool{}
 	for _, doc := range env.docs.docs {
-		assert.Equal(t, entity.DocumentStatusAwaitingInput, doc.Status)
-		assert.Nil(t, doc.ActiveAttemptID)
+		require.NotNil(t, doc.ActiveAttemptID, "every document has its attempt")
+		assert.Equal(t, entity.DocumentStatusPreparingSignature, doc.Status)
+		activeAttempts[*doc.ActiveAttemptID] = true
 	}
+	assert.Len(t, activeAttempts, 3, "one distinct active attempt per document")
 }
 
 func TestCreateDocumentsBatch_DirectSendOn_SendsEachDocument(t *testing.T) {
@@ -439,6 +563,7 @@ func TestInternalDirectSend_On_NoFillableFields_StartsSigning(t *testing.T) {
 	got, err := svc.applyDirectSend(context.Background(), stored, json.RawMessage(contentWithoutFields))
 	require.NoError(t, err)
 	require.Len(t, uow.calls, 1)
+	assert.False(t, uow.calls[0].withDocument, "the internal API starts an attempt for a document it already persisted")
 	assert.Equal(t, "doc-internal", uow.calls[0].documentID)
 	assert.Equal(t, map[string]int{"role-tether": 1, "role-client": 2}, uow.calls[0].signerOrders)
 	assert.Equal(t, entity.DocumentStatusPreparingSignature, got.Status)

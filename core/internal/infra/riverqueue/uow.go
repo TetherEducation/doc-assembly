@@ -2,6 +2,7 @@ package riverqueue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -16,17 +17,42 @@ import (
 // SigningExecutionUnitOfWork persists signing attempt transitions and River jobs
 // in the same PostgreSQL transaction.
 type SigningExecutionUnitOfWork struct {
-	pool        *pgxpool.Pool
-	client      *river.Client[pgx.Tx]
-	attemptRepo port.SigningAttemptRepository
+	pool             *pgxpool.Pool
+	client           *river.Client[pgx.Tx]
+	attemptRepo      port.SigningAttemptRepository
+	documentCreator  DocumentCreator
+	recipientCreator RecipientCreator
 }
 
+// DocumentCreator inserts a document within a caller-owned transaction
+// (documentrepo.Repository.CreateTx).
+type DocumentCreator interface {
+	CreateTx(ctx context.Context, tx pgx.Tx, document *entity.Document) (string, error)
+}
+
+// RecipientCreator inserts a document's recipients within a caller-owned
+// transaction, setting each recipient's persisted ID
+// (documentrecipientrepo.Repository.CreateBatchTx).
+type RecipientCreator interface {
+	CreateBatchTx(ctx context.Context, tx pgx.Tx, recipients []*entity.DocumentRecipient) error
+}
+
+// NewSigningExecutionUnitOfWork builds the unit of work. documentCreator and
+// recipientCreator may be nil; CreateDocumentAndStartSigning then fails.
 func NewSigningExecutionUnitOfWork(
 	pool *pgxpool.Pool,
 	client *river.Client[pgx.Tx],
 	attemptRepo port.SigningAttemptRepository,
+	documentCreator DocumentCreator,
+	recipientCreator RecipientCreator,
 ) *SigningExecutionUnitOfWork {
-	return &SigningExecutionUnitOfWork{pool: pool, client: client, attemptRepo: attemptRepo}
+	return &SigningExecutionUnitOfWork{
+		pool:             pool,
+		client:           client,
+		attemptRepo:      attemptRepo,
+		documentCreator:  documentCreator,
+		recipientCreator: recipientCreator,
+	}
 }
 
 func (u *SigningExecutionUnitOfWork) CreateAttemptAndEnqueueRender(
@@ -68,6 +94,72 @@ func (u *SigningExecutionUnitOfWork) CreateAttemptAndEnqueueRender(
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit signing attempt tx: %w", err)
+	}
+	return attempt, nil
+}
+
+// CreateDocumentAndStartSigning creates a document, its recipients and its first
+// signing attempt in one transaction. The document and recipient rows, the
+// attempt and its recipients, the active-attempt projection, the River render
+// job and the ATTEMPT_CREATED event either all commit or none do, so a caller
+// that retries after an error cannot end up with two documents. Direct send
+// uses it at creation; CreateAttemptAndEnqueueRender stays the path for a
+// document that already exists.
+//
+// The inserts work on copies of the recipients, and document.ID and the
+// recipients' IDs are set only after the commit, so on error the caller's
+// entities are unchanged.
+func (u *SigningExecutionUnitOfWork) CreateDocumentAndStartSigning(
+	ctx context.Context,
+	document *entity.Document,
+	recipients []*entity.DocumentRecipient,
+	signerOrders map[string]int,
+) (*entity.SigningAttempt, error) {
+	if u.documentCreator == nil || u.recipientCreator == nil {
+		return nil, errors.New("creating a document with its signing attempt: document and recipient repositories are not configured")
+	}
+
+	tx, err := u.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin document creation tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	documentID, err := u.documentCreator.CreateTx(ctx, tx, document)
+	if err != nil {
+		return nil, err
+	}
+	persisted := make([]*entity.DocumentRecipient, len(recipients))
+	for i, r := range recipients {
+		cp := *r
+		cp.DocumentID = documentID
+		persisted[i] = &cp
+	}
+	if err := u.recipientCreator.CreateBatchTx(ctx, tx, persisted); err != nil {
+		return nil, err
+	}
+
+	attempt, err := u.createAttemptInTx(ctx, tx, documentID, persisted, signerOrders)
+	if err != nil {
+		return nil, err
+	}
+	if err := u.setActiveProjectionTx(ctx, tx, documentID, attempt.ID, entity.ProjectDocumentStatusFromAttempt(attempt.Status)); err != nil {
+		return nil, err
+	}
+	if err := u.enqueueTx(ctx, tx, port.SigningJobPhaseRenderAttemptPDF, attempt); err != nil {
+		return nil, err
+	}
+	if err := u.insertEventTx(ctx, tx, attempt, nil, attempt.Status, "ATTEMPT_CREATED"); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit document creation tx: %w", err)
+	}
+
+	document.ID = documentID
+	for i, r := range recipients {
+		r.ID = persisted[i].ID
+		r.DocumentID = documentID
 	}
 	return attempt, nil
 }

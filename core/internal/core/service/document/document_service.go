@@ -97,7 +97,8 @@ type DocumentService struct {
 
 // CreateAndSendDocument creates a document and its recipients and places it in
 // AWAITING_INPUT. When direct send is enabled (WithDirectSend) and the template has
-// no signer-fillable fields, it also starts the signing attempt immediately.
+// no signer-fillable fields, it also starts the signing attempt, in the same
+// transaction as the document (see createAndStartSigning).
 func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documentuc.CreateDocumentCommand) (*entity.DocumentWithRecipients, error) {
 	if err := s.validateOperationType(ctx, cmd); err != nil {
 		return nil, err
@@ -123,6 +124,13 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 		return nil, entity.ErrDocumentTypeNotFound
 	}
 
+	// Opt-in (signing.direct_send): with no signer-fillable fields there is
+	// nothing to collect, so the signing attempt starts at creation instead of
+	// waiting for a signer to proceed from the public page.
+	if s.directSender.appliesToNew(version.ContentStructure) {
+		return s.createAndStartSigning(ctx, cmd, *template.DocumentTypeID)
+	}
+
 	document, err := s.createDocument(ctx, cmd, *template.DocumentTypeID)
 	if err != nil {
 		return nil, err
@@ -139,16 +147,42 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 		return nil, err
 	}
 
-	// Opt-in (signing.direct_send): with no signer-fillable fields there is
-	// nothing to collect, so start the signing attempt now instead of waiting
-	// for a signer to proceed from the public page.
-	if s.directSender.appliesTo(document, version.ContentStructure) {
-		if _, err := s.directSender.start(ctx, document, recipients); err != nil {
-			return nil, err
-		}
-		document = s.reloadAfterDirectSend(ctx, document)
+	s.notificationSvc.NotifyDocumentCreated(ctx, document.ID)
+
+	return &entity.DocumentWithRecipients{
+		Document:   *document,
+		Recipients: recipients,
+	}, nil
+}
+
+// createAndStartSigning is CreateAndSendDocument's direct-send path. The
+// document enters AWAITING_INPUT as on the normal path, but it, its recipients
+// and its first signing attempt are written in one transaction
+// (SigningExecutionUnitOfWork.CreateDocumentAndStartSigning): either all of
+// them exist afterwards or none does. A failed start returns an error with
+// nothing persisted, so a caller that retries (panel and batch creation carry
+// no idempotency key) ends up with one document, not two.
+func (s *DocumentService) createAndStartSigning(ctx context.Context, cmd documentuc.CreateDocumentCommand, documentTypeID string) (*entity.DocumentWithRecipients, error) {
+	document, err := newDocument(cmd, documentTypeID)
+	if err != nil {
+		return nil, err
 	}
 
+	recipients, err := newRecipients(document.ID, cmd.Recipients)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := document.MarkAsAwaitingInput(); err != nil {
+		return nil, fmt.Errorf("marking document as awaiting input: %w", err)
+	}
+
+	if _, err := s.directSender.createAndStart(ctx, document, recipients); err != nil {
+		return nil, err
+	}
+
+	s.emitDocumentCreated(ctx, document.ID)
+	document = s.reloadAfterDirectSend(ctx, document)
 	s.notificationSvc.NotifyDocumentCreated(ctx, document.ID)
 
 	return &entity.DocumentWithRecipients{
@@ -239,6 +273,22 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 
 // createDocument creates and persists the document entity.
 func (s *DocumentService) createDocument(ctx context.Context, cmd documentuc.CreateDocumentCommand, documentTypeID string) (*entity.Document, error) {
+	document, err := newDocument(cmd, documentTypeID)
+	if err != nil {
+		return nil, err
+	}
+
+	docID, err := s.documentRepo.Create(ctx, document)
+	if err != nil {
+		return nil, fmt.Errorf("creating document: %w", err)
+	}
+	document.ID = docID
+
+	return document, nil
+}
+
+// newDocument builds and validates a new document from the command without persisting it.
+func newDocument(cmd documentuc.CreateDocumentCommand, documentTypeID string) (*entity.Document, error) {
 	document := entity.NewDocument(cmd.WorkspaceID, cmd.TemplateVersionID)
 	document.DocumentTypeID = documentTypeID
 	document.ID = uuid.NewString()
@@ -270,17 +320,25 @@ func (s *DocumentService) createDocument(ctx context.Context, cmd documentuc.Cre
 		return nil, fmt.Errorf("validating document: %w", err)
 	}
 
-	docID, err := s.documentRepo.Create(ctx, document)
-	if err != nil {
-		return nil, fmt.Errorf("creating document: %w", err)
-	}
-	document.ID = docID
-
 	return document, nil
 }
 
 // createRecipients creates and persists the document recipients.
 func (s *DocumentService) createRecipients(ctx context.Context, docID string, cmdRecipients []documentuc.DocumentRecipientCommand) ([]*entity.DocumentRecipient, error) {
+	recipients, err := newRecipients(docID, cmdRecipients)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.recipientRepo.CreateBatch(ctx, recipients); err != nil {
+		return nil, fmt.Errorf("creating recipients: %w", err)
+	}
+
+	return recipients, nil
+}
+
+// newRecipients builds and validates the document recipients without persisting them.
+func newRecipients(docID string, cmdRecipients []documentuc.DocumentRecipientCommand) ([]*entity.DocumentRecipient, error) {
 	recipients := make([]*entity.DocumentRecipient, len(cmdRecipients))
 
 	for i, r := range cmdRecipients {
@@ -292,10 +350,6 @@ func (s *DocumentService) createRecipients(ctx context.Context, docID string, cm
 		}
 
 		recipients[i] = recipient
-	}
-
-	if err := s.recipientRepo.CreateBatch(ctx, recipients); err != nil {
-		return nil, fmt.Errorf("creating recipients: %w", err)
 	}
 
 	return recipients, nil
@@ -899,13 +953,18 @@ func (s *DocumentService) transitionToAwaitingInput(
 		return fmt.Errorf("updating document to awaiting input: %w", err)
 	}
 
-	s.eventEmitter.EmitDocumentEvent(ctx, document.ID, entity.EventDocumentCreated, entity.ActorUser, "", "", string(entity.DocumentStatusDraft), nil)
+	s.emitDocumentCreated(ctx, document.ID)
 
 	slog.InfoContext(ctx, "document awaiting input",
 		slog.String("document_id", document.ID),
 	)
 
 	return nil
+}
+
+// emitDocumentCreated records the DOCUMENT_CREATED event both creation paths write.
+func (s *DocumentService) emitDocumentCreated(ctx context.Context, documentID string) {
+	s.eventEmitter.EmitDocumentEvent(ctx, documentID, entity.EventDocumentCreated, entity.ActorUser, "", "", string(entity.DocumentStatusDraft), nil)
 }
 
 // reloadAfterDirectSend re-reads the document so callers see the attempt

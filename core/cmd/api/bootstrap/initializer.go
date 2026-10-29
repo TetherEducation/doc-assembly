@@ -147,7 +147,8 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	// --- Repositories: Execution ---
 	documentRepoConcrete := documentrepo.NewConcrete(pool)
 	var documentRepo port.DocumentRepository = documentRepoConcrete
-	documentRecipientRepo := documentrecipientrepo.New(pool)
+	documentRecipientRepoConcrete := documentrecipientrepo.NewConcrete(pool)
+	var documentRecipientRepo port.DocumentRecipientRepository = documentRecipientRepoConcrete
 	documentEventRepo := documenteventrepo.New(pool)
 	documentFieldResponseRepo := documentfieldresponserepo.New(pool)
 	documentAccessTokenRepo := documentaccesstokenrepo.New(pool)
@@ -262,6 +263,8 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	riverSvc, err := riverqueue.New(ctx, pool, workerCfg, riverqueue.Dependencies{
 		DocumentRepo:      documentRepo,
 		RecipientRepo:     documentRecipientRepo,
+		DocumentCreator:   documentRepoConcrete,
+		RecipientCreator:  documentRecipientRepoConcrete,
 		AttemptRepo:       signingAttemptRepo,
 		VersionRepo:       templateVersionRepo,
 		SourceRepo:        uploadedSourceRepo,

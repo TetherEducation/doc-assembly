@@ -14,12 +14,23 @@ import (
 
 // New creates a new document recipient repository.
 func New(pool *pgxpool.Pool) port.DocumentRecipientRepository {
+	return NewConcrete(pool)
+}
+
+// NewConcrete creates a new document recipient repository returning the concrete
+// type. Use this when you need access to transactional methods like CreateBatchTx.
+func NewConcrete(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
 // Repository implements port.DocumentRecipientRepository using PostgreSQL.
 type Repository struct {
 	pool *pgxpool.Pool
+}
+
+// batchSender is satisfied by both *pgxpool.Pool and pgx.Tx.
+type batchSender interface {
+	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
 }
 
 // Create creates a new document recipient.
@@ -43,6 +54,16 @@ func (r *Repository) Create(ctx context.Context, recipient *entity.DocumentRecip
 
 // CreateBatch creates multiple recipients for a document.
 func (r *Repository) CreateBatch(ctx context.Context, recipients []*entity.DocumentRecipient) error {
+	return r.createBatchWith(ctx, r.pool, recipients)
+}
+
+// CreateBatchTx creates multiple recipients for a document within an existing transaction.
+func (r *Repository) CreateBatchTx(ctx context.Context, tx pgx.Tx, recipients []*entity.DocumentRecipient) error {
+	return r.createBatchWith(ctx, tx, recipients)
+}
+
+// createBatchWith is the shared implementation for both CreateBatch and CreateBatchTx.
+func (r *Repository) createBatchWith(ctx context.Context, db batchSender, recipients []*entity.DocumentRecipient) error {
 	if len(recipients) == 0 {
 		return nil
 	}
@@ -60,7 +81,7 @@ func (r *Repository) CreateBatch(ctx context.Context, recipients []*entity.Docum
 		)
 	}
 
-	results := r.pool.SendBatch(ctx, batch)
+	results := db.SendBatch(ctx, batch)
 	defer func() { _ = results.Close() }()
 
 	for i := 0; i < len(recipients); i++ {
