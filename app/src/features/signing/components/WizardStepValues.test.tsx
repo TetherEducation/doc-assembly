@@ -3,10 +3,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { WizardStepValues } from './WizardStepValues'
 import type { TemplateVersionInjectable } from '@/types/api'
 
+const i18nMock = vi.hoisted(() => ({ language: 'en' }))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string) => fallback,
-    i18n: { language: 'en' },
+    i18n: i18nMock,
   }),
 }))
 
@@ -42,7 +44,8 @@ describe('WizardStepValues', () => {
     expect(screen.getByPlaceholderText('Counterparty name')).toBeTruthy()
   })
 
-  it('prefers the UI locale for system injectables', () => {
+  it('prefers the UI locale, ignoring the region, for system injectables', () => {
+    i18nMock.language = 'es-CL'
     const system = {
       ...workspaceFillIn,
       definition: {
@@ -54,6 +57,18 @@ describe('WizardStepValues', () => {
     render(
       <WizardStepValues injectables={[system]} values={{}} onValuesChange={vi.fn()} />,
     )
-    expect(screen.getByText('Date')).toBeTruthy()
+    expect(screen.getByText('Fecha')).toBeTruthy()
+    i18nMock.language = 'en'
+  })
+
+  it('falls back to the key when the label is empty', () => {
+    const blank = {
+      ...workspaceFillIn,
+      definition: { ...workspaceFillIn.definition, label: { _: '' } },
+    }
+    render(
+      <WizardStepValues injectables={[blank]} values={{}} onValuesChange={vi.fn()} />,
+    )
+    expect(screen.getByPlaceholderText('counterparty_name')).toBeTruthy()
   })
 })

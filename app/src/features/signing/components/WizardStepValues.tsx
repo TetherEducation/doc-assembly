@@ -14,6 +14,7 @@ export function WizardStepValues({
   onValuesChange,
 }: WizardStepValuesProps) {
   const { t, i18n } = useTranslation()
+  const locale = i18n.language.split('-')[0]
 
   if (injectables.length === 0) {
     return (
@@ -36,8 +37,9 @@ export function WizardStepValues({
         const { definition, isRequired, defaultValue } = injectable
         // The API sends label/description as i18n maps; workspace fill-ins
         // arrive as {"_": text}. Rendering the map itself crashes React (#31).
-        const label = resolveI18n(definition.label, i18n.language, definition.key)
-        const description = resolveI18n(definition.description, i18n.language)
+        const label =
+          resolveI18n(definition.label, locale, definition.key) || definition.key
+        const description = resolveI18n(definition.description, locale)
         const currentValue =
           (values[definition.key] as string) ?? defaultValue ?? ''
 
