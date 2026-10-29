@@ -239,6 +239,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 			cfg.HidePublicDocLink = parsed
 		}
 	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_PDF_SEND"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.PDFSend = parsed
+		}
+	}
 	applySigningEmbedEnvOverrides(&cfg.Embed)
 }
 

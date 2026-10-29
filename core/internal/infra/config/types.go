@@ -207,6 +207,10 @@ type SigningConfig struct {
 	// that page and reach documents only through the provider's links (its
 	// emails, or the per-signer links the panel copies). Off by default.
 	HidePublicDocLink bool `mapstructure:"hide_public_doc_link"`
+	// PDFSend turns on the panel's "Send a PDF": POST /documents/from-pdf
+	// takes a PDF, its signers in order and their boxes, builds a one-off
+	// template and sends it. Off by default, so the route does not exist.
+	PDFSend bool `mapstructure:"pdf_send"`
 }
 
 // SigningEmbedConfig customizes the provider's embedded signing widget so it

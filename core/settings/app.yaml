@@ -92,6 +92,9 @@ signing:
   # Hide the engine's own public signing link (/public/doc/{id}) in the panel,
   # for deployments where signers only use the provider's links. Off by default.
   hide_public_doc_link: false # DOC_ENGINE_SIGNING_HIDE_PUBLIC_DOC_LINK
+  # The panel's "Send a PDF": upload a PDF, place boxes for each signer, send.
+  # Adds POST /api/v1/documents/from-pdf. Off by default.
+  pdf_send: false             # DOC_ENGINE_SIGNING_PDF_SEND
   # Embedded signing widget options (Documenso). Appended to /embed/sign/{token}
   # as a URL fragment; unknown keys are ignored by the provider. Off by default.
   embed:

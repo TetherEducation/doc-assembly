@@ -408,6 +408,12 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	uploadedSourceSvc := templatesvc.NewUploadedSourceService(
 		templateVersionRepo, templateVersionSignerRoleRepo, uploadedSourceRepo, storageAdapter,
 	)
+	if cfg.Signing.PDFSend {
+		documentCtrl.SetPDFSendUseCase(documentsvc.NewPDFSendService(
+			templateSvc, templateVersionSvc, uploadedSourceSvc,
+			documentTypeRepo, documentTypeSvc, workspaceRepo, documentSvc,
+		))
+	}
 	automationCtrl := controller.NewAutomationController(
 		tenantSvc, workspaceSvc, injectableSvc,
 		templateSvc, templateVersionSvc, documentTypeSvc,
