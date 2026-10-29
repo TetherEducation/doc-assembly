@@ -58,23 +58,73 @@ func (d *DirectSender) appliesTo(doc *entity.Document, content json.RawMessage) 
 	return !hasSignerFillableFields(content)
 }
 
-// start creates the signing attempt and enqueues the render job through the
-// same unit of work ProceedToSigning uses. The attempt, the document's
-// PREPARING_SIGNATURE projection, the River job and the ATTEMPT_CREATED event
-// commit atomically; on error nothing is written and the document stays in
-// AWAITING_INPUT, where the normal signer flow can still start the attempt.
-func (d *DirectSender) start(
+// appliesToNew reports whether a document about to be created from a template
+// with this content should start signing at creation: the policy is on and the
+// content has no signer-fillable fields.
+func (d *DirectSender) appliesToNew(content json.RawMessage) bool {
+	return d.isEnabled() && !hasSignerFillableFields(content)
+}
+
+// createAndStart persists a new document (already in AWAITING_INPUT), its
+// recipients and its first signing attempt in one transaction
+// (SigningExecutionUnitOfWork.CreateDocumentAndStartSigning). On error nothing
+// is written, so the caller can report the failure and a retry creates exactly
+// one document. On success doc and recipients carry their persisted IDs.
+func (d *DirectSender) createAndStart(
 	ctx context.Context,
 	doc *entity.Document,
 	recipients []*entity.DocumentRecipient,
 ) (*entity.SigningAttempt, error) {
-	roles, err := d.signerRoleRepo.FindByVersionID(ctx, doc.TemplateVersionID)
+	signerOrders, err := d.signerOrders(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, err
+	}
+
+	attempt, err := d.signingUOW.CreateDocumentAndStartSigning(ctx, doc, recipients, signerOrders)
+	if err != nil {
+		slog.ErrorContext(ctx, "direct send: creating document with its signing attempt failed; nothing was persisted",
+			slog.String("template_version_id", doc.TemplateVersionID),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("direct send: creating document and signing attempt: %w", err)
+	}
+
+	slog.InfoContext(ctx, "direct send: document created with its signing attempt enqueued",
+		slog.String("document_id", doc.ID),
+		slog.String("attempt_id", attempt.ID),
+		slog.Int("recipients", len(recipients)),
+	)
+	return attempt, nil
+}
+
+// signerOrders maps each signer role of a template version to its signing order.
+func (d *DirectSender) signerOrders(ctx context.Context, templateVersionID string) (map[string]int, error) {
+	roles, err := d.signerRoleRepo.FindByVersionID(ctx, templateVersionID)
 	if err != nil {
 		return nil, fmt.Errorf("direct send: loading signer roles: %w", err)
 	}
 	signerOrders := make(map[string]int, len(roles))
 	for _, role := range roles {
 		signerOrders[role.ID] = role.SignerOrder
+	}
+	return signerOrders, nil
+}
+
+// start creates the signing attempt and enqueues the render job through the
+// same unit of work ProceedToSigning uses, for a document that already exists
+// (the internal API, which persists first and recovers a failed start through
+// its idempotent replay). The attempt, the document's PREPARING_SIGNATURE
+// projection, the River job and the ATTEMPT_CREATED event commit atomically; on
+// error nothing is written and the document stays in AWAITING_INPUT, where the
+// normal signer flow can still start the attempt.
+func (d *DirectSender) start(
+	ctx context.Context,
+	doc *entity.Document,
+	recipients []*entity.DocumentRecipient,
+) (*entity.SigningAttempt, error) {
+	signerOrders, err := d.signerOrders(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, err
 	}
 
 	attempt, err := d.signingUOW.CreateAttemptAndEnqueueRender(ctx, doc.ID, recipients, signerOrders)

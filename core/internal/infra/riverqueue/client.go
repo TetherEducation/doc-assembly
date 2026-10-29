@@ -38,6 +38,12 @@ type Dependencies struct {
 	StorageAdapter    port.StorageAdapter
 	StorageEnabled    bool
 	CompletionHandler port.DocumentCompletedHandler
+
+	// DocumentCreator and RecipientCreator let the signing unit of work create a
+	// document together with its first attempt (direct send at creation).
+	// Without them SigningExecutionUnitOfWork.CreateDocumentAndStartSigning fails.
+	DocumentCreator  DocumentCreator
+	RecipientCreator RecipientCreator
 }
 
 // New creates a RiverService. When cfg.Enabled is false the client operates in
@@ -92,7 +98,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg config.WorkerConfig, deps 
 		executor.client = client
 	}
 
-	signingUOW := NewSigningExecutionUnitOfWork(pool, client, deps.AttemptRepo)
+	signingUOW := NewSigningExecutionUnitOfWork(pool, client, deps.AttemptRepo, deps.DocumentCreator, deps.RecipientCreator)
 	slog.InfoContext(ctx, "river signing queue initialized", slog.Bool("workers_enabled", cfg.Enabled), slog.Int("max_workers", cfg.MaxWorkersOrDefault()))
 	return &RiverService{client: client, signingUOW: signingUOW, workersEnabled: cfg.Enabled}, nil
 }
