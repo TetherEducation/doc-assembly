@@ -73,7 +73,7 @@ func (a *Adapter) setAuthHeader(req *http.Request) {
 
 // SubmitAttemptDocument uploads a PDF document to Documenso and creates a signing envelope.
 func (a *Adapter) SubmitAttemptDocument(ctx context.Context, req *port.SubmitAttemptDocumentRequest) (*port.SubmitAttemptDocumentResult, error) {
-	envelopeID, err := a.createEnvelope(ctx, req.Title, req.CorrelationKey, req.PDF)
+	envelopeID, err := a.createEnvelope(ctx, req.Title, req.CorrelationKey, req.PDF, req.Language)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,11 @@ func (a *Adapter) SubmitAttemptDocument(ctx context.Context, req *port.SubmitAtt
 // buildEnvelopeBody builds the multipart form body for creating an envelope.
 // When sequential is true the payload carries meta.signingOrder=SEQUENTIAL
 // (unconditionally: a single-signer envelope behaves the same either way);
-// when false no meta key is sent and Documenso defaults to PARALLEL.
-func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool) (*bytes.Buffer, string, error) {
+// when false Documenso defaults to PARALLEL. A language Documenso supports goes
+// in meta.language, which sets the language of the envelope's emails and
+// signing certificate; otherwise Documenso uses the team's default language.
+// With neither, no meta key is sent.
+func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, language string) (*bytes.Buffer, string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -127,8 +130,15 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool) (
 	if externalRef != "" {
 		payload["externalId"] = externalRef
 	}
+	meta := map[string]any{}
 	if sequential {
-		payload["meta"] = map[string]any{"signingOrder": "SEQUENTIAL"}
+		meta["signingOrder"] = "SEQUENTIAL"
+	}
+	if code := documensoLanguage(language); code != "" {
+		meta["language"] = code
+	}
+	if len(meta) > 0 {
+		payload["meta"] = meta
 	}
 
 	payloadJSON, err := json.Marshal(payload)
@@ -145,9 +155,13 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool) (
 	return &buf, writer.FormDataContentType(), nil
 }
 
-// createEnvelope creates a new envelope with the PDF document.
-func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef string, pdf []byte) (string, error) {
-	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder)
+// createEnvelope creates a new envelope with the PDF document. The document's
+// language is sent only when the DocumentLanguage setting is on.
+func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef string, pdf []byte, language string) (string, error) {
+	if !a.config.DocumentLanguage {
+		language = ""
+	}
+	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder, language)
 	if err != nil {
 		return "", err
 	}
@@ -432,7 +446,7 @@ func (a *Adapter) EnsureProviderDocument(ctx context.Context, req *port.EnsurePr
 		}, nil
 	}
 
-	envelopeID, err := a.createEnvelope(ctx, req.Title, req.CorrelationKey, req.PDF)
+	envelopeID, err := a.createEnvelope(ctx, req.Title, req.CorrelationKey, req.PDF, req.Language)
 	if err != nil {
 		return nil, err
 	}

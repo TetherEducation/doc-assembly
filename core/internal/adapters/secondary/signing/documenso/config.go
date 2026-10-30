@@ -33,6 +33,13 @@ type Config struct {
 	// and the envelope-create payload is byte-identical to previous releases.
 	SequentialSigningOrder bool
 
+	// DocumentLanguage sends each document's language as the envelope's
+	// meta.language, so Documenso writes the signer emails and the signing
+	// certificate in it instead of the team's default language. Off by
+	// default: the envelope-create payload is then byte-identical to previous
+	// releases.
+	DocumentLanguage bool
+
 	// Embed customizes the embedded signing widget (theme, language,
 	// branding, signer-name prefill). Zero value keeps embedded URLs
 	// byte-identical to previous releases.

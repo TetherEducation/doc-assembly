@@ -202,6 +202,11 @@ type SigningConfig struct {
 	// signer order instead of all at once. Off by default (provider default,
 	// PARALLEL for Documenso).
 	SequentialOrder bool `mapstructure:"sequential_order"`
+	// DocumentLanguage sends each document's language (its template's
+	// meta.language) to the provider, so the provider writes its emails to
+	// signers and its signing certificate in that language instead of its own
+	// default. Off by default.
+	DocumentLanguage bool `mapstructure:"document_language"`
 	// HidePublicDocLink hides the engine's own public signing link
 	// (/public/doc/{id}) in the panel, for deployments where signers cannot use
 	// that page and reach documents only through the provider's links (its

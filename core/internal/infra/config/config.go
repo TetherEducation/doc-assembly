@@ -226,6 +226,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 			cfg.SequentialOrder = parsed
 		}
 	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_DOCUMENT_LANGUAGE"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.DocumentLanguage = parsed
+		}
+	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
 	}

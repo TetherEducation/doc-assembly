@@ -83,6 +83,10 @@ type SubmitAttemptDocumentRequest struct {
 	Metadata        map[string]string
 	SignatureFields []SignatureFieldPosition
 	Environment     entity.Environment
+	// Language is the document's language code, from the template's meta.language
+	// (e.g. "es"). Providers may use it to localize their emails; empty keeps the
+	// provider's default.
+	Language string
 }
 
 // SubmitAttemptDocumentResult contains provider IDs and signing references for an attempt.
@@ -115,6 +119,8 @@ type EnsureProviderDocumentRequest struct {
 	PDFChecksum    string
 	Title          string
 	Environment    entity.Environment
+	// Language is the document's language code, as in SubmitAttemptDocumentRequest.
+	Language string
 }
 
 type EnsureProviderDocumentResult struct {
