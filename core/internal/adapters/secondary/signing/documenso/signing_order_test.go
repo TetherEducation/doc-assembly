@@ -17,7 +17,7 @@ import (
 
 // captureEnvelopeCreatePayload runs EnsureProviderDocument against a fake
 // Documenso and returns the raw JSON "payload" field sent to /envelope/create.
-func captureEnvelopeCreatePayload(t *testing.T, cfg *Config) string {
+func captureEnvelopeCreatePayload(t *testing.T, cfg *Config, language string) string {
 	t.Helper()
 	const correlationKey = "doc-id:attempt-id"
 	var payload string
@@ -58,6 +58,7 @@ func captureEnvelopeCreatePayload(t *testing.T, cfg *Config) string {
 		Title:          "Consent",
 		PDF:            []byte("%PDF-1.7"),
 		Environment:    entity.EnvironmentProd,
+		Language:       language,
 	}); err != nil {
 		t.Fatalf("EnsureProviderDocument() error = %v", err)
 	}
@@ -93,7 +94,7 @@ func readMultipartPayload(t *testing.T, r *http.Request) string {
 }
 
 func TestEnvelopeCreatePayloadUnchangedWhenSequentialOrderOff(t *testing.T) {
-	got := captureEnvelopeCreatePayload(t, &Config{})
+	got := captureEnvelopeCreatePayload(t, &Config{}, "")
 
 	// Byte-for-byte the payload sent before the setting existed.
 	want := `{"externalId":"doc-id:attempt-id","title":"Consent","type":"DOCUMENT"}`
@@ -106,7 +107,7 @@ func TestEnvelopeCreatePayloadUnchangedWhenSequentialOrderOff(t *testing.T) {
 }
 
 func TestEnvelopeCreatePayloadSetsSequentialSigningOrderWhenOn(t *testing.T) {
-	got := captureEnvelopeCreatePayload(t, &Config{SequentialSigningOrder: true})
+	got := captureEnvelopeCreatePayload(t, &Config{SequentialSigningOrder: true}, "")
 
 	var decoded struct {
 		Title      string `json:"title"`

@@ -101,7 +101,7 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		return err
 	}
 
-	pdfBytes, sigFields, err := e.renderAttemptArtifacts(ctx, doc)
+	pdfBytes, sigFields, language, err := e.renderAttemptArtifacts(ctx, doc)
 	if err != nil {
 		return e.failPermanent(ctx, attempt, old, entity.ProviderSubmitPhaseBeforeRequest, err)
 	}
@@ -126,6 +126,11 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 		"pdfStoragePath":  storagePath,
 		"pdfChecksum":     checksum,
 		"signatureFields": sigFields,
+	}
+	// The template's language travels with the attempt so the provider envelope,
+	// created in a later phase, sends its emails in the document's language.
+	if language != "" {
+		payload["language"] = language
 	}
 	payloadJSON, _ := json.Marshal(payload)
 
@@ -217,6 +222,7 @@ func (e *SigningAttemptExecutor) advanceCreateProviderDocument(ctx context.Conte
 		PDFChecksum:    deref(attempt.PDFChecksum),
 		Title:          documentTitle(doc),
 		Environment:    entity.EnvironmentProd,
+		Language:       payloadString(attempt.ProviderUploadPayload, "language"),
 	})
 	if err != nil {
 		return e.handleProviderStepError(ctx, attempt, entity.ProviderSubmitPhaseCreateProviderDocument, err)
@@ -618,32 +624,35 @@ func (e *SigningAttemptExecutor) loadActiveAttempt(ctx context.Context, attemptI
 	return attempt, doc, false, nil
 }
 
-func (e *SigningAttemptExecutor) renderAttemptArtifacts(ctx context.Context, doc *entity.Document) ([]byte, []port.SignatureFieldPosition, error) {
+// renderAttemptArtifacts returns the PDF to sign, its signature fields and the
+// template's language. An uploaded PDF has no template, so its language is empty.
+func (e *SigningAttemptExecutor) renderAttemptArtifacts(ctx context.Context, doc *entity.Document) ([]byte, []port.SignatureFieldPosition, string, error) {
 	if e.sourceRepo != nil {
 		source, err := e.sourceRepo.FindByVersionID(ctx, doc.TemplateVersionID)
 		if err != nil && !errors.Is(err, entity.ErrUploadedSourceNotFound) {
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 		if source != nil {
-			return e.renderUploadedPDF(ctx, source)
+			pdf, fields, err := e.renderUploadedPDF(ctx, source)
+			return pdf, fields, "", err
 		}
 	}
 	renderResult, signerRoles, portableDoc, err := e.renderPDF(ctx, doc)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	sigFields, err := mapSignatureFieldPositions(renderResult.SignatureFields, signerRoles, portableDoc.SignerRoles)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	if len(sigFields) == 0 {
 		recipients, recErr := e.recipientRepo.FindByDocumentID(ctx, doc.ID)
 		if recErr != nil {
-			return nil, nil, recErr
+			return nil, nil, "", recErr
 		}
 		sigFields = buildDefaultSignatureFieldPositions(recipients)
 	}
-	return renderResult.PDF, sigFields, nil
+	return renderResult.PDF, sigFields, portableDoc.Meta.Language, nil
 }
 
 func (e *SigningAttemptExecutor) renderUploadedPDF(ctx context.Context, source *entity.UploadedSource) ([]byte, []port.SignatureFieldPosition, error) {
@@ -1210,4 +1219,15 @@ func mergeJSON(raw json.RawMessage, key string, value any) json.RawMessage {
 	m[key] = value
 	out, _ := json.Marshal(m)
 	return out
+}
+
+// payloadString returns the string stored under key in a JSON object, or ""
+// when the payload, the key or a string value is missing.
+func payloadString(raw json.RawMessage, key string) string {
+	m := map[string]any{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return ""
+	}
+	s, _ := m[key].(string)
+	return s
 }

@@ -21,9 +21,12 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/stretchr/testify/require"
 
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_field_response_repo"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_recipient_repo"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/document_repo"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_repo"
+	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_signer_role_repo"
 	signingmock "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/signing/mock"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/storage/local"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
@@ -613,6 +616,53 @@ func TestSigningAttemptExecutor_AdvanceProviderSubmissionResumesAfterProviderSte
 	}
 }
 
+// The template's language must reach the provider: the render phase stores it
+// with the attempt, and the create phase passes it on so Documenso sends the
+// envelope's emails and signing certificate in the document's language.
+func TestSigningAttemptExecutor_TemplateLanguageReachesProviderDocument(t *testing.T) {
+	ctx := context.Background()
+	fx := newAttemptFixture(t, ctx)
+	_, err := fx.pool.Exec(ctx, `
+		UPDATE content.template_versions
+		SET content_structure = jsonb_set(content_structure, '{meta,language}', '"es"')
+		WHERE id = $1`, fx.versionID)
+	require.NoError(t, err)
+
+	provider := &languageCapturingProvider{SigningProvider: signingmock.New()}
+	storage, err := local.New(t.TempDir())
+	require.NoError(t, err)
+	client, err := river.NewClient(riverpgxv5.New(fx.pool), &river.Config{})
+	require.NoError(t, err)
+	executor := riverqueue.NewSigningAttemptExecutor(riverqueue.SigningAttemptExecutorConfig{
+		Pool:              fx.pool,
+		Client:            client,
+		DocumentRepo:      fx.docRepo,
+		RecipientRepo:     documentrecipientrepo.New(fx.pool),
+		AttemptRepo:       fx.attemptRepo,
+		VersionRepo:       templateversionrepo.New(fx.pool),
+		SignerRoleRepo:    templateversionsignerrolerepo.New(fx.pool),
+		FieldResponseRepo: documentfieldresponserepo.New(fx.pool),
+		PDFRenderer:       staticPDFRenderer{},
+		SigningProvider:   provider,
+		StorageAdapter:    storage,
+		StorageEnabled:    true,
+	})
+	riverSvc, err := riverqueue.New(ctx, fx.pool, config.WorkerConfig{Enabled: false}, riverqueue.Dependencies{DocumentRepo: fx.docRepo, AttemptRepo: fx.attemptRepo})
+	require.NoError(t, err)
+	attempt, err := riverSvc.SigningExecutionUOW().CreateAttemptAndEnqueueRender(ctx, fx.documentID, fx.recipients(), fx.signerOrders())
+	require.NoError(t, err)
+
+	require.NoError(t, executor.RenderAttemptPDF(ctx, attempt.ID))
+	rendered := fx.mustAttempt(t, ctx, attempt.ID)
+	require.Equal(t, entity.SigningAttemptStatusReadyToSubmit, rendered.Status)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(rendered.ProviderUploadPayload, &payload))
+	require.Equal(t, "es", payload["language"])
+
+	require.NoError(t, executor.AdvanceProviderSubmissionForPhase(ctx, attempt.ID, entity.ProviderSubmitPhaseCreateProviderDocument))
+	require.Equal(t, []string{"es"}, provider.languages)
+}
+
 // Documenso sends DOCUMENT_CREATED as soon as the envelope exists, while the worker
 // is still adding recipients and fields. In production the webhook read the attempt,
 // the worker committed the next phase, and the webhook then saved its copy back as
@@ -788,6 +838,29 @@ func (p *afterDocumentProvider) EnsureProviderDocument(
 		}
 	}
 	return result, nil
+}
+
+// languageCapturingProvider records the language of each provider document it creates.
+type languageCapturingProvider struct {
+	port.SigningProvider
+	languages []string
+}
+
+func (p *languageCapturingProvider) EnsureProviderDocument(
+	ctx context.Context,
+	req *port.EnsureProviderDocumentRequest,
+) (*port.EnsureProviderDocumentResult, error) {
+	p.languages = append(p.languages, req.Language)
+	return p.SigningProvider.EnsureProviderDocument(ctx, req)
+}
+
+// staticPDFRenderer stands in for the Typst renderer: the render phase only
+// needs bytes to store, and with no signature fields the executor falls back
+// to default positions.
+type staticPDFRenderer struct{ port.PDFRenderer }
+
+func (staticPDFRenderer) RenderPreview(context.Context, *port.RenderPreviewRequest) (*port.RenderPreviewResult, error) {
+	return &port.RenderPreviewResult{PDF: []byte("%PDF-1.4 language test\n")}, nil
 }
 
 type attemptFixture struct {

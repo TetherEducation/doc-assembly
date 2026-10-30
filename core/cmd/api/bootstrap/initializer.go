@@ -556,6 +556,7 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
+			DocumentLanguage:       cfg.Signing.DocumentLanguage,
 		})
 	}
 }
@@ -643,6 +644,7 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 			Embed:          documensoEmbedOptions(cfg.Signing.Embed),
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
+			DocumentLanguage:       cfg.Signing.DocumentLanguage,
 		})
 		if err != nil {
 			return nil, err
