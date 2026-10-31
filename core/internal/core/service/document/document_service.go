@@ -104,18 +104,15 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 		return nil, err
 	}
 
-	version, _, err := s.validateTemplateAndRoles(ctx, cmd)
+	version, templateWorkspace, err := s.findTemplateVersion(ctx, cmd.WorkspaceID, cmd.TemplateVersionID)
 	if err != nil {
 		return nil, err
 	}
 
-	templateWorkspace, err := s.templateRepo.FindTemplateWorkspaceByTemplateID(ctx, version.TemplateID)
-	if err != nil {
-		return nil, fmt.Errorf("finding template from version: %w", err)
+	if err := s.validateTemplateAndRoles(ctx, cmd, version); err != nil {
+		return nil, err
 	}
-	if templateWorkspace == nil || templateWorkspace.Template == nil {
-		return nil, entity.ErrTemplateNotFound
-	}
+
 	if templateWorkspace.Workspace != nil && templateWorkspace.Workspace.Type == entity.WorkspaceTypeSystem {
 		return nil, entity.ErrInvalidWorkspaceType
 	}
@@ -191,24 +188,46 @@ func (s *DocumentService) createAndStartSigning(ctx context.Context, cmd documen
 	}, nil
 }
 
-// validateTemplateAndRoles validates the template version and returns the role map.
-func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd documentuc.CreateDocumentCommand) (*entity.TemplateVersion, map[string]*entity.TemplateVersionSignerRole, error) {
-	version, err := s.versionRepo.FindByID(ctx, cmd.TemplateVersionID)
+// findTemplateVersion loads the template version a document is created from,
+// with its template and workspace. The version is looked up by ID alone, so one
+// whose template belongs to another workspace answers exactly as a missing one
+// does, before anything else about it is checked: any other answer (not
+// published, its signer-role count, a SYSTEM workspace) would describe another
+// workspace's template.
+func (s *DocumentService) findTemplateVersion(ctx context.Context, workspaceID, versionID string) (*entity.TemplateVersion, *port.TemplateWorkspace, error) {
+	version, err := s.versionRepo.FindByID(ctx, versionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("finding template version: %w", err)
 	}
 
+	templateWorkspace, err := s.templateRepo.FindTemplateWorkspaceByTemplateID(ctx, version.TemplateID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("finding template from version: %w", err)
+	}
+	if templateWorkspace == nil || templateWorkspace.Template == nil {
+		return nil, nil, entity.ErrTemplateNotFound
+	}
+	if templateWorkspace.Template.WorkspaceID != workspaceID {
+		return nil, nil, fmt.Errorf("finding template version: %w", entity.ErrVersionNotFound)
+	}
+
+	return version, templateWorkspace, nil
+}
+
+// validateTemplateAndRoles checks that the version is published and that the
+// recipients fill its signer roles, one each.
+func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd documentuc.CreateDocumentCommand, version *entity.TemplateVersion) error {
 	if !version.IsPublished() {
-		return nil, nil, fmt.Errorf("template version is not published")
+		return fmt.Errorf("template version is not published")
 	}
 
 	signerRoles, err := s.signerRoleRepo.FindByVersionID(ctx, cmd.TemplateVersionID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("finding signer roles: %w", err)
+		return fmt.Errorf("finding signer roles: %w", err)
 	}
 
 	if len(cmd.Recipients) != len(signerRoles) {
-		return nil, nil, fmt.Errorf("recipient count (%d) does not match signer role count (%d)", len(cmd.Recipients), len(signerRoles))
+		return fmt.Errorf("recipient count (%d) does not match signer role count (%d)", len(cmd.Recipients), len(signerRoles))
 	}
 
 	roleMap := make(map[string]*entity.TemplateVersionSignerRole)
@@ -219,18 +238,18 @@ func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd docu
 	seen := make(map[string]struct{}, len(cmd.Recipients))
 	for _, r := range cmd.Recipients {
 		if _, ok := roleMap[r.RoleID]; !ok {
-			return nil, nil, fmt.Errorf("invalid role ID: %s", r.RoleID)
+			return fmt.Errorf("invalid role ID: %s", r.RoleID)
 		}
 		// With as many recipients as roles, a repeated role leaves another
 		// role unfilled. The database's unique index would reject it with a
 		// 500; this is the caller's mistake, so answer 400.
 		if _, ok := seen[r.RoleID]; ok {
-			return nil, nil, fmt.Errorf("%w: %s", entity.ErrDuplicateRecipientRole, r.RoleID)
+			return fmt.Errorf("%w: %s", entity.ErrDuplicateRecipientRole, r.RoleID)
 		}
 		seen[r.RoleID] = struct{}{}
 	}
 
-	return version, roleMap, nil
+	return nil
 }
 
 // validateOperationType validates the operation type and related document for RENEW/AMEND.
