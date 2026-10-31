@@ -17,7 +17,7 @@ type CreateDocumentCommand struct {
 	InjectedValues            map[string]any
 	Recipients                []DocumentRecipientCommand
 	OperationType             entity.OperationType // CREATE, RENEW, or AMEND (defaults to CREATE)
-	RelatedDocumentID         *string              // Required for RENEW/AMEND operations
+	RelatedDocumentID         *string              // Required for RENEW/AMEND and refused otherwise; must be a document in WorkspaceID
 }
 
 // DocumentRecipientCommand represents a recipient to be added to a document.

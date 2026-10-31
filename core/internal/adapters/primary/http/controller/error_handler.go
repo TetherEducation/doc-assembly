@@ -29,6 +29,7 @@ var notFoundErrors = []error{
 	entity.ErrSystemRoleNotFound,
 	entity.ErrDocumentTypeNotFound,
 	entity.ErrDocumentNotFound,
+	entity.ErrRelatedDocumentNotFound,
 	entity.ErrSigningAttemptNotFound,
 	entity.ErrProcessNotFound,
 	entity.ErrAPIKeyNotFound,
@@ -111,7 +112,7 @@ var badRequestErrors = []error{
 	entity.ErrDocumentNotCompleted,
 	entity.ErrDocumentNotTerminal,
 	entity.ErrRelatedDocumentRequired,
-	entity.ErrRelatedDocumentSameWorkspace,
+	entity.ErrRelatedDocumentNotAllowed,
 }
 
 var forbiddenErrors = []error{
