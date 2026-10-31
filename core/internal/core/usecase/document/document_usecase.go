@@ -11,7 +11,7 @@ import (
 // CreateDocumentCommand represents the command to create and send a document for signing.
 type CreateDocumentCommand struct {
 	WorkspaceID               string
-	TemplateVersionID         string
+	TemplateVersionID         string // must be a version of a template in WorkspaceID
 	Title                     string
 	ClientExternalReferenceID *string
 	InjectedValues            map[string]any
