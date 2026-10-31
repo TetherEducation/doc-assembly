@@ -464,6 +464,12 @@ func buildTemplateFilters(filters port.TemplateFilters, startArgPos int) (string
 		argPos++
 	}
 
+	if !filters.IncludePDFSends {
+		query += fmt.Sprintf(` AND t.process NOT LIKE $%d`, argPos)
+		args = append(args, entity.PDFSendProcessPrefix+"%")
+		argPos++
+	}
+
 	if filters.HasPublishedVersion != nil {
 		if *filters.HasPublishedVersion {
 			query += " AND EXISTS(SELECT 1 FROM content.template_versions WHERE template_id = t.id AND status = 'PUBLISHED')"

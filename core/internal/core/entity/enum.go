@@ -345,6 +345,11 @@ const (
 // DefaultProcess is the base system process.
 const DefaultProcess = "DEFAULT"
 
+// PDFSendProcessPrefix starts the process of every one-off template that
+// "Send a PDF" (POST /documents/from-pdf) builds for a single document. Template
+// lists leave these out unless asked for them.
+const PDFSendProcessPrefix = "pdf-send-"
+
 // DefaultProcessType is the default process type for the base process.
 const DefaultProcessType = ProcessTypeCanonicalName
 

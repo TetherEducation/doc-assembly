@@ -119,7 +119,7 @@ func (s *PDFSendService) SendPDF(ctx context.Context, cmd documentuc.SendPDFComm
 	template, version, err := s.templates.CreateTemplate(ctx, templateuc.CreateTemplateCommand{
 		WorkspaceID: cmd.WorkspaceID,
 		Title:       fmt.Sprintf("%s · PDF %s", title, oneOff[:8]),
-		Process:     "pdf-send-" + oneOff,
+		Process:     entity.PDFSendProcessPrefix + oneOff,
 		ProcessType: string(entity.ProcessTypeID),
 		CreatedBy:   cmd.UserID,
 	})
