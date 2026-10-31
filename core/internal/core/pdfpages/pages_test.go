@@ -2,8 +2,10 @@ package pdfpages
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/pdfpages/pdfpagestest"
 )
@@ -102,31 +104,118 @@ func TestParseRejectsOddRotation(t *testing.T) {
 	}
 }
 
+// pdf-lib reads a real /Rotate, so "90.0" must rotate, not count as 0.
+func TestParseRealRotation(t *testing.T) {
+	pdf := pdfpagestest.Build(catalog,
+		"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Rotate 90.0 >>")
+	assertSizes(t, mustParse(t, pdf), Size{792, 612})
+	odd := pdfpagestest.Build(catalog,
+		"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Rotate 90.5 >>")
+	if _, err := Parse(odd); err == nil {
+		t.Fatal("expected error for /Rotate 90.5")
+	}
+}
+
 func TestParseFixtures(t *testing.T) {
 	letter, a4, legal := Size{612, 792}, Size{595, 842}, Size{612, 1008}
 	for name, want := range map[string][]Size{
 		// Object streams and an xref stream, as DocuSign and LaTeX write them.
 		"objstm.pdf": {letter, a4, legal},
-		// AES-256 with an empty user password: read by the literal fallback.
+		// AES-256 with an empty user password opens like any other file.
 		"permissions-only.pdf": {letter, letter},
 	} {
 		t.Run(name, func(t *testing.T) {
-			pdf, err := os.ReadFile("testdata/" + name)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assertSizes(t, mustParse(t, pdf), want...)
+			assertSizes(t, mustParse(t, fixture(t, name)), want...)
 		})
 	}
 }
 
-func TestParseRejectsUserPassword(t *testing.T) {
-	pdf, err := os.ReadFile("testdata/user-password.pdf")
+func fixture(t *testing.T, name string) []byte {
+	t.Helper()
+	pdf, err := os.ReadFile("testdata/" + name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Parse(pdf); !errors.Is(err, errPassword) {
-		t.Fatalf("err = %v, want %v", err, errPassword)
+	return pdf
+}
+
+func TestParseRejectsUserPassword(t *testing.T) {
+	for name, want := range map[string]error{
+		"user-password.pdf":        errPassword, // RC4-128
+		"aes256-user-password.pdf": errPassword,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Parse(fixture(t, name)); !errors.Is(err, want) {
+				t.Fatalf("err = %v, want %v", err, want)
+			}
+		})
+	}
+}
+
+func TestParsePDF20Header(t *testing.T) {
+	pdf := pdfpagestest.Pages([2]float64{612, 792})
+	copy(pdf, "%PDF-2.0")
+	assertSizes(t, mustParse(t, pdf), Size{612, 792})
+}
+
+// /Count is untrusted: it is ignored, so a huge value allocates nothing and a
+// low value does not hide pages.
+func TestParseIgnoresCount(t *testing.T) {
+	for name, count := range map[string]string{"huge": "4000000000", "low": "1", "negative": "-5"} {
+		t.Run(name, func(t *testing.T) {
+			pdf := pdfpagestest.Build(catalog,
+				"<< /Type /Pages /Count "+count+" /MediaBox [0 0 612 792] /Kids [3 0 R 4 0 R 5 0 R] >>",
+				"<< /Type /Page /Parent 2 0 R >>",
+				"<< /Type /Page /Parent 2 0 R >>",
+				"<< /Type /Page /Parent 2 0 R >>")
+			assertSizes(t, mustParse(t, pdf), Size{612, 792}, Size{612, 792}, Size{612, 792})
+		})
+	}
+}
+
+func TestParseRejectsHostileTrees(t *testing.T) {
+	deep := []string{catalog}
+	for i := 2; i <= maxTreeDepth+3; i++ {
+		deep = append(deep, fmt.Sprintf("<< /Type /Pages /Kids [%d 0 R] /MediaBox [0 0 612 792] >>", i+1))
+	}
+	deep = append(deep, "<< /Type /Page >>")
+	for name, pdf := range map[string][]byte{
+		"self-cycle": pdfpagestest.Build(catalog, "<< /Type /Pages /Count 5 /Kids [2 0 R] >>"),
+		"two-node cycle": pdfpagestest.Build(catalog,
+			"<< /Type /Pages /Kids [3 0 R] >>",
+			"<< /Type /Pages /Kids [2 0 R 2 0 R] >>"),
+		"too deep": pdfpagestest.Build(deep...),
+	} {
+		t.Run(name, func(t *testing.T) {
+			start := time.Now()
+			if _, err := Parse(pdf); err == nil {
+				t.Fatal("expected error")
+			}
+			if d := time.Since(start); d > 2*time.Second {
+				t.Fatalf("took %v", d)
+			}
+		})
+	}
+}
+
+func TestParsePageLimit(t *testing.T) {
+	sizes := make([][2]float64, MaxPages)
+	for i := range sizes {
+		sizes[i] = [2]float64{612, 792}
+	}
+	start := time.Now()
+	pages := mustParse(t, pdfpagestest.Pages(sizes...))
+	if len(pages) != MaxPages {
+		t.Fatalf("got %d pages", len(pages))
+	}
+	// One pass over the tree: a flat tree at the limit stays fast.
+	if d := time.Since(start); d > 2*time.Second {
+		t.Fatalf("%d pages took %v", MaxPages, d)
+	}
+	if _, err := Parse(pdfpagestest.Pages(append(sizes, [2]float64{612, 792})...)); err == nil {
+		t.Fatal("expected error above the page limit")
 	}
 }
 
