@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  MAX_SIGNER_NAME_BYTES,
   MAX_TITLE_LENGTH,
   boxFromDrag,
   clampBox,
@@ -98,6 +99,15 @@ describe('findProblems: one test per server rule', () => {
   it(`takes a title of at most ${MAX_TITLE_LENGTH} characters`, () => {
     expect(findProblems('x'.repeat(MAX_TITLE_LENGTH), [ana], [box()], [LETTER])).toEqual([])
     expect(findProblems('x'.repeat(MAX_TITLE_LENGTH + 1), [ana], [box()], [LETTER])).toEqual([{ kind: 'title-too-long' }])
+  })
+
+  it(`takes a signer name of at most ${MAX_SIGNER_NAME_BYTES} UTF-8 bytes`, () => {
+    const named = (name: string) => findProblems('NDA', [{ ...ana, name }], [box()], [LETTER])
+    expect(named('x'.repeat(MAX_SIGNER_NAME_BYTES))).toEqual([])
+    expect(named('x'.repeat(MAX_SIGNER_NAME_BYTES + 1))).toEqual([{ kind: 'name-too-long', signerIndex: 0 }])
+    // An accented letter takes 2 bytes, as on the server.
+    expect(named('á'.repeat(MAX_SIGNER_NAME_BYTES / 2))).toEqual([])
+    expect(named('á'.repeat(MAX_SIGNER_NAME_BYTES / 2 + 1))).toEqual([{ kind: 'name-too-long', signerIndex: 0 }])
   })
 
   it('needs at least one signer', () => {

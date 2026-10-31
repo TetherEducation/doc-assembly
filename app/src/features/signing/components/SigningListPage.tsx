@@ -130,6 +130,18 @@ export function SigningListPage() {
     setCreateWizardOpen(true)
   }
 
+  const createDocumentButton = (
+    <button
+      onClick={handleOpenCreateWizard}
+      className="group flex h-12 items-center gap-2 rounded-none bg-foreground px-6 text-sm font-medium tracking-wide text-background shadow-lg shadow-muted transition-colors hover:bg-foreground/90"
+    >
+      <Plus size={20} />
+      <span>
+        {t('signing.actions.createDocument', 'CREATE DOCUMENT')}
+      </span>
+    </button>
+  )
+
   return (
     <div className="animate-page-enter flex h-full flex-1 flex-col bg-background">
       {/* Header */}
@@ -143,32 +155,28 @@ export function SigningListPage() {
               {t('signing.title', 'Signing Documents')}
             </h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-          {canSendPdf && (
-            <button
-              onClick={() =>
-                navigate({
-                  to: '/workspace/$workspaceId/signing/send-pdf',
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router type limitation
-                  params: { workspaceId: workspaceId ?? '' } as any,
-                })
-              }
-              className="group flex h-12 items-center gap-2 rounded-none border border-foreground px-6 text-sm font-medium tracking-wide text-foreground transition-colors hover:bg-accent"
-            >
-              <FileUp size={20} />
-              <span>{t('signing.actions.sendPdf', 'SEND A PDF')}</span>
-            </button>
+          {canSendPdf ? (
+            // The wrapper exists only with "Send a PDF" on, so the header keeps
+            // its original layout (full-width button on phones) without it.
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() =>
+                  navigate({
+                    to: '/workspace/$workspaceId/signing/send-pdf',
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router type limitation
+                    params: { workspaceId: workspaceId ?? '' } as any,
+                  })
+                }
+                className="group flex h-12 items-center gap-2 rounded-none border border-foreground px-6 text-sm font-medium tracking-wide text-foreground transition-colors hover:bg-accent"
+              >
+                <FileUp size={20} />
+                <span>{t('signing.actions.sendPdf', 'SEND A PDF')}</span>
+              </button>
+              {createDocumentButton}
+            </div>
+          ) : (
+            createDocumentButton
           )}
-          <button
-            onClick={handleOpenCreateWizard}
-            className="group flex h-12 items-center gap-2 rounded-none bg-foreground px-6 text-sm font-medium tracking-wide text-background shadow-lg shadow-muted transition-colors hover:bg-foreground/90"
-          >
-            <Plus size={20} />
-            <span>
-              {t('signing.actions.createDocument', 'CREATE DOCUMENT')}
-            </span>
-          </button>
-          </div>
         </div>
       </header>
 

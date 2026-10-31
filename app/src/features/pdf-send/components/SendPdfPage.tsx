@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 import { ArrowLeft, FileUp, Loader2, Send } from 'lucide-react'
 import { Document, pdfjs } from 'react-pdf'
 
@@ -14,6 +13,7 @@ import { signingKeys } from '@/features/signing/hooks/useSigningDocuments'
 import { cn } from '@/lib/utils'
 
 import { pdfSendApi } from '../api'
+import { describeSendError } from '../describe-problem'
 import { fieldLabel } from '../field-label'
 import {
   FIELD_TYPES,
@@ -195,12 +195,8 @@ export function SendPdfPage() {
         params: { workspaceId, documentId: doc.id } as any,
       })
     } catch (error) {
-      // Stay in the editor with everything placed, and show the server's reason.
-      const message =
-        isAxiosError(error) && typeof error.response?.data?.error === 'string'
-          ? error.response.data.error
-          : t('pdfSend.sendFailed', 'The document could not be sent. Please try again.')
-      setSendError(message)
+      // Stay in the editor with everything placed.
+      setSendError(describeSendError(t, error))
     } finally {
       setSending(false)
     }
