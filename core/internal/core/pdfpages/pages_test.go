@@ -90,17 +90,65 @@ func TestParseRotation(t *testing.T) {
 		"<< /Type /Pages /Count 4 /Rotate 270 /MediaBox [0 0 612 792] /Kids [3 0 R 4 0 R 5 0 R 6 0 R] >>",
 		"<< /Type /Page /Parent 2 0 R >>",
 		"<< /Type /Page /Parent 2 0 R /Rotate 0 >>",
-		"<< /Type /Page /Parent 2 0 R /Rotate -90 >>",
+		"<< /Type /Page /Parent 2 0 R /Rotate 90 >>",
 		"<< /Type /Page /Parent 2 0 R /Rotate 180 >>")
 	assertSizes(t, mustParse(t, pdf), Size{792, 612}, Size{612, 792}, Size{792, 612}, Size{612, 792})
 }
 
-func TestParseRejectsOddRotation(t *testing.T) {
-	pdf := pdfpagestest.Build(catalog,
-		"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
-		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Rotate 45 >>")
-	if _, err := Parse(pdf); err == nil {
-		t.Fatal("expected error")
+// Documenso swaps width and height only for a literal 90 or 270 and does not
+// normalise other values, so anything outside 0, 90, 180, 270 is refused.
+func TestParseRejectsOtherRotations(t *testing.T) {
+	for _, rotate := range []string{"45", "-90", "450", "360"} {
+		t.Run(rotate, func(t *testing.T) {
+			pdf := pdfpagestest.Build(catalog,
+				"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+				"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Rotate "+rotate+" >>")
+			if _, err := Parse(pdf); err == nil {
+				t.Fatal("expected error")
+			}
+		})
+	}
+}
+
+// pdf-lib (Documenso) counts only /Type /Page leaves and inherits through
+// /Parent, so a tree it would read differently is refused.
+func TestParseRejectsTreesPdfLibReadsDifferently(t *testing.T) {
+	for name, objects := range map[string][]string{
+		"leaf without /Type": {catalog,
+			"<< /Type /Pages /Count 2 /MediaBox [0 0 612 792] /Kids [3 0 R 4 0 R] >>",
+			"<< /Type /Page /Parent 2 0 R >>",
+			"<< /Parent 2 0 R >>"},
+		"node with Kids but no /Type": {catalog,
+			"<< /Type /Pages /Count 1 /MediaBox [0 0 612 792] /Kids [3 0 R] >>",
+			"<< /Parent 2 0 R /Kids [4 0 R] >>",
+			"<< /Type /Page /Parent 3 0 R >>"},
+		"/Parent points elsewhere": {catalog,
+			"<< /Type /Pages /Count 1 /MediaBox [0 0 612 792] /Kids [3 0 R] >>",
+			"<< /Type /Page /Parent 4 0 R >>",
+			"<< /Type /Pages /Count 0 /MediaBox [0 0 100 100] /Kids [] >>"},
+		"no /Parent": {catalog,
+			"<< /Type /Pages /Count 1 /MediaBox [0 0 612 792] /Kids [3 0 R] >>",
+			"<< /Type /Page >>"},
+		"direct kid": {catalog,
+			"<< /Type /Pages /Count 1 /MediaBox [0 0 612 792] /Kids [<< /Type /Page /Parent 2 0 R >>] >>"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Parse(pdfpagestest.Build(objects...)); err == nil {
+				t.Fatal("expected error")
+			}
+		})
+	}
+}
+
+// Each object stream is decoded once and kept, so the number of distinct
+// streams the walk may touch is capped.
+func TestParseObjectStreamBudget(t *testing.T) {
+	pages := mustParse(t, fixture(t, "objstm-64-streams.pdf"))
+	if len(pages) != maxObjectStreams {
+		t.Fatalf("got %d pages", len(pages))
+	}
+	if _, err := Parse(fixture(t, "objstm-65-streams.pdf")); !errors.Is(err, errLimit) {
+		t.Fatalf("err = %v, want %v", err, errLimit)
 	}
 }
 
