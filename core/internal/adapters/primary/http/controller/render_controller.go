@@ -33,10 +33,13 @@ func NewRenderController(
 }
 
 // RegisterRoutes registers all render routes.
-// These routes are nested under /content/templates/:templateId/versions/:versionId
-func (c *RenderController) RegisterRoutes(versions *gin.RouterGroup) {
+// These routes are nested under /content/templates/:templateId/versions/:versionId.
+// guards run after the role check and before the handler; the version
+// controller passes the ones that tie the version to the caller's workspace.
+func (c *RenderController) RegisterRoutes(versions *gin.RouterGroup, guards ...gin.HandlerFunc) {
 	// Preview route requires EDITOR+ role
-	versions.POST("/:versionId/preview", middleware.RequireEditor(), c.PreviewVersion)
+	handlers := append([]gin.HandlerFunc{middleware.RequireEditor()}, guards...)
+	versions.POST("/:versionId/preview", append(handlers, c.PreviewVersion)...)
 }
 
 // PreviewVersion generates a preview PDF for a template version.

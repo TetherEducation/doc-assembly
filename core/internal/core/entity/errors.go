@@ -225,7 +225,6 @@ var (
 	ErrInvalidPDF                      = errors.New("invalid pdf")
 	ErrInvalidPlacedField              = errors.New("invalid placed field")
 	ErrTargetTemplateRequired          = errors.New("target template ID is required for NEW_VERSION mode")
-	ErrTargetTemplateNotInWorkspace    = errors.New("target template does not belong to the destination workspace")
 	ErrScheduledTimeConflict           = errors.New("another version is already scheduled at this time")
 )
 
