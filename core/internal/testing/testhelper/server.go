@@ -323,8 +323,8 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	)
 
 	// Create controllers - Content
-	// Note: RenderController is nil for tests (no PDF renderer configured)
-	templateVersionController := controller.NewTemplateVersionController(templateVersionService, templateVersionMapper, templateMapper, nil)
+	renderController := controller.NewRenderController(templateVersionService, mockPDFRenderer)
+	templateVersionController := controller.NewTemplateVersionController(templateVersionService, templateVersionMapper, templateMapper, renderController)
 	injectableController := controller.NewContentInjectableController(
 		injectableService,
 		injectableMapper,
