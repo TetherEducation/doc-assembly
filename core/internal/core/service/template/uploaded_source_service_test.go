@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/pdfpages/pdfpagestest"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
@@ -17,9 +18,7 @@ func TestStorePDFAndPlaceFields(t *testing.T) {
 	storage := &memStorage{}
 	svc := NewUploadedSourceService(&memVersions{version: version}, &memRoles{}, sources, storage)
 
-	pdf := []byte("%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n" +
-		"2 0 obj << /Type /Pages /Count 1 /Kids [3 0 R] >> endobj\n" +
-		"3 0 obj << /Type /Page /MediaBox [0 0 200 400] >> endobj\n%%EOF")
+	pdf := pdfpagestest.Pages([2]float64{200, 400})
 	stored, err := svc.StorePDF(context.Background(), templateuc.StoreUploadedPDFCommand{TemplateID: "tpl-1", VersionID: "ver-1", PDF: pdf})
 	if err != nil {
 		t.Fatal(err)
