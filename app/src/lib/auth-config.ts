@@ -22,6 +22,8 @@ export interface AuthConfig {
     gallery?: boolean
     /** False when signers can't use the engine's own /public/doc page here. */
     publicDocLink?: boolean
+    /** The panel offers "Send a PDF" (signing.pdf_send). */
+    pdfSend?: boolean
   }
 }
 

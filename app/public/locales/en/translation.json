@@ -1709,7 +1709,8 @@
     "filterByStatus": "Filter by status",
     "allStatuses": "All statuses",
     "actions": {
-      "deprecate": "Deprecate"
+      "deprecate": "Deprecate",
+      "sendPdf": "SEND A PDF"
     },
     "detail": {
       "title": "Document Details",
@@ -1946,6 +1947,62 @@
       "previousPage": "Previous page",
       "nextPage": "Next page",
       "pageOf": "Page {{current}} of {{total}}"
+    }
+  },
+  "pdfSend": {
+    "pages": "Pages",
+    "boxCount": "{{n}} boxes",
+    "unnamedSigner": "Signer {{n}}",
+    "boxSigner": "Signer for this box",
+    "boxType": "Field type for this box",
+    "deleteBox": "Delete box",
+    "review": "Review",
+    "untitled": "Untitled",
+    "pageCount": "{{n}} pages",
+    "noBoxes": "no boxes yet",
+    "noPermission": "You need permission to send documents in this workspace.",
+    "notPdf": "Choose a PDF file.",
+    "tooLarge": "The PDF is larger than 12 MB.",
+    "sent": "Sent for signature.",
+    "sendFailed": "The document could not be sent. Please try again.",
+    "title": "Send a PDF",
+    "file": "PDF",
+    "chooseFile": "Choose a PDF (up to 12 MB)",
+    "offsetPages": "Page {{pages}} has a visible area that does not start at the corner. Print or re-save the PDF and upload it again.",
+    "tooManyPages": "The PDF has more than {{max}} pages.",
+    "documentTitle": "Document title",
+    "place": "Place a box for the selected signer",
+    "clickToPlace": "Click a page to drop a box, or drag to draw one. Esc to cancel.",
+    "send": "Send for signature",
+    "empty": "Choose a PDF to start.",
+    "unreadable": "This PDF could not be read.",
+    "password": "This PDF needs a password. Remove the password and upload it again.",
+    "signers": "Signers, in signing order",
+    "addSigner": "Add signer",
+    "dragSigner": "Drag to reorder signer {{n}}",
+    "signerName": "Signer {{n}} name",
+    "name": "Name",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeSigner": "Remove signer",
+    "signerEmail": "Signer {{n}} email",
+    "email": "Email",
+    "pageShort": "p.{{n}}",
+    "problem": {
+      "noTitle": "Give the document a title.",
+      "titleTooLong": "Shorten the title to 200 characters or fewer.",
+      "noSigners": "Add at least one signer.",
+      "signerName": "Signer {{n}} needs a name.",
+      "signerEmail": "{{name}} needs a valid email.",
+      "duplicateName": "Two signers are called {{name}}; give each a different name.",
+      "noSignature": "{{name}} has no signature box.",
+      "boxOutsidePage": "A box is outside its page; move it back onto the page."
+    },
+    "field": {
+      "signature": "Signature",
+      "date": "Date",
+      "text": "Text",
+      "initials": "Initials"
     }
   }
 }

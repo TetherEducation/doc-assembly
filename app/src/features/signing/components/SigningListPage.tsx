@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { FileUp, Plus } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SigningListToolbar } from './SigningListToolbar'
 import { SigningDocumentRow } from './SigningDocumentRow'
@@ -13,12 +13,17 @@ import {
   useSigningDocumentTypeOptions,
 } from '../hooks/useSigningDocuments'
 import { Skeleton } from '@/components/ui/skeleton'
+import { usePermission } from '@/features/auth/hooks/usePermission'
+import { useClientFeatures } from '@/lib/use-client-features'
 import type { DocumentListFilters, SigningDocumentListItem } from '../types'
 
 export function SigningListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { workspaceId } = useParams({ strict: false })
+  const { hasPermission, Permission } = usePermission()
+  // "Send a PDF" exists only where the deployment turns on signing.pdf_send.
+  const canSendPdf = useClientFeatures()?.pdfSend === true && hasPermission(Permission.DOCUMENT_CREATE)
 
   // Search with debounce
   const [searchQuery, setSearchQuery] = useState('')
@@ -138,6 +143,22 @@ export function SigningListPage() {
               {t('signing.title', 'Signing Documents')}
             </h1>
           </div>
+          <div className="flex flex-wrap gap-2">
+          {canSendPdf && (
+            <button
+              onClick={() =>
+                navigate({
+                  to: '/workspace/$workspaceId/signing/send-pdf',
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TanStack Router type limitation
+                  params: { workspaceId: workspaceId ?? '' } as any,
+                })
+              }
+              className="group flex h-12 items-center gap-2 rounded-none border border-foreground px-6 text-sm font-medium tracking-wide text-foreground transition-colors hover:bg-accent"
+            >
+              <FileUp size={20} />
+              <span>{t('signing.actions.sendPdf', 'SEND A PDF')}</span>
+            </button>
+          )}
           <button
             onClick={handleOpenCreateWizard}
             className="group flex h-12 items-center gap-2 rounded-none bg-foreground px-6 text-sm font-medium tracking-wide text-background shadow-lg shadow-muted transition-colors hover:bg-foreground/90"
@@ -147,6 +168,7 @@ export function SigningListPage() {
               {t('signing.actions.createDocument', 'CREATE DOCUMENT')}
             </span>
           </button>
+          </div>
         </div>
       </header>
 
