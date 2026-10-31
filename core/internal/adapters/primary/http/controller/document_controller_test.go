@@ -879,3 +879,155 @@ func TestDocumentController_Sandbox_BadRequestForSystemWorkspace(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &errorResp))
 	assert.Equal(t, entity.ErrSandboxNotSupported.Error(), errorResp["error"])
 }
+
+// TestDocumentController_RelatedDocumentFromAnotherWorkspace covers
+// relatedDocumentId on POST /documents and /documents/batch. Only RENEW and
+// AMEND may name a related document, and only one in the caller's workspace.
+// Another workspace's document must answer exactly as a missing one does,
+// status and body, so the field cannot be used to probe IDs, and no document
+// may be stored linked to a document in another workspace.
+func TestDocumentController_RelatedDocumentFromAnotherWorkspace(t *testing.T) {
+	env := setupDocumentEnv(t)
+	pool := testhelper.GetTestPool(t)
+
+	// Completed, so it would satisfy RENEW and AMEND but for its workspace.
+	foreignDoc := env.createDocument(t, "Related Doc In Another Workspace")
+	setDocumentStatusForDocumentController(t, foreignDoc.ID, entity.DocumentStatusCompleted)
+	const missingDocumentID = "00000000-0000-0000-0000-000000000000"
+
+	// The caller is an operator of a second workspace with its own template, so
+	// its requests are valid apart from the related document.
+	otherWorkspaceID := testhelper.CreateTestWorkspace(t, pool, &env.tenantID, "Other Workspace", entity.WorkspaceTypeClient)
+	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, otherWorkspaceID) })
+	testhelper.CreateTestWorkspaceMember(t, pool, otherWorkspaceID, env.operator.ID, entity.WorkspaceRoleOperator, nil)
+	fromOtherWorkspace := env.client.WithAuth(env.operator.BearerHeader).WithWorkspaceID(otherWorkspaceID)
+
+	templateID := testhelper.CreateTestTemplate(t, pool, otherWorkspaceID, "Other Workspace Template", nil)
+	t.Cleanup(func() { testhelper.CleanupTemplate(t, pool, templateID) })
+	testhelper.SetTemplateDocumentType(t, pool, templateID, env.docTypeID)
+	versionID := testhelper.CreateTestTemplateVersion(t, pool, templateID, 1, "v1.0", entity.VersionStatusDraft)
+	t.Cleanup(func() { testhelper.CleanupTemplateVersion(t, pool, versionID) })
+	testhelper.PublishTestVersion(t, pool, versionID)
+	role1 := testhelper.CreateTestSignerRole(t, pool, versionID, "Signer", "__sig_rel_1__", 1)
+	t.Cleanup(func() { testhelper.CleanupSignerRole(t, pool, role1) })
+	role2 := testhelper.CreateTestSignerRole(t, pool, versionID, "Co-Signer", "__sig_rel_2__", 2)
+	t.Cleanup(func() { testhelper.CleanupSignerRole(t, pool, role2) })
+
+	// relatedReq builds a request for the second workspace. An empty
+	// operationType or relatedDocumentID leaves that field out.
+	relatedReq := func(title, operationType, relatedDocumentID string) dto.CreateDocumentRequest {
+		req := env.createDocumentReq(title)
+		req.TemplateVersionID = versionID
+		req.Recipients[0].RoleID = role1
+		req.Recipients[1].RoleID = role2
+		if operationType != "" {
+			req.OperationType = &operationType
+		}
+		if relatedDocumentID != "" {
+			req.RelatedDocumentID = &relatedDocumentID
+		}
+		return req
+	}
+
+	// create posts one document from the second workspace and removes it
+	// afterwards if it was created.
+	create := func(t *testing.T, req dto.CreateDocumentRequest) (int, string) {
+		t.Helper()
+		resp, body := fromOtherWorkspace.POST("/api/v1/documents", req)
+		if resp.StatusCode == http.StatusCreated {
+			var doc entity.DocumentWithRecipients
+			require.NoError(t, json.Unmarshal(body, &doc))
+			t.Cleanup(func() { testhelper.CleanupDocument(t, pool, doc.ID) })
+		}
+		return resp.StatusCode, string(body)
+	}
+
+	// storedLinks counts the documents stored with the foreign document as
+	// their related document.
+	storedLinks := func(t *testing.T) int {
+		t.Helper()
+		var n int
+		require.NoError(t, pool.QueryRow(context.Background(),
+			`SELECT count(*) FROM execution.documents WHERE related_document_id = $1`, foreignDoc.ID,
+		).Scan(&n))
+		return n
+	}
+
+	// A completed document in the caller's own workspace.
+	status, body := create(t, relatedReq("Own Related Doc", "", ""))
+	require.Equal(t, http.StatusCreated, status, body)
+	var ownDoc entity.DocumentWithRecipients
+	require.NoError(t, json.Unmarshal([]byte(body), &ownDoc))
+	setDocumentStatusForDocumentController(t, ownDoc.ID, entity.DocumentStatusCompleted)
+
+	t.Run("outside RENEW and AMEND the field is refused whatever it names", func(t *testing.T) {
+		for _, operationType := range []string{"", "CREATE", "CANCEL", "PREVIEW"} {
+			ownStatus, ownBody := create(t, relatedReq("Related "+operationType, operationType, ownDoc.ID))
+			assert.Equal(t, http.StatusBadRequest, ownStatus, "operationType %q naming the caller's own document: %s", operationType, ownBody)
+
+			for _, relatedID := range []string{foreignDoc.ID, missingDocumentID, "not-a-uuid"} {
+				status, body := create(t, relatedReq("Related "+operationType, operationType, relatedID))
+				assert.Equal(t, ownStatus, status, "operationType %q naming %s: status differs: %s", operationType, relatedID, body)
+				assert.Equal(t, ownBody, body, "operationType %q naming %s: body differs", operationType, relatedID)
+			}
+		}
+		assert.Zero(t, storedLinks(t), "a document was stored linked to another workspace's document")
+	})
+
+	t.Run("RENEW and AMEND answer another workspace's document as a missing one", func(t *testing.T) {
+		for _, operationType := range []string{"RENEW", "AMEND"} {
+			missingStatus, missingBody := create(t, relatedReq(operationType+" Missing", operationType, missingDocumentID))
+			assert.Equal(t, http.StatusNotFound, missingStatus, "%s of a missing document: %s", operationType, missingBody)
+
+			for _, relatedID := range []string{foreignDoc.ID, "not-a-uuid"} {
+				status, body := create(t, relatedReq(operationType+" Foreign", operationType, relatedID))
+				assert.Equal(t, missingStatus, status, "%s naming %s: status differs from a missing document's: %s", operationType, relatedID, body)
+				assert.Equal(t, missingBody, body, "%s naming %s: body differs from a missing document's", operationType, relatedID)
+			}
+		}
+		assert.Zero(t, storedLinks(t), "a document was stored linked to another workspace's document")
+	})
+
+	t.Run("the batch route answers each document the same way", func(t *testing.T) {
+		// Pairs: another workspace's document, then a missing one.
+		var docs []dto.CreateDocumentRequest
+		for _, operationType := range []string{"", "RENEW", "AMEND"} {
+			for _, relatedID := range []string{foreignDoc.ID, missingDocumentID} {
+				docs = append(docs, relatedReq("Batch Related "+operationType, operationType, relatedID))
+			}
+		}
+
+		resp, body := fromOtherWorkspace.POST("/api/v1/documents/batch", dto.BatchCreateDocumentRequest{Documents: docs})
+		require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+		var batchResp dto.BatchCreateDocumentResponse
+		require.NoError(t, json.Unmarshal(body, &batchResp))
+		require.Len(t, batchResp.Results, len(docs))
+		for _, r := range batchResp.Results {
+			if r.Success && r.Document != nil {
+				t.Cleanup(func() { testhelper.CleanupDocument(t, pool, r.Document.ID) })
+			}
+		}
+
+		for i := 0; i < len(batchResp.Results); i += 2 {
+			foreign, missing := batchResp.Results[i], batchResp.Results[i+1]
+			assert.False(t, foreign.Success, "batch document %d naming another workspace's document was created", i)
+			assert.Equal(t, missing.Success, foreign.Success, "batch document %d: outcome differs from a missing document's", i)
+			assert.Equal(t, missing.Error, foreign.Error, "batch document %d: error differs from a missing document's", i)
+		}
+		assert.Zero(t, storedLinks(t), "a document was stored linked to another workspace's document")
+	})
+
+	t.Run("RENEW and AMEND still accept a document in the caller's workspace", func(t *testing.T) {
+		for _, operationType := range []string{"RENEW", "AMEND"} {
+			status, body := create(t, relatedReq(operationType+" Own", operationType, ownDoc.ID))
+			require.Equal(t, http.StatusCreated, status, body)
+
+			var doc entity.DocumentWithRecipients
+			require.NoError(t, json.Unmarshal([]byte(body), &doc))
+			assert.Equal(t, entity.OperationType(operationType), doc.OperationType)
+			require.NotNil(t, doc.RelatedDocumentID)
+			assert.Equal(t, ownDoc.ID, *doc.RelatedDocumentID)
+		}
+	})
+}

@@ -233,7 +233,9 @@ func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd docu
 	return version, roleMap, nil
 }
 
-// validateOperationType validates the operation type and related document for RENEW/AMEND.
+// validateOperationType validates the operation type and the related document.
+// Only RENEW and AMEND may name a related document, and it must belong to the
+// caller's workspace (see findRelatedDocument).
 func (s *DocumentService) validateOperationType(ctx context.Context, cmd documentuc.CreateDocumentCommand) error {
 	opType := cmd.OperationType
 	if opType == "" {
@@ -244,11 +246,13 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 		return entity.ErrInvalidOperationType
 	}
 
-	if opType == entity.OperationCreate {
-		return nil
-	}
-
 	if opType != entity.OperationRenew && opType != entity.OperationAmend {
+		// These operations have no use for a related document. Stored
+		// unchecked, it would link this document to any document, in any
+		// workspace, whose ID the caller supplies.
+		if cmd.RelatedDocumentID != nil {
+			return entity.ErrRelatedDocumentNotAllowed
+		}
 		return nil
 	}
 
@@ -256,13 +260,9 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 		return entity.ErrRelatedDocumentRequired
 	}
 
-	relatedDoc, err := s.documentRepo.FindByID(ctx, *cmd.RelatedDocumentID)
+	relatedDoc, err := s.findRelatedDocument(ctx, cmd.WorkspaceID, *cmd.RelatedDocumentID)
 	if err != nil {
-		return fmt.Errorf("finding related document: %w", err)
-	}
-
-	if relatedDoc.WorkspaceID != cmd.WorkspaceID {
-		return entity.ErrRelatedDocumentSameWorkspace
+		return err
 	}
 
 	switch opType {
@@ -277,6 +277,29 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 	}
 
 	return nil
+}
+
+// findRelatedDocument loads the document a RENEW or AMEND names. Document
+// lookups select by ID alone, so a document in another workspace answers
+// ErrRelatedDocumentNotFound, the same as a missing document or an ID that is
+// not a UUID: any other answer would confirm that the ID exists elsewhere.
+func (s *DocumentService) findRelatedDocument(ctx context.Context, workspaceID, documentID string) (*entity.Document, error) {
+	if _, err := uuid.Parse(documentID); err != nil {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if errors.Is(err, entity.ErrDocumentNotFound) {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("finding related document: %w", err)
+	}
+	if doc.WorkspaceID != workspaceID {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+
+	return doc, nil
 }
 
 // createDocument creates and persists the document entity.
