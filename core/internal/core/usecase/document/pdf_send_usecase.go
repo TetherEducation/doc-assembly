@@ -15,6 +15,9 @@ type SendPDFCommand struct {
 	Title   string
 	PDF     []byte
 	Signers []PDFSigner
+	// SigningEmail is an optional subject and message for the signing
+	// provider's invitation email, as in CreateDocumentCommand.
+	SigningEmail *entity.SigningEmail
 }
 
 // PDFSigner is one signer of an uploaded PDF and the boxes they fill.
