@@ -1709,7 +1709,8 @@
     "filterByStatus": "Filtrar por estado",
     "allStatuses": "Todos los estados",
     "actions": {
-      "deprecate": "Deprecar"
+      "deprecate": "Deprecar",
+      "sendPdf": "ENVIAR UN PDF"
     },
     "detail": {
       "title": "Detalles del Documento",
@@ -1946,6 +1947,62 @@
       "previousPage": "Página anterior",
       "nextPage": "Página siguiente",
       "pageOf": "Página {{current}} de {{total}}"
+    }
+  },
+  "pdfSend": {
+    "pages": "Páginas",
+    "boxCount": "{{n}} campos",
+    "unnamedSigner": "Firmante {{n}}",
+    "boxSigner": "Firmante de este campo",
+    "boxType": "Tipo de campo",
+    "deleteBox": "Eliminar campo",
+    "review": "Revisión",
+    "untitled": "Sin título",
+    "pageCount": "{{n}} páginas",
+    "noBoxes": "aún sin campos",
+    "noPermission": "Necesitas permiso para enviar documentos en este espacio de trabajo.",
+    "notPdf": "Elige un archivo PDF.",
+    "tooLarge": "El PDF pesa más de 12 MB.",
+    "sent": "Enviado a firmar.",
+    "sendFailed": "No se pudo enviar el documento. Inténtalo de nuevo.",
+    "title": "Enviar un PDF",
+    "file": "PDF",
+    "chooseFile": "Elige un PDF (hasta 12 MB)",
+    "offsetPages": "El área visible de la página {{pages}} no empieza en la esquina. Imprime o vuelve a guardar el PDF y súbelo de nuevo.",
+    "tooManyPages": "El PDF tiene más de {{max}} páginas.",
+    "documentTitle": "Título del documento",
+    "place": "Coloca un campo para el firmante seleccionado",
+    "clickToPlace": "Haz clic en una página para soltar un campo, o arrastra para dibujarlo. Esc para cancelar.",
+    "send": "Enviar a firmar",
+    "empty": "Elige un PDF para empezar.",
+    "unreadable": "No se pudo leer este PDF.",
+    "password": "Este PDF tiene contraseña. Quítala y vuelve a subirlo.",
+    "signers": "Firmantes, en orden de firma",
+    "addSigner": "Agregar firmante",
+    "dragSigner": "Arrastra para reordenar al firmante {{n}}",
+    "signerName": "Nombre del firmante {{n}}",
+    "name": "Nombre",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "removeSigner": "Quitar firmante",
+    "signerEmail": "Correo del firmante {{n}}",
+    "email": "Correo",
+    "pageShort": "p.{{n}}",
+    "problem": {
+      "noTitle": "Ponle un título al documento.",
+      "titleTooLong": "Acorta el título a 200 caracteres o menos.",
+      "noSigners": "Agrega al menos un firmante.",
+      "signerName": "El firmante {{n}} necesita un nombre.",
+      "signerEmail": "{{name}} necesita un correo válido.",
+      "duplicateName": "Hay dos firmantes llamados {{name}}; ponle a cada uno un nombre distinto.",
+      "noSignature": "{{name}} no tiene campo de firma.",
+      "boxOutsidePage": "Un campo está fuera de su página; muévelo de vuelta a la página."
+    },
+    "field": {
+      "signature": "Firma",
+      "date": "Fecha",
+      "text": "Texto",
+      "initials": "Iniciales"
     }
   }
 }
