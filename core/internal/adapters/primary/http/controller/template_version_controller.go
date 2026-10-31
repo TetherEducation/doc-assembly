@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
@@ -34,36 +37,69 @@ func NewTemplateVersionController(
 	}
 }
 
+// versionInTemplate aborts a request whose :versionId is not a version of the
+// :templateId in its path. Version lookups select by ID alone, so without this
+// a route under one of the caller's own templates could reach a version of any
+// other template, in any workspace. A mismatch answers 404, the same as a
+// missing version.
+func (c *TemplateVersionController) versionInTemplate(ctx *gin.Context) {
+	versionID := ctx.Param("versionId")
+	if _, err := uuid.Parse(versionID); err != nil {
+		HandleError(ctx, entity.ErrVersionNotFound)
+		ctx.Abort()
+		return
+	}
+
+	version, err := c.versionUC.GetVersion(ctx.Request.Context(), versionID)
+	if errors.Is(err, entity.ErrVersionNotFound) || (err == nil && version.TemplateID != ctx.Param("templateId")) {
+		HandleError(ctx, entity.ErrVersionNotFound)
+		ctx.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
 // RegisterRoutes registers all template version routes.
-// These routes are nested under /content/templates/:templateId/versions
-func (c *TemplateVersionController) RegisterRoutes(templates *gin.RouterGroup) {
+// These routes are nested under /content/templates/:templateId/versions.
+// templateInWorkspace (ContentTemplateController's) ties :templateId to the
+// caller's workspace and versionInTemplate ties :versionId to that template;
+// both run after the role check. Promote is the exception: it runs in
+// production on a template of the workspace's sandbox, so it gets only
+// versionInTemplate and PromoteVersion checks the source template's workspace.
+func (c *TemplateVersionController) RegisterRoutes(templates *gin.RouterGroup, templateInWorkspace gin.HandlerFunc) {
 	versions := templates.Group("/:templateId/versions")
 	{
 		// Version CRUD
-		versions.GET("", c.ListVersions)                                                         // VIEWER+
-		versions.POST("", middleware.RequireEditor(), c.CreateVersion)                           // EDITOR+
-		versions.POST("/from-existing", middleware.RequireEditor(), c.CreateVersionFromExisting) // EDITOR+
-		versions.GET("/:versionId", c.GetVersion)                                                // VIEWER+
-		versions.PUT("/:versionId", middleware.RequireEditor(), c.UpdateVersion)                 // EDITOR+
-		versions.DELETE("/:versionId", middleware.RequireAdmin(), c.DeleteVersion)               // ADMIN+
+		versions.GET("", templateInWorkspace, c.ListVersions)                                                         // VIEWER+
+		versions.POST("", middleware.RequireEditor(), templateInWorkspace, c.CreateVersion)                           // EDITOR+
+		versions.POST("/from-existing", middleware.RequireEditor(), templateInWorkspace, c.CreateVersionFromExisting) // EDITOR+
+		versions.GET("/:versionId", templateInWorkspace, c.versionInTemplate, c.GetVersion)                           // VIEWER+
+		versions.PUT("/:versionId", middleware.RequireEditor(), templateInWorkspace, c.versionInTemplate, c.UpdateVersion)
+		versions.DELETE("/:versionId", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.DeleteVersion)
 
 		// Lifecycle actions - ADMIN+
-		versions.POST("/:versionId/publish", middleware.RequireAdmin(), c.PublishVersion)
-		versions.POST("/:versionId/archive", middleware.RequireAdmin(), c.ArchiveVersion)
-		versions.POST("/:versionId/schedule-publish", middleware.RequireAdmin(), c.SchedulePublish)
-		versions.POST("/:versionId/schedule-archive", middleware.RequireAdmin(), c.ScheduleArchive)
-		versions.DELETE("/:versionId/schedule", middleware.RequireAdmin(), c.CancelSchedule)
+		versions.POST("/:versionId/publish", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.PublishVersion)
+		versions.POST("/:versionId/archive", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.ArchiveVersion)
+		versions.POST("/:versionId/schedule-publish", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.SchedulePublish)
+		versions.POST("/:versionId/schedule-archive", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.ScheduleArchive)
+		versions.DELETE("/:versionId/schedule", middleware.RequireAdmin(), templateInWorkspace, c.versionInTemplate, c.CancelSchedule)
 
 		// Injectables - EDITOR+
-		versions.POST("/:versionId/injectables", middleware.RequireEditor(), c.AddInjectable)
-		versions.DELETE("/:versionId/injectables/:injectableId", middleware.RequireEditor(), c.RemoveInjectable)
+		versions.POST("/:versionId/injectables", middleware.RequireEditor(), templateInWorkspace, c.versionInTemplate, c.AddInjectable)
+		versions.DELETE("/:versionId/injectables/:injectableId", middleware.RequireEditor(), templateInWorkspace, c.versionInTemplate, c.RemoveInjectable)
 
 		// Promotion - EDITOR+
-		versions.POST("/:versionId/promote", middleware.RequireEditor(), c.PromoteVersion)
+		versions.POST("/:versionId/promote", middleware.RequireEditor(), c.versionInTemplate, c.PromoteVersion)
 
 		// Render routes - EDITOR+ (delegates to RenderController)
 		if c.renderController != nil {
-			c.renderController.RegisterRoutes(versions)
+			c.renderController.RegisterRoutes(versions, templateInWorkspace, c.versionInTemplate)
 		}
 	}
 }
@@ -140,6 +176,7 @@ func (c *TemplateVersionController) CreateVersion(ctx *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/content/templates/{templateId}/versions/from-existing [post]
 func (c *TemplateVersionController) CreateVersionFromExisting(ctx *gin.Context) {
+	templateID := ctx.Param("templateId")
 	userID, _ := middleware.GetInternalUserID(ctx)
 
 	var req dto.CreateVersionFromExistingRequest
@@ -150,6 +187,7 @@ func (c *TemplateVersionController) CreateVersionFromExisting(ctx *gin.Context) 
 
 	version, err := c.versionUC.CreateVersionFromExisting(
 		ctx.Request.Context(),
+		templateID,
 		req.SourceVersionID,
 		req.Name,
 		req.Description,
@@ -441,9 +479,10 @@ func (c *TemplateVersionController) AddInjectable(ctx *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/content/templates/{templateId}/versions/{versionId}/injectables/{injectableId} [delete]
 func (c *TemplateVersionController) RemoveInjectable(ctx *gin.Context) {
+	versionID := ctx.Param("versionId")
 	injectableID := ctx.Param("injectableId")
 
-	if err := c.versionUC.RemoveInjectable(ctx.Request.Context(), injectableID); err != nil {
+	if err := c.versionUC.RemoveInjectable(ctx.Request.Context(), versionID, injectableID); err != nil {
 		HandleError(ctx, err)
 		return
 	}

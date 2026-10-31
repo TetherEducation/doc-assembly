@@ -222,7 +222,6 @@ var (
 	ErrMissingRequiredContent          = errors.New("content structure is required for publishing")
 	ErrVersionDoesNotBelongToTemplate  = errors.New("version does not belong to the specified template")
 	ErrTargetTemplateRequired          = errors.New("target template ID is required for NEW_VERSION mode")
-	ErrTargetTemplateNotInWorkspace    = errors.New("target template does not belong to the destination workspace")
 	ErrScheduledTimeConflict           = errors.New("another version is already scheduled at this time")
 )
 
