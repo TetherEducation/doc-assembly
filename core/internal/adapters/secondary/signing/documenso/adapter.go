@@ -1283,11 +1283,33 @@ func (a *Adapter) ParseWebhook(ctx context.Context, req *port.ParseWebhookReques
 	event.DocumentStatus = mapping.DocumentStatus
 	event.RecipientStatus = mapping.RecipientStatus
 
-	// Extract the recipient who signed from the webhook payload
+	// Every recipient's state, and the recipient the event is about. A
+	// webhook for signer 2 lists signer 1 as SIGNED too, so the event is
+	// credited to the recipient who signed last, not the first one listed.
+	var latest *time.Time
 	for _, r := range document.Recipients {
-		if r.SigningStatus == "SIGNED" && r.SignedAt != nil {
-			event.ProviderRecipientID = strconv.Itoa(r.ID)
-			break
+		state := port.WebhookRecipientState{
+			ProviderRecipientID: strconv.Itoa(r.ID),
+			Signed:              r.SigningStatus == "SIGNED",
+		}
+		if r.SignedAt != nil {
+			if t, err := time.Parse(time.RFC3339, *r.SignedAt); err == nil {
+				utc := t.UTC()
+				state.SignedAt = &utc
+			}
+		}
+		event.Recipients = append(event.Recipients, state)
+
+		if !state.Signed || r.SignedAt == nil {
+			continue
+		}
+		switch {
+		case state.SignedAt != nil && (latest == nil || state.SignedAt.After(*latest)):
+			latest = state.SignedAt
+			event.ProviderRecipientID = state.ProviderRecipientID
+		case state.SignedAt == nil && latest == nil && event.ProviderRecipientID == "":
+			// An unreadable time: credit the first signer, as before.
+			event.ProviderRecipientID = state.ProviderRecipientID
 		}
 	}
 

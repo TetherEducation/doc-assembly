@@ -310,8 +310,22 @@ type WebhookEvent struct {
 	ProviderRecipientID    string
 	DocumentStatus         *entity.SigningAttemptStatus
 	RecipientStatus        *entity.RecipientStatus
-	Timestamp              time.Time
-	RawPayload             []byte
+	// Recipients is every recipient as the provider reports them in this
+	// event. A later signer's webhook still lists the earlier signers, so
+	// each signer's own signing time can be recorded whichever event brings
+	// it. Empty when the provider doesn't report recipients.
+	Recipients []WebhookRecipientState
+	Timestamp  time.Time
+	RawPayload []byte
+}
+
+// WebhookRecipientState is one recipient as a provider webhook reports it.
+type WebhookRecipientState struct {
+	ProviderRecipientID string
+	Signed              bool
+	// SignedAt is when the provider says the recipient signed; nil when it
+	// doesn't say.
+	SignedAt *time.Time
 }
 
 // WebhookHandler defines the interface for processing webhook events.
