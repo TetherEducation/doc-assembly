@@ -1964,7 +1964,7 @@
     "notPdf": "Choose a PDF file.",
     "tooLarge": "The PDF is larger than 12 MB.",
     "sent": "Sent for signature.",
-    "sendFailed": "The document could not be sent. Please try again.",
+    "sendMaybeSent": "The send may have gone through. Check the Signing list before trying again, so it is not sent twice.",
     "title": "Send a PDF",
     "file": "PDF",
     "chooseFile": "Choose a PDF (up to 12 MB)",
@@ -1994,6 +1994,7 @@
       "noSigners": "Add at least one signer.",
       "signerName": "Signer {{n}} needs a name.",
       "signerEmail": "{{name}} needs a valid email.",
+      "nameTooLong": "Shorten the name of signer {{n}}.",
       "duplicateName": "Two signers are called {{name}}; give each a different name.",
       "noSignature": "{{name}} has no signature box.",
       "boxOutsidePage": "A box is outside its page; move it back onto the page."

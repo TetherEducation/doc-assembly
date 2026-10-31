@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import type { Problem, Signer } from './model'
 
 type T = (key: string, fallback: string, options?: Record<string, unknown>) => string
@@ -20,6 +21,8 @@ export function describeProblem(t: T, problem: Problem, signers: Signer[]): stri
       return t('pdfSend.problem.signerName', 'Signer {{n}} needs a name.', { n: problem.signerIndex + 1 })
     case 'signer-email':
       return t('pdfSend.problem.signerEmail', '{{name}} needs a valid email.', { name: signerLabel(t, signers, problem.signerIndex) })
+    case 'name-too-long':
+      return t('pdfSend.problem.nameTooLong', 'Shorten the name of signer {{n}}.', { n: problem.signerIndex + 1 })
     case 'duplicate-name':
       return t('pdfSend.problem.duplicateName', 'Two signers are called {{name}}; give each a different name.', {
         name: signerLabel(t, signers, problem.signerIndex),
@@ -29,4 +32,24 @@ export function describeProblem(t: T, problem: Problem, signers: Signer[]): stri
     case 'box-outside-page':
       return t('pdfSend.problem.boxOutsidePage', 'A box is outside its page; move it back onto the page.')
   }
+}
+
+/**
+ * What to tell the sender when Send fails. A 4xx means the server refused the
+ * request before creating anything, so its reason is shown and retrying is safe.
+ * Anything else (timeout, network error, 5xx) may have failed after the document
+ * was created and the signers emailed, so a retry could send it twice.
+ */
+export function describeSendError(t: T, error: unknown): string {
+  if (isAxiosError(error)) {
+    const status = error.response?.status
+    const reason = error.response?.data?.error
+    if (status !== undefined && status >= 400 && status < 500 && typeof reason === 'string') {
+      return reason
+    }
+  }
+  return t(
+    'pdfSend.sendMaybeSent',
+    'The send may have gone through. Check the Signing list before trying again, so it is not sent twice.'
+  )
 }

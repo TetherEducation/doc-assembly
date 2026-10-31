@@ -41,8 +41,18 @@ export interface PageSize {
 export const MAX_PDF_BYTES = 12 * 1024 * 1024
 export const MAX_TITLE_LENGTH = 200
 export const MAX_PAGES = 2000
-/** How far a box may poke out of its page before the engine refuses it. */
-const PAGE_TOLERANCE = 0.5
+/**
+ * A signer's name becomes the signer role's name (at most 100 bytes on the
+ * server) and its signature anchor (`__sig_<name>__`, plus a `role_` prefix and
+ * an order suffix when needed, also at most 100 bytes). 80 UTF-8 bytes keeps
+ * both inside the limit; an accented letter takes 2.
+ */
+export const MAX_SIGNER_NAME_BYTES = 80
+/**
+ * How far a box may poke out of its page, and how far a page's visible area may
+ * sit from (0,0), before the engine refuses it (pdfpages uses the same 0.5 pt).
+ */
+export const PAGE_TOLERANCE = 0.5
 
 /** Default box sizes in points (SPEC-2.4 §3). */
 export const DEFAULT_BOX_SIZE: Record<FieldType, { width: number; height: number }> = {
@@ -141,6 +151,7 @@ export type Problem =
   | { kind: 'signer-name'; signerIndex: number }
   | { kind: 'signer-email'; signerIndex: number }
   | { kind: 'duplicate-name'; signerIndex: number }
+  | { kind: 'name-too-long'; signerIndex: number }
   | { kind: 'no-signature'; signerIndex: number }
   | { kind: 'box-outside-page'; boxId: string }
 
@@ -160,6 +171,7 @@ export function findProblems(title: string, signers: Signer[], boxes: Box[], pag
   signers.forEach((signer, signerIndex) => {
     const name = signer.name.trim()
     if (!name) problems.push({ kind: 'signer-name', signerIndex })
+    else if (new TextEncoder().encode(name).length > MAX_SIGNER_NAME_BYTES) problems.push({ kind: 'name-too-long', signerIndex })
     else if (seen.has(name.toLowerCase())) problems.push({ kind: 'duplicate-name', signerIndex })
     if (name) seen.add(name.toLowerCase())
     if (!EMAIL.test(signer.email.trim())) problems.push({ kind: 'signer-email', signerIndex })

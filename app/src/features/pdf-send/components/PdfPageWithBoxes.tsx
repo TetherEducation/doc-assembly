@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { fieldLabel } from '../field-label'
 import {
   FIELD_TYPES,
+  PAGE_TOLERANCE,
   boxFromDrag,
   moveBox,
   pointOnPage,
@@ -152,7 +153,8 @@ export function PdfPageWithBoxes({
           const viewport = page.getViewport({ scale: 1 })
           onPageLoad(pageNumber, {
             size: { width: viewport.width, height: viewport.height },
-            offset: page.view[0] !== 0 || page.view[1] !== 0,
+            // Same tolerance as the server (pdfpages), which refuses larger offsets.
+            offset: Math.abs(page.view[0]) > PAGE_TOLERANCE || Math.abs(page.view[1]) > PAGE_TOLERANCE,
           })
         }}
       />
