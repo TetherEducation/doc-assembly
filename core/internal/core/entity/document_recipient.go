@@ -66,12 +66,19 @@ func (r *DocumentRecipient) MarkAsDelivered() error {
 
 // MarkAsSigned transitions the recipient to SIGNED status (completed signing).
 func (r *DocumentRecipient) MarkAsSigned() error {
+	return r.MarkAsSignedAt(time.Now().UTC())
+}
+
+// MarkAsSignedAt marks the recipient as signed at the given time, normally the
+// signing provider's own time for that signer.
+func (r *DocumentRecipient) MarkAsSignedAt(signedAt time.Time) error {
 	if r.Status == RecipientStatusSigned || r.Status == RecipientStatusDeclined {
 		return ErrInvalidRecipientStatusTransition
 	}
 	now := time.Now().UTC()
+	at := signedAt.UTC()
 	r.Status = RecipientStatusSigned
-	r.SignedAt = &now
+	r.SignedAt = &at
 	r.UpdatedAt = &now
 	return nil
 }

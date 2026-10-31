@@ -633,13 +633,19 @@ func (s *DocumentService) HandleWebhookEvent(ctx context.Context, event *port.We
 		slog.String("provider_document_id", event.ProviderDocumentID),
 	)
 
+	providerSignedAt := webhookSignedTimes(event)
+	if len(providerSignedAt) > 0 {
+		if err := s.recordProviderSignatures(ctx, attempt.ID, providerSignedAt); err != nil {
+			slog.WarnContext(ctx, "failed to record signers' signing times from webhook", slog.String("error", err.Error()))
+		}
+	}
 	if event.ProviderRecipientID != "" && event.RecipientStatus != nil {
-		if err := s.updateAttemptRecipientFromWebhook(ctx, attempt.ID, event.ProviderRecipientID, *event.RecipientStatus); err != nil {
+		if err := s.updateAttemptRecipientFromWebhook(ctx, attempt.ID, event.ProviderRecipientID, *event.RecipientStatus, providerSignedAt); err != nil {
 			slog.WarnContext(ctx, "failed to update attempt recipient from webhook", slog.String("error", err.Error()))
 		}
 	}
 	if event.DocumentStatus != nil && *event.DocumentStatus == entity.SigningAttemptStatusCompleted {
-		if err := s.markAttemptRecipientsSigned(ctx, attempt.ID); err != nil {
+		if err := s.markAttemptRecipientsSigned(ctx, attempt.ID, providerSignedAt); err != nil {
 			return fmt.Errorf("marking completed attempt recipients signed: %w", err)
 		}
 	}
@@ -680,7 +686,49 @@ func (s *DocumentService) findAttemptForWebhook(ctx context.Context, event *port
 	return nil, entity.ErrRecordNotFound
 }
 
-func (s *DocumentService) updateAttemptRecipientFromWebhook(ctx context.Context, attemptID, providerRecipientID string, status entity.RecipientStatus) error {
+// webhookSignedTimes maps each recipient the provider reports as signed, with
+// its own signing time, by provider recipient ID.
+func webhookSignedTimes(event *port.WebhookEvent) map[string]time.Time {
+	times := make(map[string]time.Time, len(event.Recipients))
+	for _, r := range event.Recipients {
+		if r.Signed && r.SignedAt != nil && r.ProviderRecipientID != "" {
+			times[r.ProviderRecipientID] = r.SignedAt.UTC()
+		}
+	}
+	return times
+}
+
+// recordProviderSignatures marks every recipient the provider reports as
+// signed, on the attempt and on the document recipient the panel shows, at
+// the provider's time for that signer. Each signer's time is recorded as soon
+// as a webhook reports it, not only at completion, and a later signer's
+// webhook can't stamp an earlier signer with its own time.
+func (s *DocumentService) recordProviderSignatures(ctx context.Context, attemptID string, signedAt map[string]time.Time) error {
+	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
+	if err != nil {
+		return err
+	}
+	for _, recipient := range recipients {
+		if recipient.ProviderRecipientID == nil {
+			continue
+		}
+		at, ok := signedAt[*recipient.ProviderRecipientID]
+		if !ok {
+			continue
+		}
+		if err := s.markAttemptRecipientSigned(ctx, recipient, at, true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *DocumentService) updateAttemptRecipientFromWebhook(
+	ctx context.Context,
+	attemptID, providerRecipientID string,
+	status entity.RecipientStatus,
+	providerSignedAt map[string]time.Time,
+) error {
 	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
 	if err != nil {
 		return err
@@ -689,34 +737,57 @@ func (s *DocumentService) updateAttemptRecipientFromWebhook(ctx context.Context,
 		if recipient.ProviderRecipientID == nil || *recipient.ProviderRecipientID != providerRecipientID {
 			continue
 		}
-		recipient.Status = status.Normalize()
-		if recipient.Status == entity.RecipientStatusSigned {
-			now := time.Now().UTC()
-			recipient.SignedAt = &now
+		if status.Normalize() == entity.RecipientStatusSigned {
+			// Without the provider's time, fall back to now.
+			at, fromProvider := providerSignedAt[providerRecipientID]
+			if !fromProvider {
+				at = time.Now().UTC()
+			}
+			return s.markAttemptRecipientSigned(ctx, recipient, at, fromProvider)
 		}
+		recipient.Status = status.Normalize()
 		return s.attemptRepo.UpdateRecipient(ctx, recipient)
 	}
 	return entity.ErrRecordNotFound
 }
 
-func (s *DocumentService) markAttemptRecipientsSigned(ctx context.Context, attemptID string) error {
+// markAttemptRecipientsSigned marks every recipient of a completed attempt as
+// signed. Times the provider gave win; a recipient already signed keeps its
+// time; only a recipient with neither gets the completion time.
+func (s *DocumentService) markAttemptRecipientsSigned(ctx context.Context, attemptID string, providerSignedAt map[string]time.Time) error {
 	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
 	if err != nil {
 		return err
 	}
 	now := time.Now().UTC()
 	for _, recipient := range recipients {
-		if err := s.markAttemptRecipientSigned(ctx, recipient, now); err != nil {
+		at, fromProvider := now, false
+		if recipient.ProviderRecipientID != nil {
+			if t, ok := providerSignedAt[*recipient.ProviderRecipientID]; ok {
+				at, fromProvider = t, true
+			}
+		}
+		if !fromProvider && recipient.SignedAt != nil {
+			at = *recipient.SignedAt
+		}
+		if err := s.markAttemptRecipientSigned(ctx, recipient, at, fromProvider); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipient *entity.SigningAttemptRecipient, signedAt time.Time) error {
-	if recipient.Status != entity.RecipientStatusSigned {
+// markAttemptRecipientSigned marks an attempt recipient and its document
+// recipient as signed at signedAt. A recipient already signed keeps its time
+// unless fromProvider: the provider's time replaces a time the engine guessed
+// (the moment a webhook arrived) before the provider's was known.
+func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipient *entity.SigningAttemptRecipient, signedAt time.Time, fromProvider bool) error {
+	alreadySigned := recipient.Status == entity.RecipientStatusSigned
+	timeChanges := recipient.SignedAt == nil || !recipient.SignedAt.Equal(signedAt)
+	if !alreadySigned || (fromProvider && timeChanges) {
 		recipient.Status = entity.RecipientStatusSigned
-		recipient.SignedAt = &signedAt
+		at := signedAt
+		recipient.SignedAt = &at
 		if err := s.attemptRepo.UpdateRecipient(ctx, recipient); err != nil {
 			return err
 		}
@@ -724,18 +795,27 @@ func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipi
 	if recipient.DocumentRecipientID == nil {
 		return nil
 	}
-	return s.markDocumentRecipientSigned(ctx, *recipient.DocumentRecipientID)
+	docAt := signedAt
+	if recipient.SignedAt != nil {
+		docAt = *recipient.SignedAt
+	}
+	return s.markDocumentRecipientSigned(ctx, *recipient.DocumentRecipientID, docAt, fromProvider)
 }
 
-func (s *DocumentService) markDocumentRecipientSigned(ctx context.Context, recipientID string) error {
+func (s *DocumentService) markDocumentRecipientSigned(ctx context.Context, recipientID string, signedAt time.Time, fromProvider bool) error {
 	recipient, err := s.recipientRepo.FindByID(ctx, recipientID)
 	if err != nil {
 		return err
 	}
 	if recipient.Status == entity.RecipientStatusSigned {
-		return nil
+		if !fromProvider || (recipient.SignedAt != nil && recipient.SignedAt.Equal(signedAt)) {
+			return nil
+		}
+		at := signedAt.UTC()
+		recipient.SignedAt = &at
+		return s.recipientRepo.Update(ctx, recipient)
 	}
-	if err := recipient.MarkAsSigned(); err != nil {
+	if err := recipient.MarkAsSignedAt(signedAt); err != nil {
 		return err
 	}
 	return s.recipientRepo.Update(ctx, recipient)
