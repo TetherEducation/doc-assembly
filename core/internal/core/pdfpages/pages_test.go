@@ -59,12 +59,28 @@ func TestParsePageOrderAndOrphans(t *testing.T) {
 func TestParseCropBox(t *testing.T) {
 	pdf := pdfpagestest.Build(catalog,
 		"<< /Type /Pages /Count 3 /Kids [3 0 R 4 0 R 5 0 R] >>",
-		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /CropBox [36 36 559 756] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /CropBox [0 0 523 720] >>",
 		// A CropBox larger than the MediaBox: Documenso uses the MediaBox.
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /CropBox [0 0 700 900] >>",
 		// Corners may come in any order.
 		"<< /Type /Page /Parent 2 0 R /MediaBox [612 792 0 0] >>")
 	assertSizes(t, mustParse(t, pdf), Size{523, 720}, Size{612, 792}, Size{612, 792})
+}
+
+// Documenso stamps from the user-space origin, so an offset visible area
+// would shift every field. Such pages are refused, not misplaced.
+func TestParseRejectsOffsetVisibleArea(t *testing.T) {
+	for name, page := range map[string]string{
+		"offset CropBox":  "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /CropBox [36 36 559 756] >>",
+		"offset MediaBox": "<< /Type /Page /Parent 2 0 R /MediaBox [18 18 630 810] >>",
+	} {
+		t.Run(name, func(t *testing.T) {
+			pdf := pdfpagestest.Build(catalog, "<< /Type /Pages /Count 1 /Kids [3 0 R] >>", page)
+			if _, err := Parse(pdf); !errors.Is(err, ErrOffsetPage) {
+				t.Fatalf("err = %v, want %v", err, ErrOffsetPage)
+			}
+		})
+	}
 }
 
 func TestParseRotation(t *testing.T) {

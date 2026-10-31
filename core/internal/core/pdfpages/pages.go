@@ -6,6 +6,9 @@
 // stamps fields: the CropBox, or the MediaBox when that is smaller, with width
 // and height swapped for pages rotated 90 or 270 degrees. Placed-field
 // percentages computed from these sizes then land where Documenso draws them.
+// Like DocuSign, sizes describe the page as the viewer sees it; a page whose
+// visible area is offset from (0, 0) is refused, because Documenso would stamp
+// its fields shifted by the offset.
 package pdfpages
 
 import (
@@ -25,6 +28,13 @@ type Size struct {
 
 // maxTreeDepth bounds the /Parent walk so a cyclic page tree cannot loop.
 const maxTreeDepth = 64
+
+// originTolerance is how far, in points, a visible area's corner may sit from
+// (0, 0) before the page is refused.
+const originTolerance = 0.5
+
+// ErrOffsetPage marks a page whose visible area does not start at (0, 0).
+var ErrOffsetPage = errors.New("the visible area of the page does not start at its corner")
 
 // Parse returns one size per page, in page order.
 func Parse(data []byte) ([]Size, error) {
@@ -92,14 +102,23 @@ func pageSize(page pdf.Value) (Size, error) {
 	if !ok {
 		return Size{}, fmt.Errorf("no readable MediaBox")
 	}
-	w, h := media.width(), media.height()
+	visible := media
 	if crop, ok := box(inherited(page, "CropBox")); ok {
-		if !(w < crop.width() || h < crop.height()) {
-			w, h = crop.width(), crop.height()
+		if !(media.width() < crop.width() || media.height() < crop.height()) {
+			visible = crop
 		}
 	}
+	w, h := visible.width(), visible.height()
 	if w <= 0 || h <= 0 {
 		return Size{}, fmt.Errorf("empty page box")
+	}
+	// Documenso stamps fields from the user-space origin, not from the corner
+	// of the visible area, so a page whose visible area is offset would get
+	// every field shifted by that offset. Refuse it rather than misplace a
+	// signature; re-saving or printing the PDF moves the corner to (0, 0).
+	if math.Abs(visible.llx) > originTolerance || math.Abs(visible.lly) > originTolerance {
+		return Size{}, fmt.Errorf("%w (it starts at %.0f, %.0f); print or re-save the PDF and upload it again",
+			ErrOffsetPage, visible.llx, visible.lly)
 	}
 	rotate := ((inherited(page, "Rotate").Int64() % 360) + 360) % 360
 	switch rotate {
