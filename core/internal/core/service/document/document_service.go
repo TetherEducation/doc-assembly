@@ -324,6 +324,12 @@ func newDocument(cmd documentuc.CreateDocumentCommand, documentTypeID string) (*
 		document.SetInjectedValues(valuesJSON)
 	}
 
+	if cmd.SigningEmail != nil {
+		if err := document.SetSigningEmail(*cmd.SigningEmail); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := document.Validate(); err != nil {
 		return nil, fmt.Errorf("validating document: %w", err)
 	}

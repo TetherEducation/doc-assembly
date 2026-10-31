@@ -132,6 +132,7 @@ func (e *SigningAttemptExecutor) RenderAttemptPDF(ctx context.Context, attemptID
 	if language != "" {
 		payload["language"] = language
 	}
+	addSigningEmail(payload, doc)
 	payloadJSON, _ := json.Marshal(payload)
 
 	attempt.Status = entity.SigningAttemptStatusReadyToSubmit
@@ -223,6 +224,10 @@ func (e *SigningAttemptExecutor) advanceCreateProviderDocument(ctx context.Conte
 		Title:          documentTitle(doc),
 		Environment:    entity.EnvironmentProd,
 		Language:       payloadString(attempt.ProviderUploadPayload, "language"),
+		Email: port.ProviderEmail{
+			Subject: payloadString(attempt.ProviderUploadPayload, "emailSubject"),
+			Message: payloadString(attempt.ProviderUploadPayload, "emailMessage"),
+		},
 	})
 	if err != nil {
 		return e.handleProviderStepError(ctx, attempt, entity.ProviderSubmitPhaseCreateProviderDocument, err)
@@ -1230,4 +1235,17 @@ func payloadString(raw json.RawMessage, key string) string {
 	}
 	s, _ := m[key].(string)
 	return s
+}
+
+// addSigningEmail puts the document's optional invitation subject and message
+// into the attempt payload, like the language, so the provider envelope created
+// in a later phase carries them. Unset fields add no key.
+func addSigningEmail(payload map[string]any, doc *entity.Document) {
+	email := doc.SigningEmail()
+	if email.Subject != "" {
+		payload["emailSubject"] = email.Subject
+	}
+	if email.Message != "" {
+		payload["emailMessage"] = email.Message
+	}
 }

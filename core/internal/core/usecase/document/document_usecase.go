@@ -18,6 +18,9 @@ type CreateDocumentCommand struct {
 	Recipients                []DocumentRecipientCommand
 	OperationType             entity.OperationType // CREATE, RENEW, or AMEND (defaults to CREATE)
 	RelatedDocumentID         *string              // Required for RENEW/AMEND operations
+	// SigningEmail is an optional subject and message for the signing
+	// provider's invitation email. Nil or empty keeps the provider's default.
+	SigningEmail *entity.SigningEmail
 }
 
 // DocumentRecipientCommand represents a recipient to be added to a document.

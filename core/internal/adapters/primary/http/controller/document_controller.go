@@ -598,6 +598,7 @@ func (c *DocumentController) CreateDocument(ctx *gin.Context) {
 		Recipients:                make([]documentuc.DocumentRecipientCommand, len(req.Recipients)),
 		OperationType:             entity.OperationCreate,
 		RelatedDocumentID:         req.RelatedDocumentID,
+		SigningEmail:              signingEmailCommand(req.SigningEmail),
 	}
 
 	if req.OperationType != nil {
@@ -656,6 +657,7 @@ func (c *DocumentController) CreateDocumentsBatch(ctx *gin.Context) {
 			Recipients:                make([]documentuc.DocumentRecipientCommand, len(docReq.Recipients)),
 			OperationType:             entity.OperationCreate,
 			RelatedDocumentID:         docReq.RelatedDocumentID,
+			SigningEmail:              signingEmailCommand(docReq.SigningEmail),
 		}
 
 		if docReq.OperationType != nil {

@@ -203,6 +203,7 @@ func (s *PDFSendService) sendOnTemplate(
 		TemplateVersionID: versionID,
 		Title:             title,
 		Recipients:        recipients,
+		SigningEmail:      cmd.SigningEmail,
 	})
 }
 
@@ -251,6 +252,12 @@ func validateSendPDF(cmd documentuc.SendPDFCommand) (string, error) {
 	}
 	if len(cmd.PDF) == 0 {
 		return "", fmt.Errorf("%w: no PDF", entity.ErrInvalidPDF)
+	}
+	// Checked before the one-off template is created, so a bad email leaves nothing behind.
+	if cmd.SigningEmail != nil {
+		if err := cmd.SigningEmail.Validate(); err != nil {
+			return "", err
+		}
 	}
 	if len(cmd.Signers) == 0 {
 		return "", fmt.Errorf("%w: at least one signer is required", entity.ErrInvalidPlacedField)
