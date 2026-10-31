@@ -137,10 +137,7 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 
 		// Every route below names one document. documentInWorkspace runs after the
 		// role check and before the handler, so the document must belong to the
-		// caller's workspace whatever the handler does with it. view-link and
-		// print-pdf are the exception: their service already checks the
-		// workspace (ReadOnlyViewService), and they are also registered outside
-		// this group when a wrapper supplies its own authentication.
+		// caller's workspace whatever the handler does with it.
 
 		// Get single document
 		docs.GET("/:documentId", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocument)
@@ -158,14 +155,18 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 		// Download signed PDF
 		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentPDF)
 
+		// view-link and print-pdf: ReadOnlyViewService checks the workspace too,
+		// but answers 403, which would confirm the ID exists in another workspace,
+		// so documentInWorkspace answers 404 first. When a wrapper supplies its
+		// own authentication these two are registered outside this group instead
+		// (registerReadOnlyViewLinkRoute), by workspace code, and keep the 403,
+		// which tells those handlers to try the next authorized code.
 		if !routeOptions.skipReadOnlyViewLink {
 			// Create public read-only view link
-			docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.CreateReadOnlyViewLink)
+			docs.POST("/:documentId/view-link", middleware.RequireViewer(), c.documentInWorkspace, c.CreateReadOnlyViewLink)
 
 			// Render the unsigned (or blank) PDF for in-person signing.
-			// Registered externally with custom auth when the read-only view
-			// link authenticator is set, mirroring view-link.
-			docs.GET("/:documentId/print-pdf", middleware.RequireViewer(), c.GetDocumentPrintPDF)
+			docs.GET("/:documentId/print-pdf", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentPrintPDF)
 		}
 
 		// Refresh document status from provider

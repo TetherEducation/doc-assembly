@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -135,6 +136,37 @@ func setDocumentStatusForDocumentController(t *testing.T, documentID string, sta
 		documentID,
 		status,
 	)
+	require.NoError(t, err)
+}
+
+// giveRecipientSigningURL attaches an active SIGNING_READY attempt to the document
+// carrying signingURL for recipientID, as if the provider had accepted the
+// submission, so GET .../signing-url has a live link to hand out.
+func giveRecipientSigningURL(t *testing.T, documentID, recipientID, signingURL string) {
+	t.Helper()
+	pool := testhelper.GetTestPool(t)
+	ctx := context.Background()
+
+	var attemptID string
+	require.NoError(t, pool.QueryRow(ctx, `
+		INSERT INTO execution.signing_attempts (document_id, sequence, status)
+		VALUES ($1, (SELECT COALESCE(MAX(sequence), 0) + 1 FROM execution.signing_attempts WHERE document_id = $1), $2)
+		RETURNING id
+	`, documentID, entity.SigningAttemptStatusSigningReady).Scan(&attemptID))
+
+	tag, err := pool.Exec(ctx, `
+		INSERT INTO execution.signing_attempt_recipients (
+			attempt_id, document_recipient_id, template_version_role_id, signer_order, email, name, signing_url
+		)
+		SELECT $1::uuid, dr.id, dr.template_version_role_id, role.signer_order, dr.email, dr.name, $3::text
+		FROM execution.document_recipients dr
+		JOIN content.template_version_signer_roles role ON role.id = dr.template_version_role_id
+		WHERE dr.id = $2::uuid
+	`, attemptID, recipientID, signingURL)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), tag.RowsAffected(), "recipient %s not found", recipientID)
+
+	_, err = pool.Exec(ctx, `UPDATE execution.documents SET active_attempt_id = $2 WHERE id = $1`, documentID, attemptID)
 	require.NoError(t, err)
 }
 
@@ -795,17 +827,27 @@ func TestDocumentController_Sandbox_ListAndCreateIsolation(t *testing.T) {
 // TestDocumentController_DocumentFromAnotherWorkspace_NotFound covers
 // documentInWorkspace: an operator who is also a member of a second workspace in
 // the same tenant cannot read or act on the first workspace's document by its ID,
-// through any route that names a document.
+// through any route that names a document. Each route answers exactly what it
+// answers for a document that does not exist, so the ID cannot be probed.
 func TestDocumentController_DocumentFromAnotherWorkspace_NotFound(t *testing.T) {
 	env := setupDocumentEnv(t)
 	pool := testhelper.GetTestPool(t)
 	doc := env.createDocument(t, "Workspace Scope Doc")
 	recipientID := doc.Recipients[0].ID
 
+	// A live signing link, so the signing-url route has something to leak: from
+	// the document's own workspace it answers 200 with the link.
+	signingURL := "https://sign.example.test/" + doc.ID
+	giveRecipientSigningURL(t, doc.ID, recipientID, signingURL)
+	resp, body := env.operatorClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + recipientID + "/signing-url")
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.Contains(t, string(body), signingURL)
+
 	otherWorkspaceID := testhelper.CreateTestWorkspace(t, pool, &env.tenantID, "Other Workspace", entity.WorkspaceTypeClient)
 	t.Cleanup(func() { testhelper.CleanupWorkspace(t, pool, otherWorkspaceID) })
 	testhelper.CreateTestWorkspaceMember(t, pool, otherWorkspaceID, env.operator.ID, entity.WorkspaceRoleOperator, nil)
 	fromOtherWorkspace := env.client.WithAuth(env.operator.BearerHeader).WithWorkspaceID(otherWorkspaceID)
+	missingDocumentID := uuid.NewString()
 
 	routes := []struct{ method, path string }{
 		{http.MethodGet, ""},
@@ -813,6 +855,8 @@ func TestDocumentController_DocumentFromAnotherWorkspace_NotFound(t *testing.T) 
 		{http.MethodGet, "/events"},
 		{http.MethodGet, "/recipients/" + recipientID + "/signing-url"},
 		{http.MethodGet, "/pdf"},
+		{http.MethodPost, "/view-link"},
+		{http.MethodGet, "/print-pdf"},
 		{http.MethodPost, "/refresh"},
 		{http.MethodPost, "/cancel"},
 		{http.MethodPost, "/deprecate"},
@@ -823,18 +867,10 @@ func TestDocumentController_DocumentFromAnotherWorkspace_NotFound(t *testing.T) 
 		t.Run(route.method+" "+route.path, func(t *testing.T) {
 			resp, body := fromOtherWorkspace.Do(route.method, "/api/v1/documents/"+doc.ID+route.path, nil)
 			assert.Equal(t, http.StatusNotFound, resp.StatusCode, string(body))
-		})
-	}
 
-	// view-link and print-pdf keep their own check in ReadOnlyViewService, which
-	// answers 403.
-	for _, route := range []struct{ method, path string }{
-		{http.MethodPost, "/view-link"},
-		{http.MethodGet, "/print-pdf"},
-	} {
-		t.Run(route.method+" "+route.path+" is refused by its own check", func(t *testing.T) {
-			resp, body := fromOtherWorkspace.Do(route.method, "/api/v1/documents/"+doc.ID+route.path, nil)
-			assert.Equal(t, http.StatusForbidden, resp.StatusCode, string(body))
+			missingResp, missingBody := fromOtherWorkspace.Do(route.method, "/api/v1/documents/"+missingDocumentID+route.path, nil)
+			assert.Equal(t, missingResp.StatusCode, resp.StatusCode, "status differs from a missing document's")
+			assert.Equal(t, string(missingBody), string(body), "body differs from a missing document's")
 		})
 	}
 
