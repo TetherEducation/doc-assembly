@@ -599,9 +599,15 @@ func TestDocumentController_GetSigningURL(t *testing.T) {
 	t.Run("no active attempt", func(t *testing.T) {
 		recipientID := doc.Recipients[0].ID
 
-		resp, body := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + recipientID + "/signing-url")
+		resp, body := env.operatorClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + recipientID + "/signing-url")
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		assert.Contains(t, string(body), "signing attempt not found")
+	})
+
+	t.Run("forbidden for viewer", func(t *testing.T) {
+		// The link lets whoever holds it sign as the recipient.
+		resp, _ := env.viewerClient().GET("/api/v1/documents/" + doc.ID + "/recipients/" + doc.Recipients[0].ID + "/signing-url")
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 }
 

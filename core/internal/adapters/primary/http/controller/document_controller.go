@@ -135,8 +135,9 @@ func (c *DocumentController) RegisterRoutes(api *gin.RouterGroup, opts ...Docume
 		// Get document events (audit trail)
 		docs.GET("/:documentId/events", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentEvents)
 
-		// Get signing URL for recipient
-		docs.GET("/:documentId/recipients/:recipientId/signing-url", middleware.RequireViewer(), c.documentInWorkspace, c.GetSigningURL)
+		// Get a recipient's provider signing link. OPERATOR, like sending: the
+		// link lets whoever holds it sign as that recipient.
+		docs.GET("/:documentId/recipients/:recipientId/signing-url", middleware.RequireOperator(), c.documentInWorkspace, c.GetSigningURL)
 
 		// Download signed PDF
 		docs.GET("/:documentId/pdf", middleware.RequireViewer(), c.documentInWorkspace, c.GetDocumentPDF)
