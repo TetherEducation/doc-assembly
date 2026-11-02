@@ -274,7 +274,7 @@ func (s *TemplateService) validateCloneSource(ctx context.Context, templateID, v
 		return nil, nil, fmt.Errorf("finding source version: %w", err)
 	}
 	if sourceVersion.TemplateID != templateID {
-		return nil, nil, entity.ErrVersionDoesNotBelongToTemplate
+		return nil, nil, s.versionOfAnotherTemplate(ctx, templateID, sourceVersion.TemplateID)
 	}
 
 	source, err := s.templateRepo.FindByIDWithDetails(ctx, templateID)
@@ -286,6 +286,25 @@ func (s *TemplateService) validateCloneSource(ctx context.Context, templateID, v
 	}
 
 	return source, sourceVersion, nil
+}
+
+// versionOfAnotherTemplate is the error for a clone source version that belongs to
+// another template than templateID: ErrVersionDoesNotBelongToTemplate when both
+// templates share a workspace, and the missing-version error otherwise, so a version
+// ID from another workspace cannot be probed.
+func (s *TemplateService) versionOfAnotherTemplate(ctx context.Context, templateID, versionTemplateID string) error {
+	template, err := s.templateRepo.FindByID(ctx, templateID)
+	if err != nil {
+		return fmt.Errorf("finding source template: %w", err)
+	}
+	versionTemplate, err := s.templateRepo.FindByID(ctx, versionTemplateID)
+	if err != nil {
+		return fmt.Errorf("finding source version template: %w", err)
+	}
+	if versionTemplate.WorkspaceID != template.WorkspaceID {
+		return fmt.Errorf("finding source version: %w", entity.ErrVersionNotFound)
+	}
+	return entity.ErrVersionDoesNotBelongToTemplate
 }
 
 func (s *TemplateService) createClonedTemplate(ctx context.Context, source *entity.TemplateWithDetails, newTitle string, targetFolderID *string) (*entity.Template, error) {

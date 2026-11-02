@@ -106,7 +106,6 @@ var badRequestErrors = []error{
 	entity.ErrInvalidTenantRole,
 	entity.ErrVersionDoesNotBelongToTemplate,
 	entity.ErrTargetTemplateRequired,
-	entity.ErrTargetTemplateNotInWorkspace,
 	entity.ErrOnlyTextTypeAllowed,
 	entity.ErrWorkspaceIDRequired,
 	entity.ErrCannotModifyGlobal,

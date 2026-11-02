@@ -67,8 +67,9 @@ type TemplateVersionUseCase interface {
 	// CreateVersion creates a new version for a template.
 	CreateVersion(ctx context.Context, cmd CreateVersionCommand) (*entity.TemplateVersion, error)
 
-	// CreateVersionFromExisting creates a new version copying content from an existing version.
-	CreateVersionFromExisting(ctx context.Context, sourceVersionID string, name string, description *string, createdBy *string) (*entity.TemplateVersion, error)
+	// CreateVersionFromExisting creates a new version of templateID copying content from
+	// sourceVersionID, which must be one of that template's versions.
+	CreateVersionFromExisting(ctx context.Context, templateID, sourceVersionID string, name string, description *string, createdBy *string) (*entity.TemplateVersion, error)
 
 	// GetVersion retrieves a template version by ID.
 	GetVersion(ctx context.Context, id string) (*entity.TemplateVersion, error)
@@ -106,8 +107,9 @@ type TemplateVersionUseCase interface {
 	// AddInjectable adds an injectable to a version.
 	AddInjectable(ctx context.Context, cmd AddVersionInjectableCommand) (*entity.TemplateVersionInjectable, error)
 
-	// RemoveInjectable removes an injectable from a version.
-	RemoveInjectable(ctx context.Context, id string) error
+	// RemoveInjectable removes an injectable link from versionID; a link of another
+	// version answers as missing.
+	RemoveInjectable(ctx context.Context, versionID, id string) error
 
 	// ProcessScheduledPublications publishes all versions whose scheduled time has passed.
 	ProcessScheduledPublications(ctx context.Context) error
