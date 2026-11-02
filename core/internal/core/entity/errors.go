@@ -246,7 +246,10 @@ var (
 	ErrDocumentNotCompleted             = errors.New("related document must be completed for RENEW")
 	ErrDocumentNotTerminal              = errors.New("related document must be in a terminal state for AMEND")
 	ErrRelatedDocumentRequired          = errors.New("related document ID is required for RENEW/AMEND operations")
-	ErrRelatedDocumentSameWorkspace     = errors.New("related document must belong to the same workspace")
+	ErrRelatedDocumentNotAllowed        = errors.New("related document ID is only allowed for RENEW/AMEND operations")
+	// ErrRelatedDocumentNotFound: the related document does not exist or is in
+	// another workspace. The two answer alike so that IDs cannot be probed.
+	ErrRelatedDocumentNotFound = errors.New("related document not found")
 	// ErrSignedPDFNotAvailable: the document is in a state that should have a
 	// signed PDF, but neither storage nor the provider has one.
 	ErrSignedPDFNotAvailable = errors.New("signed PDF not available for this document")
