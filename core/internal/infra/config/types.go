@@ -207,6 +207,11 @@ type SigningConfig struct {
 	// signers and its signing certificate in that language instead of its own
 	// default. Off by default.
 	DocumentLanguage bool `mapstructure:"document_language"`
+	// SuppressOwnerSignedEmail turns off the provider's "a recipient signed"
+	// email to the document owner (Documenso meta.emailSettings
+	// .recipientSigned=false). Signers' invites and completion emails are
+	// unchanged. Off by default (provider default: the owner is emailed).
+	SuppressOwnerSignedEmail bool `mapstructure:"suppress_owner_signed_email"`
 	// HidePublicDocLink hides the engine's own public signing link
 	// (/public/doc/{id}) in the panel, for deployments where signers cannot use
 	// that page and reach documents only through the provider's links (its

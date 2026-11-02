@@ -557,6 +557,8 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 			DocumentLanguage:       cfg.Signing.DocumentLanguage,
+
+			SuppressOwnerSignedEmail: cfg.Signing.SuppressOwnerSignedEmail,
 		})
 	}
 }
@@ -645,6 +647,8 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 			DocumentLanguage:       cfg.Signing.DocumentLanguage,
+
+			SuppressOwnerSignedEmail: cfg.Signing.SuppressOwnerSignedEmail,
 		})
 		if err != nil {
 			return nil, err

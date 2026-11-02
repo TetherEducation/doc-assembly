@@ -109,8 +109,10 @@ func (a *Adapter) SubmitAttemptDocument(ctx context.Context, req *port.SubmitAtt
 // when false Documenso defaults to PARALLEL. A language Documenso supports goes
 // in meta.language, which sets the language of the envelope's emails and
 // signing certificate; otherwise Documenso uses the team's default language.
-// With neither, no meta key is sent.
-func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, language string) (*bytes.Buffer, string, error) {
+// When suppressOwnerSigned is true, meta.emailSettings turns off Documenso's
+// "recipient signed" email to the document owner; its other emails keep their
+// default (on). With none of these, no meta key is sent.
+func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, language string, suppressOwnerSigned bool) (*bytes.Buffer, string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
@@ -137,6 +139,9 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, l
 	if code := documensoLanguage(language); code != "" {
 		meta["language"] = code
 	}
+	if suppressOwnerSigned {
+		meta["emailSettings"] = map[string]bool{"recipientSigned": false}
+	}
 	if len(meta) > 0 {
 		payload["meta"] = meta
 	}
@@ -161,7 +166,7 @@ func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef 
 	if !a.config.DocumentLanguage {
 		language = ""
 	}
-	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder, language)
+	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder, language, a.config.SuppressOwnerSignedEmail)
 	if err != nil {
 		return "", err
 	}

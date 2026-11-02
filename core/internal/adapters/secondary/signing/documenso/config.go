@@ -40,6 +40,14 @@ type Config struct {
 	// releases.
 	DocumentLanguage bool
 
+	// SuppressOwnerSignedEmail turns off Documenso's "recipient signed" email
+	// to the document owner for each envelope (meta.emailSettings
+	// .recipientSigned=false). When the owner is also a later signer, that
+	// email lands with their own invite and reads as if the document were
+	// complete. Off by default: the envelope-create payload is then
+	// byte-identical to previous releases.
+	SuppressOwnerSignedEmail bool
+
 	// Embed customizes the embedded signing widget (theme, language,
 	// branding, signer-name prefill). Zero value keeps embedded URLs
 	// byte-identical to previous releases.

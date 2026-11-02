@@ -84,6 +84,8 @@ signing:
   document_language: false               # true → each document's template language (meta.language) goes to
                                          # Documenso as envelope meta.language: signer emails and the signing
                                          # certificate use it; false → the Documenso team's default language
+  suppress_owner_signed_email: false     # true → envelope meta.emailSettings.recipientSigned=false: Documenso
+                                         # does not email the owner each time a recipient signs; false → it does
   webhook_url: "https://app.example.com/webhooks/signing/documenso"
   direct_send: false                     # DOC_ENGINE_SIGNING_DIRECT_SEND — true sends documents with no
                                          # signer-fillable fields straight to the provider at creation
@@ -205,6 +207,7 @@ These are the env vars the lib `Getenv`s explicitly — they always win over YAM
 | `DOC_ENGINE_SIGNING_WEBHOOK_SECRET` | `signing.webhook_secret` | |
 | `DOC_ENGINE_SIGNING_SEQUENTIAL_ORDER` | `signing.sequential_order` | `true`/`false`; default `false` (all signers invited at once). |
 | `DOC_ENGINE_SIGNING_DOCUMENT_LANGUAGE` | `signing.document_language` | `true`/`false`; default `false` (provider's default language). `true` sends the template's `meta.language`, so Documenso's emails and signing certificate follow it; codes Documenso does not support are left out. |
+| `DOC_ENGINE_SIGNING_SUPPRESS_OWNER_SIGNED_EMAIL` | `signing.suppress_owner_signed_email` | `true`/`false`; default `false` (Documenso emails the owner when a recipient signs). `true` sends `meta.emailSettings.recipientSigned=false`; Documenso's other emails keep their defaults. |
 | `DOC_ENGINE_SIGNING_WEBHOOK_URL` | `signing.webhook_url` | |
 | `DOC_ENGINE_SIGNING_DIRECT_SEND` | `signing.direct_send` | Default `false`. `true` skips `AWAITING_INPUT` for documents whose template has no interactive (signer-fillable) fields. |
 | `DOC_ENGINE_STORAGE_ENABLED` | `storage.enabled` | |

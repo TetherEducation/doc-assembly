@@ -231,6 +231,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 			cfg.DocumentLanguage = parsed
 		}
 	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_SUPPRESS_OWNER_SIGNED_EMAIL"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.SuppressOwnerSignedEmail = parsed
+		}
+	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
 	}

@@ -88,6 +88,9 @@ signing:
   # Send each template's language to the provider, so its emails to signers and
   # its signing certificate use it instead of the provider's default. Off by default.
   document_language: false    # DOC_ENGINE_SIGNING_DOCUMENT_LANGUAGE
+  # Turn off the provider's "a recipient signed" email to the document owner
+  # (signers' invites and completion emails are unchanged). Off by default.
+  suppress_owner_signed_email: false # DOC_ENGINE_SIGNING_SUPPRESS_OWNER_SIGNED_EMAIL
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
   # Send documents with no signer-fillable fields straight to the provider at
   # creation, skipping the AWAITING_INPUT pre-signing step. Off by default.
