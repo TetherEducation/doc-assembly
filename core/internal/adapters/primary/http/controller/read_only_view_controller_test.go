@@ -148,9 +148,24 @@ func (s *readOnlyViewLinkAuthStub) Authenticate(_ *gin.Context, _ *port.ReadOnly
 	return s.claims, nil
 }
 
+// documentUCStub serves the document lookup the panel routes make before their
+// handler (documentInWorkspace). Nothing else on DocumentUseCase is called here.
+type documentUCStub struct {
+	documentuc.DocumentUseCase
+	doc *entity.Document
+}
+
+func (s *documentUCStub) GetDocument(_ context.Context, id string) (*entity.Document, error) {
+	if s.doc == nil || s.doc.ID != id {
+		return nil, entity.ErrDocumentNotFound
+	}
+	return s.doc, nil
+}
+
 func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	expiresAt := time.Date(2026, 5, 8, 12, 0, 0, 0, time.UTC)
+	const documentID = "3b241101-e2bb-4255-8caf-4136c566a962"
 
 	t.Run("viewer allowed", func(t *testing.T) {
 		uc := &readOnlyViewUCStub{createResult: &documentuc.CreateReadOnlyViewLinkResult{
@@ -158,20 +173,21 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 			Token:     "view-token",
 			ExpiresAt: expiresAt,
 		}}
+		docs := &documentUCStub{doc: &entity.Document{ID: documentID, WorkspaceID: "workspace-1"}}
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
 			c.Set("workspace_id", "workspace-1")
 			c.Set("workspace_role", entity.WorkspaceRoleViewer)
 			c.Next()
 		})
-		controller.NewDocumentController(nil, nil, uc, nil).RegisterRoutes(router.Group("/api/v1"))
+		controller.NewDocumentController(docs, nil, uc, nil).RegisterRoutes(router.Group("/api/v1"))
 
 		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/doc-1/view-link", nil)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/documents/"+documentID+"/view-link", nil)
 		router.ServeHTTP(recorder, req)
 
 		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
-		assert.Equal(t, "doc-1", uc.createCalledWith)
+		assert.Equal(t, documentID, uc.createCalledWith)
 		assert.Equal(t, "workspace-1", uc.createWorkspace)
 
 		var body struct {
@@ -196,6 +212,30 @@ func TestDocumentController_CreateReadOnlyViewLink(t *testing.T) {
 
 		require.Equal(t, http.StatusForbidden, recorder.Code, recorder.Body.String())
 		assert.Empty(t, uc.createCalledWith)
+	})
+
+	t.Run("document in another workspace answers 404 before use case", func(t *testing.T) {
+		uc := &readOnlyViewUCStub{createResult: &documentuc.CreateReadOnlyViewLinkResult{}}
+		docs := &documentUCStub{doc: &entity.Document{ID: documentID, WorkspaceID: "workspace-2"}}
+		router := gin.New()
+		router.Use(func(c *gin.Context) {
+			c.Set("workspace_id", "workspace-1")
+			c.Set("workspace_role", entity.WorkspaceRoleViewer)
+			c.Next()
+		})
+		controller.NewDocumentController(docs, nil, uc, nil).RegisterRoutes(router.Group("/api/v1"))
+
+		for _, route := range []struct{ method, path string }{
+			{http.MethodPost, "/view-link"},
+			{http.MethodGet, "/print-pdf"},
+		} {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(route.method, "/api/v1/documents/"+documentID+route.path, nil)
+			router.ServeHTTP(recorder, req)
+
+			require.Equal(t, http.StatusNotFound, recorder.Code, "%s: %s", route.path, recorder.Body.String())
+		}
+		assert.Empty(t, uc.createCalledWith, "the read-only view use case must not run")
 	})
 
 	t.Run("missing workspace rejected before use case", func(t *testing.T) {
