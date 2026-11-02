@@ -1964,7 +1964,7 @@
     "notPdf": "Elige un archivo PDF.",
     "tooLarge": "El PDF pesa más de 12 MB.",
     "sent": "Enviado a firmar.",
-    "sendFailed": "No se pudo enviar el documento. Inténtalo de nuevo.",
+    "sendMaybeSent": "Puede que el envío se haya hecho. Revisa la lista de firmas antes de reintentar, para no enviarlo dos veces.",
     "title": "Enviar un PDF",
     "file": "PDF",
     "chooseFile": "Elige un PDF (hasta 12 MB)",
@@ -1994,6 +1994,7 @@
       "noSigners": "Agrega al menos un firmante.",
       "signerName": "El firmante {{n}} necesita un nombre.",
       "signerEmail": "{{name}} necesita un correo válido.",
+      "nameTooLong": "Acorta el nombre del firmante {{n}}.",
       "duplicateName": "Hay dos firmantes llamados {{name}}; ponle a cada uno un nombre distinto.",
       "noSignature": "{{name}} no tiene campo de firma.",
       "boxOutsidePage": "Un campo está fuera de su página; muévelo de vuelta a la página."

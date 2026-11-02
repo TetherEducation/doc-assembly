@@ -174,6 +174,34 @@ describe('SendPdfPage', () => {
     expect(drawn.height).toBeCloseTo(50 / s, 1)
   })
 
+  it.each([
+    [
+      'a 500',
+      new AxiosError('server error', 'ERR_BAD_RESPONSE', undefined, undefined, {
+        status: 500,
+        statusText: 'Internal Server Error',
+        data: { error: 'creating document: pq: connection reset' },
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      }),
+    ],
+    ['a timeout', new AxiosError('timeout of 120000ms exceeded', 'ECONNABORTED')],
+    ['a network error', new AxiosError('Network Error', 'ERR_NETWORK')],
+  ])('warns that %s may have sent it, without the raw error', async (_name, error) => {
+    vi.mocked(pdfSendApi.send).mockRejectedValue(error)
+    renderPage()
+    await choosePdf()
+    fillSigner(1, 'Ana', 'ana@example.test')
+    await place('Signature', [160, 200])
+
+    fireEvent.click(sendButton())
+
+    const alert = (await screen.findByRole('alert')).textContent ?? ''
+    expect(alert).toMatch(/may have gone through.*Signing list/)
+    expect(alert).not.toMatch(/pq:|timeout|Network Error/)
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('keeps everything placed and shows the server\'s reason on a 400', async () => {
     vi.mocked(pdfSendApi.send).mockRejectedValue(
       new AxiosError('bad request', 'ERR_BAD_REQUEST', undefined, undefined, {
@@ -290,5 +318,17 @@ describe('SendPdfPage', () => {
     fillSigner(1, 'Ana', 'ana@example.test')
     await place('Signature', [160, 200])
     expect(sendButton()).toHaveProperty('disabled', true)
+  })
+
+  // The server allows 0.5 pt (pdfpages), so a rounding-sized offset is not refused here either.
+  it('accepts a page whose visible area is off the corner by under 0.5 pt', async () => {
+    pageView = [0.3, -0.4, 612.3, 791.6]
+    renderPage()
+    await choosePdf()
+    fillSigner(1, 'Ana', 'ana@example.test')
+    await place('Signature', [160, 200])
+
+    await waitFor(() => expect(sendButton()).toHaveProperty('disabled', false))
+    expect(screen.queryByText(/does not start at the corner/)).toBeNull()
   })
 })
