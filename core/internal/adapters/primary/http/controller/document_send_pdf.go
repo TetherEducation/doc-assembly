@@ -74,11 +74,12 @@ func (c *DocumentController) SendPDF(ctx *gin.Context) {
 	}
 
 	doc, err := c.pdfSendUC.SendPDF(ctx.Request.Context(), documentuc.SendPDFCommand{
-		WorkspaceID: workspaceID,
-		UserID:      userID,
-		Title:       req.Title,
-		PDF:         pdf,
-		Signers:     signers,
+		WorkspaceID:  workspaceID,
+		UserID:       userID,
+		Title:        req.Title,
+		PDF:          pdf,
+		Signers:      signers,
+		SigningEmail: signingEmailCommand(req.SigningEmail),
 	})
 	if err != nil {
 		HandleError(ctx, err)
@@ -102,4 +103,12 @@ func readSendPDFFile(ctx *gin.Context) ([]byte, error) {
 	}
 	defer opened.Close()
 	return io.ReadAll(io.LimitReader(opened, maxSendPDFBytes+1))
+}
+
+// signingEmailCommand maps the optional request field; nil stays nil.
+func signingEmailCommand(req *dto.SigningEmailRequest) *entity.SigningEmail {
+	if req == nil {
+		return nil
+	}
+	return &entity.SigningEmail{Subject: req.Subject, Message: req.Message}
 }

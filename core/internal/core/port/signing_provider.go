@@ -87,6 +87,15 @@ type SubmitAttemptDocumentRequest struct {
 	// (e.g. "es"). Providers may use it to localize their emails; empty keeps the
 	// provider's default.
 	Language string
+	// Email is the document's optional invitation subject and message.
+	Email ProviderEmail
+}
+
+// ProviderEmail is an optional subject and message for the provider's
+// invitation email. Empty fields keep the provider's default text.
+type ProviderEmail struct {
+	Subject string
+	Message string
 }
 
 // SubmitAttemptDocumentResult contains provider IDs and signing references for an attempt.
@@ -121,6 +130,8 @@ type EnsureProviderDocumentRequest struct {
 	Environment    entity.Environment
 	// Language is the document's language code, as in SubmitAttemptDocumentRequest.
 	Language string
+	// Email is the document's optional invitation subject and message.
+	Email ProviderEmail
 }
 
 type EnsureProviderDocumentResult struct {

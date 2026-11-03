@@ -214,6 +214,18 @@ func TestSendPDF_EachSendGetsItsOwnProcess(t *testing.T) {
 	assert.NotEqual(t, first.Title, f.createTemplate.Title)
 }
 
+func TestSendPDF_PassesTheSigningEmailToTheDocument(t *testing.T) {
+	svc, f := newPDFSendFixture()
+	cmd := sendPDFCommand()
+	cmd.SigningEmail = &entity.SigningEmail{Subject: "Contrato", Message: "Para su firma"}
+
+	_, err := svc.SendPDF(context.Background(), cmd)
+
+	require.NoError(t, err)
+	require.NotNil(t, f.document.SigningEmail)
+	assert.Equal(t, entity.SigningEmail{Subject: "Contrato", Message: "Para su firma"}, *f.document.SigningEmail)
+}
+
 func TestSendPDF_RejectsBadInputBeforeCreatingAnything(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -226,6 +238,12 @@ func TestSendPDF_RejectsBadInputBeforeCreatingAnything(t *testing.T) {
 		{"no signers", func(c *documentuc.SendPDFCommand) { c.Signers = nil }, entity.ErrInvalidPlacedField},
 		{"signer without a name", func(c *documentuc.SendPDFCommand) { c.Signers[0].Name = " " }, entity.ErrInvalidPlacedField},
 		{"signer without an email", func(c *documentuc.SendPDFCommand) { c.Signers[1].Email = "" }, entity.ErrInvalidPlacedField},
+		{"email subject too long", func(c *documentuc.SendPDFCommand) {
+			c.SigningEmail = &entity.SigningEmail{Subject: strings.Repeat("x", entity.MaxSigningEmailSubjectLength+1)}
+		}, entity.ErrFieldTooLong},
+		{"email message too long", func(c *documentuc.SendPDFCommand) {
+			c.SigningEmail = &entity.SigningEmail{Message: strings.Repeat("x", entity.MaxSigningEmailMessageLength+1)}
+		}, entity.ErrFieldTooLong},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

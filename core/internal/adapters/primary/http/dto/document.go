@@ -11,6 +11,15 @@ type CreateDocumentRequest struct {
 	Recipients                []CreateRecipientRequest `json:"recipients" binding:"required,min=1,dive"`
 	OperationType             *string                  `json:"operationType,omitempty"`     // CREATE, RENEW, or AMEND (defaults to CREATE)
 	RelatedDocumentID         *string                  `json:"relatedDocumentId,omitempty"` // Required for RENEW/AMEND
+	SigningEmail              *SigningEmailRequest     `json:"signingEmail,omitempty"`      // Optional subject and message for the signing invitation
+}
+
+// SigningEmailRequest is an optional subject (up to 254 characters) and message
+// (up to 5000) for the signing provider's invitation email. Omitted or empty
+// fields keep the provider's default text.
+type SigningEmailRequest struct {
+	Subject string `json:"subject,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // CreateRecipientRequest represents a recipient in the create document request.

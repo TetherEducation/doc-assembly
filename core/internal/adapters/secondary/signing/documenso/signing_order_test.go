@@ -19,6 +19,13 @@ import (
 // Documenso and returns the raw JSON "payload" field sent to /envelope/create.
 func captureEnvelopeCreatePayload(t *testing.T, cfg *Config, language string) string {
 	t.Helper()
+	return captureEnvelopeCreatePayloadWithEmail(t, cfg, language, port.ProviderEmail{})
+}
+
+// captureEnvelopeCreatePayloadWithEmail is captureEnvelopeCreatePayload for a
+// document that carries an invitation subject and message.
+func captureEnvelopeCreatePayloadWithEmail(t *testing.T, cfg *Config, language string, email port.ProviderEmail) string {
+	t.Helper()
 	const correlationKey = "doc-id:attempt-id"
 	var payload string
 
@@ -59,6 +66,7 @@ func captureEnvelopeCreatePayload(t *testing.T, cfg *Config, language string) st
 		PDF:            []byte("%PDF-1.7"),
 		Environment:    entity.EnvironmentProd,
 		Language:       language,
+		Email:          email,
 	}); err != nil {
 		t.Fatalf("EnsureProviderDocument() error = %v", err)
 	}
