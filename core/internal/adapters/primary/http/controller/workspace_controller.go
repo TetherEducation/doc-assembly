@@ -215,7 +215,7 @@ func (c *WorkspaceController) ListMembers(ctx *gin.Context) {
 // @Router /api/v1/workspace/members [post]
 func (c *WorkspaceController) InviteMember(ctx *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(ctx)
-	userID, _ := middleware.GetUserID(ctx)
+	userID, _ := middleware.GetInternalUserID(ctx)
 
 	var req dto.InviteMemberRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -275,7 +275,7 @@ func (c *WorkspaceController) GetMember(ctx *gin.Context) {
 // @Router /api/v1/workspace/members/{memberId} [put]
 func (c *WorkspaceController) UpdateMemberRole(ctx *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(ctx)
-	userID, _ := middleware.GetUserID(ctx)
+	userID, _ := middleware.GetInternalUserID(ctx)
 	memberID := ctx.Param("memberId")
 
 	var req dto.UpdateMemberRoleRequest
@@ -387,7 +387,7 @@ func (c *WorkspaceController) GetFolderTree(ctx *gin.Context) {
 // @Router /api/v1/workspace/folders [post]
 func (c *WorkspaceController) CreateFolder(ctx *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(ctx)
-	userID, _ := middleware.GetUserID(ctx)
+	userID, _ := middleware.GetInternalUserID(ctx)
 
 	var req dto.CreateFolderRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -563,7 +563,7 @@ func (c *WorkspaceController) ListTags(ctx *gin.Context) {
 // @Router /api/v1/workspace/tags [post]
 func (c *WorkspaceController) CreateTag(ctx *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(ctx)
-	userID, _ := middleware.GetUserID(ctx)
+	userID, _ := middleware.GetInternalUserID(ctx)
 
 	var req dto.CreateTagRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
