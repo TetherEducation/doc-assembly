@@ -18,6 +18,10 @@ type TemplateFilters struct {
 	Search              string
 	Limit               int
 	Offset              int
+	// IncludePDFSends also lists the one-off templates "Send a PDF" builds for
+	// a single document (process entity.PDFSendProcessPrefix + id). They are
+	// left out by default: nobody edits them or creates documents from them.
+	IncludePDFSends bool
 }
 
 // InternalTemplateBaseQuery contains the base identifiers needed before running template resolution.

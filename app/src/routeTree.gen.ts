@@ -26,6 +26,7 @@ import { Route as PublicDocDocumentIdRouteImport } from './routes/public.doc.$do
 import { Route as WorkspaceWorkspaceIdTemplatesIndexRouteImport } from './routes/workspace.$workspaceId/templates.index'
 import { Route as WorkspaceWorkspaceIdSigningIndexRouteImport } from './routes/workspace.$workspaceId/signing.index'
 import { Route as WorkspaceWorkspaceIdTemplatesTemplateIdRouteImport } from './routes/workspace.$workspaceId/templates.$templateId'
+import { Route as WorkspaceWorkspaceIdSigningSendPdfRouteImport } from './routes/workspace.$workspaceId/signing.send-pdf'
 import { Route as WorkspaceWorkspaceIdSigningDocumentIdRouteImport } from './routes/workspace.$workspaceId/signing.$documentId'
 import { Route as WorkspaceWorkspaceIdEditorVersionIdRouteImport } from './routes/workspace.$workspaceId/editor.$versionId'
 import { Route as WorkspaceWorkspaceIdEditorTemplateIdVersionVersionIdRouteImport } from './routes/workspace.$workspaceId/editor.$templateId.version.$versionId'
@@ -125,6 +126,12 @@ const WorkspaceWorkspaceIdTemplatesTemplateIdRoute =
     path: '/$templateId',
     getParentRoute: () => WorkspaceWorkspaceIdTemplatesRoute,
   } as any)
+const WorkspaceWorkspaceIdSigningSendPdfRoute =
+  WorkspaceWorkspaceIdSigningSendPdfRouteImport.update({
+    id: '/send-pdf',
+    path: '/send-pdf',
+    getParentRoute: () => WorkspaceWorkspaceIdSigningRoute,
+  } as any)
 const WorkspaceWorkspaceIdSigningDocumentIdRoute =
   WorkspaceWorkspaceIdSigningDocumentIdRouteImport.update({
     id: '/$documentId',
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/workspace/$workspaceId/': typeof WorkspaceWorkspaceIdIndexRoute
   '/workspace/$workspaceId/editor/$versionId': typeof WorkspaceWorkspaceIdEditorVersionIdRoute
   '/workspace/$workspaceId/signing/$documentId': typeof WorkspaceWorkspaceIdSigningDocumentIdRoute
+  '/workspace/$workspaceId/signing/send-pdf': typeof WorkspaceWorkspaceIdSigningSendPdfRoute
   '/workspace/$workspaceId/templates/$templateId': typeof WorkspaceWorkspaceIdTemplatesTemplateIdRoute
   '/workspace/$workspaceId/signing/': typeof WorkspaceWorkspaceIdSigningIndexRoute
   '/workspace/$workspaceId/templates/': typeof WorkspaceWorkspaceIdTemplatesIndexRoute
@@ -180,6 +188,7 @@ export interface FileRoutesByTo {
   '/workspace/$workspaceId': typeof WorkspaceWorkspaceIdIndexRoute
   '/workspace/$workspaceId/editor/$versionId': typeof WorkspaceWorkspaceIdEditorVersionIdRoute
   '/workspace/$workspaceId/signing/$documentId': typeof WorkspaceWorkspaceIdSigningDocumentIdRoute
+  '/workspace/$workspaceId/signing/send-pdf': typeof WorkspaceWorkspaceIdSigningSendPdfRoute
   '/workspace/$workspaceId/templates/$templateId': typeof WorkspaceWorkspaceIdTemplatesTemplateIdRoute
   '/workspace/$workspaceId/signing': typeof WorkspaceWorkspaceIdSigningIndexRoute
   '/workspace/$workspaceId/templates': typeof WorkspaceWorkspaceIdTemplatesIndexRoute
@@ -203,6 +212,7 @@ export interface FileRoutesById {
   '/workspace/$workspaceId/': typeof WorkspaceWorkspaceIdIndexRoute
   '/workspace/$workspaceId/editor/$versionId': typeof WorkspaceWorkspaceIdEditorVersionIdRoute
   '/workspace/$workspaceId/signing/$documentId': typeof WorkspaceWorkspaceIdSigningDocumentIdRoute
+  '/workspace/$workspaceId/signing/send-pdf': typeof WorkspaceWorkspaceIdSigningSendPdfRoute
   '/workspace/$workspaceId/templates/$templateId': typeof WorkspaceWorkspaceIdTemplatesTemplateIdRoute
   '/workspace/$workspaceId/signing/': typeof WorkspaceWorkspaceIdSigningIndexRoute
   '/workspace/$workspaceId/templates/': typeof WorkspaceWorkspaceIdTemplatesIndexRoute
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/workspace/$workspaceId/'
     | '/workspace/$workspaceId/editor/$versionId'
     | '/workspace/$workspaceId/signing/$documentId'
+    | '/workspace/$workspaceId/signing/send-pdf'
     | '/workspace/$workspaceId/templates/$templateId'
     | '/workspace/$workspaceId/signing/'
     | '/workspace/$workspaceId/templates/'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/workspace/$workspaceId'
     | '/workspace/$workspaceId/editor/$versionId'
     | '/workspace/$workspaceId/signing/$documentId'
+    | '/workspace/$workspaceId/signing/send-pdf'
     | '/workspace/$workspaceId/templates/$templateId'
     | '/workspace/$workspaceId/signing'
     | '/workspace/$workspaceId/templates'
@@ -268,6 +280,7 @@ export interface FileRouteTypes {
     | '/workspace/$workspaceId/'
     | '/workspace/$workspaceId/editor/$versionId'
     | '/workspace/$workspaceId/signing/$documentId'
+    | '/workspace/$workspaceId/signing/send-pdf'
     | '/workspace/$workspaceId/templates/$templateId'
     | '/workspace/$workspaceId/signing/'
     | '/workspace/$workspaceId/templates/'
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceWorkspaceIdTemplatesTemplateIdRouteImport
       parentRoute: typeof WorkspaceWorkspaceIdTemplatesRoute
     }
+    '/workspace/$workspaceId/signing/send-pdf': {
+      id: '/workspace/$workspaceId/signing/send-pdf'
+      path: '/send-pdf'
+      fullPath: '/workspace/$workspaceId/signing/send-pdf'
+      preLoaderRoute: typeof WorkspaceWorkspaceIdSigningSendPdfRouteImport
+      parentRoute: typeof WorkspaceWorkspaceIdSigningRoute
+    }
     '/workspace/$workspaceId/signing/$documentId': {
       id: '/workspace/$workspaceId/signing/$documentId'
       path: '/$documentId'
@@ -431,6 +451,7 @@ declare module '@tanstack/react-router' {
 
 interface WorkspaceWorkspaceIdSigningRouteChildren {
   WorkspaceWorkspaceIdSigningDocumentIdRoute: typeof WorkspaceWorkspaceIdSigningDocumentIdRoute
+  WorkspaceWorkspaceIdSigningSendPdfRoute: typeof WorkspaceWorkspaceIdSigningSendPdfRoute
   WorkspaceWorkspaceIdSigningIndexRoute: typeof WorkspaceWorkspaceIdSigningIndexRoute
 }
 
@@ -438,6 +459,8 @@ const WorkspaceWorkspaceIdSigningRouteChildren: WorkspaceWorkspaceIdSigningRoute
   {
     WorkspaceWorkspaceIdSigningDocumentIdRoute:
       WorkspaceWorkspaceIdSigningDocumentIdRoute,
+    WorkspaceWorkspaceIdSigningSendPdfRoute:
+      WorkspaceWorkspaceIdSigningSendPdfRoute,
     WorkspaceWorkspaceIdSigningIndexRoute:
       WorkspaceWorkspaceIdSigningIndexRoute,
   }

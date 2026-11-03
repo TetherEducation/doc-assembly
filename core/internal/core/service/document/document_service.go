@@ -104,18 +104,15 @@ func (s *DocumentService) CreateAndSendDocument(ctx context.Context, cmd documen
 		return nil, err
 	}
 
-	version, _, err := s.validateTemplateAndRoles(ctx, cmd)
+	version, templateWorkspace, err := s.findTemplateVersion(ctx, cmd.WorkspaceID, cmd.TemplateVersionID)
 	if err != nil {
 		return nil, err
 	}
 
-	templateWorkspace, err := s.templateRepo.FindTemplateWorkspaceByTemplateID(ctx, version.TemplateID)
-	if err != nil {
-		return nil, fmt.Errorf("finding template from version: %w", err)
+	if err := s.validateTemplateAndRoles(ctx, cmd, version); err != nil {
+		return nil, err
 	}
-	if templateWorkspace == nil || templateWorkspace.Template == nil {
-		return nil, entity.ErrTemplateNotFound
-	}
+
 	if templateWorkspace.Workspace != nil && templateWorkspace.Workspace.Type == entity.WorkspaceTypeSystem {
 		return nil, entity.ErrInvalidWorkspaceType
 	}
@@ -191,24 +188,46 @@ func (s *DocumentService) createAndStartSigning(ctx context.Context, cmd documen
 	}, nil
 }
 
-// validateTemplateAndRoles validates the template version and returns the role map.
-func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd documentuc.CreateDocumentCommand) (*entity.TemplateVersion, map[string]*entity.TemplateVersionSignerRole, error) {
-	version, err := s.versionRepo.FindByID(ctx, cmd.TemplateVersionID)
+// findTemplateVersion loads the template version a document is created from,
+// with its template and workspace. The version is looked up by ID alone, so one
+// whose template belongs to another workspace answers exactly as a missing one
+// does, before anything else about it is checked: any other answer (not
+// published, its signer-role count, a SYSTEM workspace) would describe another
+// workspace's template.
+func (s *DocumentService) findTemplateVersion(ctx context.Context, workspaceID, versionID string) (*entity.TemplateVersion, *port.TemplateWorkspace, error) {
+	version, err := s.versionRepo.FindByID(ctx, versionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("finding template version: %w", err)
 	}
 
+	templateWorkspace, err := s.templateRepo.FindTemplateWorkspaceByTemplateID(ctx, version.TemplateID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("finding template from version: %w", err)
+	}
+	if templateWorkspace == nil || templateWorkspace.Template == nil {
+		return nil, nil, entity.ErrTemplateNotFound
+	}
+	if templateWorkspace.Template.WorkspaceID != workspaceID {
+		return nil, nil, fmt.Errorf("finding template version: %w", entity.ErrVersionNotFound)
+	}
+
+	return version, templateWorkspace, nil
+}
+
+// validateTemplateAndRoles checks that the version is published and that the
+// recipients fill its signer roles, one each.
+func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd documentuc.CreateDocumentCommand, version *entity.TemplateVersion) error {
 	if !version.IsPublished() {
-		return nil, nil, fmt.Errorf("template version is not published")
+		return fmt.Errorf("template version is not published")
 	}
 
 	signerRoles, err := s.signerRoleRepo.FindByVersionID(ctx, cmd.TemplateVersionID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("finding signer roles: %w", err)
+		return fmt.Errorf("finding signer roles: %w", err)
 	}
 
 	if len(cmd.Recipients) != len(signerRoles) {
-		return nil, nil, fmt.Errorf("recipient count (%d) does not match signer role count (%d)", len(cmd.Recipients), len(signerRoles))
+		return fmt.Errorf("recipient count (%d) does not match signer role count (%d)", len(cmd.Recipients), len(signerRoles))
 	}
 
 	roleMap := make(map[string]*entity.TemplateVersionSignerRole)
@@ -219,21 +238,23 @@ func (s *DocumentService) validateTemplateAndRoles(ctx context.Context, cmd docu
 	seen := make(map[string]struct{}, len(cmd.Recipients))
 	for _, r := range cmd.Recipients {
 		if _, ok := roleMap[r.RoleID]; !ok {
-			return nil, nil, fmt.Errorf("invalid role ID: %s", r.RoleID)
+			return fmt.Errorf("invalid role ID: %s", r.RoleID)
 		}
 		// With as many recipients as roles, a repeated role leaves another
 		// role unfilled. The database's unique index would reject it with a
 		// 500; this is the caller's mistake, so answer 400.
 		if _, ok := seen[r.RoleID]; ok {
-			return nil, nil, fmt.Errorf("%w: %s", entity.ErrDuplicateRecipientRole, r.RoleID)
+			return fmt.Errorf("%w: %s", entity.ErrDuplicateRecipientRole, r.RoleID)
 		}
 		seen[r.RoleID] = struct{}{}
 	}
 
-	return version, roleMap, nil
+	return nil
 }
 
-// validateOperationType validates the operation type and related document for RENEW/AMEND.
+// validateOperationType validates the operation type and the related document.
+// Only RENEW and AMEND may name a related document, and it must belong to the
+// caller's workspace (see findRelatedDocument).
 func (s *DocumentService) validateOperationType(ctx context.Context, cmd documentuc.CreateDocumentCommand) error {
 	opType := cmd.OperationType
 	if opType == "" {
@@ -244,11 +265,13 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 		return entity.ErrInvalidOperationType
 	}
 
-	if opType == entity.OperationCreate {
-		return nil
-	}
-
 	if opType != entity.OperationRenew && opType != entity.OperationAmend {
+		// These operations have no use for a related document. Stored
+		// unchecked, it would link this document to any document, in any
+		// workspace, whose ID the caller supplies.
+		if cmd.RelatedDocumentID != nil {
+			return entity.ErrRelatedDocumentNotAllowed
+		}
 		return nil
 	}
 
@@ -256,13 +279,9 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 		return entity.ErrRelatedDocumentRequired
 	}
 
-	relatedDoc, err := s.documentRepo.FindByID(ctx, *cmd.RelatedDocumentID)
+	relatedDoc, err := s.findRelatedDocument(ctx, cmd.WorkspaceID, *cmd.RelatedDocumentID)
 	if err != nil {
-		return fmt.Errorf("finding related document: %w", err)
-	}
-
-	if relatedDoc.WorkspaceID != cmd.WorkspaceID {
-		return entity.ErrRelatedDocumentSameWorkspace
+		return err
 	}
 
 	switch opType {
@@ -277,6 +296,29 @@ func (s *DocumentService) validateOperationType(ctx context.Context, cmd documen
 	}
 
 	return nil
+}
+
+// findRelatedDocument loads the document a RENEW or AMEND names. Document
+// lookups select by ID alone, so a document in another workspace answers
+// ErrRelatedDocumentNotFound, the same as a missing document or an ID that is
+// not a UUID: any other answer would confirm that the ID exists elsewhere.
+func (s *DocumentService) findRelatedDocument(ctx context.Context, workspaceID, documentID string) (*entity.Document, error) {
+	if _, err := uuid.Parse(documentID); err != nil {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+
+	doc, err := s.documentRepo.FindByID(ctx, documentID)
+	if errors.Is(err, entity.ErrDocumentNotFound) {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("finding related document: %w", err)
+	}
+	if doc.WorkspaceID != workspaceID {
+		return nil, entity.ErrRelatedDocumentNotFound
+	}
+
+	return doc, nil
 }
 
 // createDocument creates and persists the document entity.
@@ -639,13 +681,19 @@ func (s *DocumentService) HandleWebhookEvent(ctx context.Context, event *port.We
 		slog.String("provider_document_id", event.ProviderDocumentID),
 	)
 
+	providerSignedAt := webhookSignedTimes(event)
+	if len(providerSignedAt) > 0 {
+		if err := s.recordProviderSignatures(ctx, attempt.ID, providerSignedAt); err != nil {
+			slog.WarnContext(ctx, "failed to record signers' signing times from webhook", slog.String("error", err.Error()))
+		}
+	}
 	if event.ProviderRecipientID != "" && event.RecipientStatus != nil {
-		if err := s.updateAttemptRecipientFromWebhook(ctx, attempt.ID, event.ProviderRecipientID, *event.RecipientStatus); err != nil {
+		if err := s.updateAttemptRecipientFromWebhook(ctx, attempt.ID, event.ProviderRecipientID, *event.RecipientStatus, providerSignedAt); err != nil {
 			slog.WarnContext(ctx, "failed to update attempt recipient from webhook", slog.String("error", err.Error()))
 		}
 	}
 	if event.DocumentStatus != nil && *event.DocumentStatus == entity.SigningAttemptStatusCompleted {
-		if err := s.markAttemptRecipientsSigned(ctx, attempt.ID); err != nil {
+		if err := s.markAttemptRecipientsSigned(ctx, attempt.ID, providerSignedAt); err != nil {
 			return fmt.Errorf("marking completed attempt recipients signed: %w", err)
 		}
 	}
@@ -686,7 +734,49 @@ func (s *DocumentService) findAttemptForWebhook(ctx context.Context, event *port
 	return nil, entity.ErrRecordNotFound
 }
 
-func (s *DocumentService) updateAttemptRecipientFromWebhook(ctx context.Context, attemptID, providerRecipientID string, status entity.RecipientStatus) error {
+// webhookSignedTimes maps each recipient the provider reports as signed, with
+// its own signing time, by provider recipient ID.
+func webhookSignedTimes(event *port.WebhookEvent) map[string]time.Time {
+	times := make(map[string]time.Time, len(event.Recipients))
+	for _, r := range event.Recipients {
+		if r.Signed && r.SignedAt != nil && r.ProviderRecipientID != "" {
+			times[r.ProviderRecipientID] = r.SignedAt.UTC()
+		}
+	}
+	return times
+}
+
+// recordProviderSignatures marks every recipient the provider reports as
+// signed, on the attempt and on the document recipient the panel shows, at
+// the provider's time for that signer. Each signer's time is recorded as soon
+// as a webhook reports it, not only at completion, and a later signer's
+// webhook can't stamp an earlier signer with its own time.
+func (s *DocumentService) recordProviderSignatures(ctx context.Context, attemptID string, signedAt map[string]time.Time) error {
+	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
+	if err != nil {
+		return err
+	}
+	for _, recipient := range recipients {
+		if recipient.ProviderRecipientID == nil {
+			continue
+		}
+		at, ok := signedAt[*recipient.ProviderRecipientID]
+		if !ok {
+			continue
+		}
+		if err := s.markAttemptRecipientSigned(ctx, recipient, at, true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *DocumentService) updateAttemptRecipientFromWebhook(
+	ctx context.Context,
+	attemptID, providerRecipientID string,
+	status entity.RecipientStatus,
+	providerSignedAt map[string]time.Time,
+) error {
 	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
 	if err != nil {
 		return err
@@ -695,34 +785,57 @@ func (s *DocumentService) updateAttemptRecipientFromWebhook(ctx context.Context,
 		if recipient.ProviderRecipientID == nil || *recipient.ProviderRecipientID != providerRecipientID {
 			continue
 		}
-		recipient.Status = status.Normalize()
-		if recipient.Status == entity.RecipientStatusSigned {
-			now := time.Now().UTC()
-			recipient.SignedAt = &now
+		if status.Normalize() == entity.RecipientStatusSigned {
+			// Without the provider's time, fall back to now.
+			at, fromProvider := providerSignedAt[providerRecipientID]
+			if !fromProvider {
+				at = time.Now().UTC()
+			}
+			return s.markAttemptRecipientSigned(ctx, recipient, at, fromProvider)
 		}
+		recipient.Status = status.Normalize()
 		return s.attemptRepo.UpdateRecipient(ctx, recipient)
 	}
 	return entity.ErrRecordNotFound
 }
 
-func (s *DocumentService) markAttemptRecipientsSigned(ctx context.Context, attemptID string) error {
+// markAttemptRecipientsSigned marks every recipient of a completed attempt as
+// signed. Times the provider gave win; a recipient already signed keeps its
+// time; only a recipient with neither gets the completion time.
+func (s *DocumentService) markAttemptRecipientsSigned(ctx context.Context, attemptID string, providerSignedAt map[string]time.Time) error {
 	recipients, err := s.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
 	if err != nil {
 		return err
 	}
 	now := time.Now().UTC()
 	for _, recipient := range recipients {
-		if err := s.markAttemptRecipientSigned(ctx, recipient, now); err != nil {
+		at, fromProvider := now, false
+		if recipient.ProviderRecipientID != nil {
+			if t, ok := providerSignedAt[*recipient.ProviderRecipientID]; ok {
+				at, fromProvider = t, true
+			}
+		}
+		if !fromProvider && recipient.SignedAt != nil {
+			at = *recipient.SignedAt
+		}
+		if err := s.markAttemptRecipientSigned(ctx, recipient, at, fromProvider); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipient *entity.SigningAttemptRecipient, signedAt time.Time) error {
-	if recipient.Status != entity.RecipientStatusSigned {
+// markAttemptRecipientSigned marks an attempt recipient and its document
+// recipient as signed at signedAt. A recipient already signed keeps its time
+// unless fromProvider: the provider's time replaces a time the engine guessed
+// (the moment a webhook arrived) before the provider's was known.
+func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipient *entity.SigningAttemptRecipient, signedAt time.Time, fromProvider bool) error {
+	alreadySigned := recipient.Status == entity.RecipientStatusSigned
+	timeChanges := recipient.SignedAt == nil || !recipient.SignedAt.Equal(signedAt)
+	if !alreadySigned || (fromProvider && timeChanges) {
 		recipient.Status = entity.RecipientStatusSigned
-		recipient.SignedAt = &signedAt
+		at := signedAt
+		recipient.SignedAt = &at
 		if err := s.attemptRepo.UpdateRecipient(ctx, recipient); err != nil {
 			return err
 		}
@@ -730,18 +843,27 @@ func (s *DocumentService) markAttemptRecipientSigned(ctx context.Context, recipi
 	if recipient.DocumentRecipientID == nil {
 		return nil
 	}
-	return s.markDocumentRecipientSigned(ctx, *recipient.DocumentRecipientID)
+	docAt := signedAt
+	if recipient.SignedAt != nil {
+		docAt = *recipient.SignedAt
+	}
+	return s.markDocumentRecipientSigned(ctx, *recipient.DocumentRecipientID, docAt, fromProvider)
 }
 
-func (s *DocumentService) markDocumentRecipientSigned(ctx context.Context, recipientID string) error {
+func (s *DocumentService) markDocumentRecipientSigned(ctx context.Context, recipientID string, signedAt time.Time, fromProvider bool) error {
 	recipient, err := s.recipientRepo.FindByID(ctx, recipientID)
 	if err != nil {
 		return err
 	}
 	if recipient.Status == entity.RecipientStatusSigned {
-		return nil
+		if !fromProvider || (recipient.SignedAt != nil && recipient.SignedAt.Equal(signedAt)) {
+			return nil
+		}
+		at := signedAt.UTC()
+		recipient.SignedAt = &at
+		return s.recipientRepo.Update(ctx, recipient)
 	}
-	if err := recipient.MarkAsSigned(); err != nil {
+	if err := recipient.MarkAsSignedAt(signedAt); err != nil {
 		return err
 	}
 	return s.recipientRepo.Update(ctx, recipient)

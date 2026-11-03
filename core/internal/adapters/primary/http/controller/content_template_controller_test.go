@@ -1660,8 +1660,8 @@ func TestContentTemplateController_AddTemplateTags(t *testing.T) {
 				"tagIds": []string{tagID},
 			})
 
-		// API returns 500 when template not found during tag add (FK constraint)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		// templateInWorkspace answers a missing template before the tag insert
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("error - tag not found", func(t *testing.T) {
@@ -1769,7 +1769,7 @@ func TestContentTemplateController_RemoveTemplateTag(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 
-	t.Run("idempotent - template not found returns success", func(t *testing.T) {
+	t.Run("not found - template not found", func(t *testing.T) {
 		tenantID := testhelper.CreateTestTenant(t, pool, "Remove Tag Tenant 3", "RTST03")
 		defer testhelper.CleanupTenant(t, pool, tenantID)
 
@@ -1788,8 +1788,9 @@ func TestContentTemplateController_RemoveTemplateTag(t *testing.T) {
 			WithWorkspaceID(workspaceID).
 			DELETE(fmt.Sprintf("/api/v1/content/templates/00000000-0000-0000-0000-000000000000/tags/%s", tagID))
 
-		// RemoveTag is idempotent - returns success even if nothing to remove
-		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		// A missing template answers 404 on every template route, as another
+		// workspace's does; removing an unlinked tag stays idempotent (below).
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("idempotent - tag not associated returns success", func(t *testing.T) {

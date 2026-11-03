@@ -1,14 +1,18 @@
 package controller
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
@@ -32,6 +36,42 @@ func NewContentTemplateController(
 	}
 }
 
+// templateInWorkspace aborts a request whose :templateId does not belong to the
+// caller's workspace (after sandbox resolution). Template lookups select by ID
+// alone, and WorkspaceContext only checks the caller's role in the workspace the
+// header names, so without this a member of any workspace could read or change
+// another workspace's template by its ID. A mismatch answers 404, the same as a
+// missing template, so IDs from other workspaces cannot be probed.
+func (c *ContentTemplateController) templateInWorkspace(ctx *gin.Context) {
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok || strings.TrimSpace(workspaceID) == "" {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		ctx.Abort()
+		return
+	}
+
+	templateID := ctx.Param("templateId")
+	if _, err := uuid.Parse(templateID); err != nil {
+		HandleError(ctx, entity.ErrTemplateNotFound)
+		ctx.Abort()
+		return
+	}
+
+	template, err := c.templateUC.GetTemplate(ctx.Request.Context(), templateID)
+	if errors.Is(err, entity.ErrTemplateNotFound) || (err == nil && template.WorkspaceID != workspaceID) {
+		HandleError(ctx, entity.ErrTemplateNotFound)
+		ctx.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
 // RegisterRoutes registers all template routes.
 // All template routes require X-Workspace-ID header.
 // Template and version routes support sandbox mode via X-Sandbox-Mode header.
@@ -44,26 +84,30 @@ func (c *ContentTemplateController) RegisterRoutes(rg *gin.RouterGroup, middlewa
 		// Template routes
 		templates := content.Group("/templates")
 		{
-			templates.GET("", c.ListTemplates)                                                // VIEWER+
-			templates.POST("", middleware.RequireEditor(), c.CreateTemplate)                  // EDITOR+
-			templates.GET("/:templateId", c.GetTemplate)                                      // VIEWER+
-			templates.GET("/:templateId/all-versions", c.GetTemplateWithAllVersions)          // VIEWER+
-			templates.PUT("/:templateId", middleware.RequireEditor(), c.UpdateTemplate)       // EDITOR+
-			templates.DELETE("/:templateId", middleware.RequireAdmin(), c.DeleteTemplate)     // ADMIN+
-			templates.POST("/:templateId/clone", middleware.RequireEditor(), c.CloneTemplate) // EDITOR+
+			templates.GET("", c.ListTemplates)                               // VIEWER+
+			templates.POST("", middleware.RequireEditor(), c.CreateTemplate) // EDITOR+
+
+			// Every route below names one template. templateInWorkspace runs
+			// after the role check and before the handler, so the template must
+			// belong to the caller's workspace whatever the handler does with it.
+			templates.GET("/:templateId", c.templateInWorkspace, c.GetTemplate)                                      // VIEWER+
+			templates.GET("/:templateId/all-versions", c.templateInWorkspace, c.GetTemplateWithAllVersions)          // VIEWER+
+			templates.PUT("/:templateId", middleware.RequireEditor(), c.templateInWorkspace, c.UpdateTemplate)       // EDITOR+
+			templates.DELETE("/:templateId", middleware.RequireAdmin(), c.templateInWorkspace, c.DeleteTemplate)     // ADMIN+
+			templates.POST("/:templateId/clone", middleware.RequireEditor(), c.templateInWorkspace, c.CloneTemplate) // EDITOR+
 
 			// Template tag routes (tags belong to templates, not versions)
-			templates.POST("/:templateId/tags", middleware.RequireEditor(), c.AddTemplateTags)            // EDITOR+
-			templates.DELETE("/:templateId/tags/:tagId", middleware.RequireEditor(), c.RemoveTemplateTag) // EDITOR+
+			templates.POST("/:templateId/tags", middleware.RequireEditor(), c.templateInWorkspace, c.AddTemplateTags)            // EDITOR+
+			templates.DELETE("/:templateId/tags/:tagId", middleware.RequireEditor(), c.templateInWorkspace, c.RemoveTemplateTag) // EDITOR+
 
 			// Process fields
-			templates.PUT("/:templateId/process", middleware.RequireEditor(), c.SetProcessFields) // EDITOR+
+			templates.PUT("/:templateId/process", middleware.RequireEditor(), c.templateInWorkspace, c.SetProcessFields) // EDITOR+
 
 			// Document type assignment
-			templates.PUT("/:templateId/document-type", middleware.RequireEditor(), c.AssignDocumentType) // EDITOR+
+			templates.PUT("/:templateId/document-type", middleware.RequireEditor(), c.templateInWorkspace, c.AssignDocumentType) // EDITOR+
 
-			// Version routes (nested under templates)
-			c.versionController.RegisterRoutes(templates)
+			// Version routes (nested under templates), behind the same guard
+			c.versionController.RegisterRoutes(templates, c.templateInWorkspace)
 		}
 	}
 }

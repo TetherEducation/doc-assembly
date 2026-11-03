@@ -90,8 +90,14 @@ func (s *TemplateVersionService) CreateVersion(ctx context.Context, cmd template
 }
 
 // CreateVersionFromExisting creates a new version copying content from an existing version.
-func (s *TemplateVersionService) CreateVersionFromExisting(ctx context.Context, sourceVersionID string, name string, description *string, createdBy *string) (*entity.TemplateVersion, error) {
+// The copy lands in the source's template, so the source must be a version of templateID:
+// any other answers as missing, so a version ID from another workspace cannot be written
+// to or probed.
+func (s *TemplateVersionService) CreateVersionFromExisting(ctx context.Context, templateID, sourceVersionID string, name string, description *string, createdBy *string) (*entity.TemplateVersion, error) {
 	source, err := s.versionRepo.FindByID(ctx, sourceVersionID)
+	if err == nil && source.TemplateID != templateID {
+		err = entity.ErrVersionNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("finding source version: %w", err)
 	}
@@ -419,9 +425,13 @@ func (s *TemplateVersionService) AddInjectable(ctx context.Context, cmd template
 	return injectable, nil
 }
 
-// RemoveInjectable removes an injectable from a version.
-func (s *TemplateVersionService) RemoveInjectable(ctx context.Context, id string) error {
+// RemoveInjectable removes an injectable from a version. A link of another version
+// answers as missing, so links of other workspaces' versions cannot be removed or probed.
+func (s *TemplateVersionService) RemoveInjectable(ctx context.Context, versionID, id string) error {
 	injectable, err := s.injectableRepo.FindByID(ctx, id)
+	if err == nil && injectable.TemplateVersionID != versionID {
+		err = entity.ErrVersionInjectableNotFound
+	}
 	if err != nil {
 		return fmt.Errorf("finding injectable: %w", err)
 	}
@@ -528,7 +538,7 @@ func (s *TemplateVersionService) PromoteVersion(ctx context.Context, cmd templat
 		return nil, fmt.Errorf("finding source version: %w", err)
 	}
 
-	if err := s.validatePromotionSource(sourceVersion, cmd.SourceTemplateID); err != nil {
+	if err := s.validatePromotionSource(ctx, sourceVersion, cmd.SourceTemplateID, cmd.TargetWorkspaceID); err != nil {
 		return nil, err
 	}
 
@@ -597,12 +607,13 @@ func (s *TemplateVersionService) promoteAsNewVersion(ctx context.Context, source
 		return nil, entity.ErrTargetTemplateRequired
 	}
 
+	// Another workspace's template answers like a missing one, so it cannot be probed.
 	targetTemplate, err := s.templateRepo.FindByID(ctx, *cmd.TargetTemplateID)
+	if err == nil && targetTemplate.WorkspaceID != cmd.TargetWorkspaceID {
+		err = entity.ErrTemplateNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("finding target template: %w", err)
-	}
-	if targetTemplate.WorkspaceID != cmd.TargetWorkspaceID {
-		return nil, entity.ErrTargetTemplateNotInWorkspace
 	}
 
 	sourceTemplate, err := s.templateRepo.FindByID(ctx, sourceVersion.TemplateID)
@@ -920,15 +931,42 @@ func (s *TemplateVersionService) archiveCurrentPublished(ctx context.Context, te
 	return nil
 }
 
-// validatePromotionSource validates the source version for promotion.
-func (s *TemplateVersionService) validatePromotionSource(sourceVersion *entity.TemplateVersion, sourceTemplateID string) error {
-	if sourceVersion.Status != entity.VersionStatusPublished {
-		return entity.ErrVersionNotPublished
+// validatePromotionSource validates the source version for promotion. Promote runs in
+// the target (production) workspace on a template of its sandbox, so the source
+// template must belong to the target workspace or to its sandbox; a version anywhere
+// else answers as missing, before any other check, so it cannot be copied or probed.
+func (s *TemplateVersionService) validatePromotionSource(ctx context.Context, sourceVersion *entity.TemplateVersion, sourceTemplateID, targetWorkspaceID string) error {
+	reachable, err := s.templateInWorkspaceOrSandbox(ctx, sourceVersion.TemplateID, targetWorkspaceID)
+	if err != nil {
+		return err
+	}
+	if !reachable {
+		return entity.ErrVersionNotFound
 	}
 	if sourceVersion.TemplateID != sourceTemplateID {
 		return entity.ErrVersionDoesNotBelongToTemplate
 	}
+	if sourceVersion.Status != entity.VersionStatusPublished {
+		return entity.ErrVersionNotPublished
+	}
 	return nil
+}
+
+// templateInWorkspaceOrSandbox reports whether templateID belongs to workspaceID or to
+// that workspace's sandbox.
+func (s *TemplateVersionService) templateInWorkspaceOrSandbox(ctx context.Context, templateID, workspaceID string) (bool, error) {
+	template, err := s.templateRepo.FindByID(ctx, templateID)
+	if err != nil {
+		return false, fmt.Errorf("finding source template: %w", err)
+	}
+	if template.WorkspaceID == workspaceID {
+		return true, nil
+	}
+	workspace, err := s.workspaceRepo.FindByID(ctx, template.WorkspaceID)
+	if err != nil {
+		return false, fmt.Errorf("finding source workspace: %w", err)
+	}
+	return workspace.IsSandbox && workspace.SandboxOfID != nil && *workspace.SandboxOfID == workspaceID, nil
 }
 
 // validatePromotionTarget validates the target workspace for promotion.

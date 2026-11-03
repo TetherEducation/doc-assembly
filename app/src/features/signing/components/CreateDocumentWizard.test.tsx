@@ -11,28 +11,87 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+const { mutateAsync, templates } = vi.hoisted(() => ({
+  mutateAsync: vi.fn(),
+  // Two templates, one version each, with no fill-in key in common
+  templates: {
+    nda: {
+      title: 'NDA',
+      versions: [
+        {
+          id: 'nda-v1',
+          signerRoles: [],
+          injectables: [{ definition: { key: 'counterparty_name' }, isRequired: false }],
+        },
+      ],
+    },
+    offer: {
+      title: 'Offer',
+      versions: [
+        {
+          id: 'offer-v1',
+          signerRoles: [],
+          injectables: [{ definition: { key: 'job_title' }, isRequired: false }],
+        },
+      ],
+    },
+  } as Record<string, unknown>,
+}))
+
 // Mock useCreateDocument
 vi.mock('../hooks/useSigningDocuments', () => ({
   useCreateDocument: () => ({
-    mutateAsync: vi.fn(),
+    mutateAsync,
     isPending: false,
   }),
 }))
 
 // Mock useTemplateWithVersions
 vi.mock('@/features/templates/hooks/useTemplateDetail', () => ({
-  useTemplateWithVersions: () => ({
-    data: null,
+  useTemplateWithVersions: (templateId: string) => ({
+    data: templates[templateId] ?? null,
   }),
 }))
 
 // Mock child wizard step components to simplify tests
 vi.mock('./WizardStepVersion', () => ({
-  WizardStepVersion: () => <div data-testid="step-version">Version Step</div>,
+  WizardStepVersion: ({
+    onTemplateChange,
+    onVersionChange,
+  }: {
+    onTemplateChange: (id: string) => void
+    onVersionChange: (id: string) => void
+  }) => (
+    <div data-testid="step-version">
+      Version Step
+      <button type="button" onClick={() => { onTemplateChange('nda'); onVersionChange('nda-v1') }}>
+        pick nda
+      </button>
+      <button type="button" onClick={() => { onTemplateChange('offer'); onVersionChange('offer-v1') }}>
+        pick offer
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock('./WizardStepValues', () => ({
-  WizardStepValues: () => <div data-testid="step-values">Values Step</div>,
+  WizardStepValues: ({
+    values,
+    onValuesChange,
+  }: {
+    values: Record<string, unknown>
+    onValuesChange: (v: Record<string, unknown>) => void
+  }) => (
+    <div data-testid="step-values">
+      Values Step
+      <button type="button" onClick={() => onValuesChange({ ...values, counterparty_name: 'Acme' })}>
+        fill nda
+      </button>
+      <button type="button" onClick={() => onValuesChange({ ...values, job_title: 'Analyst' })}>
+        fill offer
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock('./WizardStepRecipients', () => ({
@@ -42,7 +101,9 @@ vi.mock('./WizardStepRecipients', () => ({
 }))
 
 vi.mock('./WizardStepReview', () => ({
-  WizardStepReview: () => <div data-testid="step-review">Review Step</div>,
+  WizardStepReview: ({ values }: { values: Record<string, unknown> }) => (
+    <div data-testid="step-review">{JSON.stringify(values)}</div>
+  ),
 }))
 
 function createWrapper() {
@@ -145,5 +206,50 @@ describe('CreateDocumentWizard', () => {
     const titleInput = screen.getByPlaceholderText('Enter document title...')
     await userEvent.type(titleInput, 'My Contract')
     expect((titleInput as HTMLInputElement).value).toBe('My Contract')
+  })
+
+  it('reopens on the first step with an empty form', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <CreateDocumentWizard open={true} onOpenChange={vi.fn()} />,
+      { wrapper: createWrapper() },
+    )
+    await user.type(screen.getByPlaceholderText('Enter document title...'), 'Old draft')
+    await user.click(screen.getByText('pick nda'))
+    await user.click(screen.getByText('Next'))
+    expect(screen.getByTestId('step-values')).toBeDefined()
+
+    rerender(<CreateDocumentWizard open={false} onOpenChange={vi.fn()} />)
+    rerender(<CreateDocumentWizard open={true} onOpenChange={vi.fn()} />)
+
+    expect(screen.getByTestId('step-version')).toBeDefined()
+    expect(
+      (screen.getByPlaceholderText('Enter document title...') as HTMLInputElement).value,
+    ).toBe('')
+  })
+
+  it("sends only the selected version's values after a template switch", async () => {
+    const user = userEvent.setup()
+    mutateAsync.mockResolvedValue({ id: 'doc-1', status: 'PENDING' })
+    render(
+      <CreateDocumentWizard open={true} onOpenChange={vi.fn()} />,
+      { wrapper: createWrapper() },
+    )
+    await user.type(screen.getByPlaceholderText('Enter document title...'), 'Offer')
+    await user.click(screen.getByText('pick nda'))
+    await user.click(screen.getByText('Next'))
+    await user.click(screen.getByText('fill nda'))
+    await user.click(screen.getByText('Back'))
+    await user.click(screen.getByText('pick offer'))
+    await user.click(screen.getByText('Next'))
+    await user.click(screen.getByText('fill offer'))
+    await user.click(screen.getByText('Next'))
+    await user.click(screen.getByText('Next'))
+
+    expect(screen.getByTestId('step-review').textContent).toBe('{"job_title":"Analyst"}')
+    await user.click(screen.getByText('Send for Signing'))
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ injectedValues: { job_title: 'Analyst' } }),
+    )
   })
 })

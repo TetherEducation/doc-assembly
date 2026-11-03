@@ -11,13 +11,13 @@ import (
 // CreateDocumentCommand represents the command to create and send a document for signing.
 type CreateDocumentCommand struct {
 	WorkspaceID               string
-	TemplateVersionID         string
+	TemplateVersionID         string // must be a version of a template in WorkspaceID
 	Title                     string
 	ClientExternalReferenceID *string
 	InjectedValues            map[string]any
 	Recipients                []DocumentRecipientCommand
 	OperationType             entity.OperationType // CREATE, RENEW, or AMEND (defaults to CREATE)
-	RelatedDocumentID         *string              // Required for RENEW/AMEND operations
+	RelatedDocumentID         *string              // Required for RENEW/AMEND and refused otherwise; must be a document in WorkspaceID
 	// SigningEmail is an optional subject and message for the signing
 	// provider's invitation email. Nil or empty keeps the provider's default.
 	SigningEmail *entity.SigningEmail

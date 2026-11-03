@@ -320,6 +320,8 @@ Gestión de imágenes del workspace para reutilizarlas en el editor y en render/
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/content_template_controller.go`
 
+**Alcance de workspace:** toda ruta con `{templateId}` exige que el template pertenezca al workspace efectivo del request (el de `X-Workspace-ID`, o su sandbox con `X-Sandbox-Mode: true`). Un template de otro workspace responde **404**, igual que uno inexistente (`templateInWorkspace`, después del chequeo de rol). En `clone`, un `versionId` de un template de otro workspace también responde 404 como una versión inexistente.
+
 ### Endpoints de Contract Generation (`/api/v1/content`)
 
 | Método | Endpoint | Descripción | OWNER | ADMIN | EDITOR | OPERATOR | VIEWER |
@@ -401,6 +403,8 @@ Genera un documento de contrato estructurado (PortableDocument JSON) analizando 
 | DELETE | `/versions/{versionId}/signer-roles/{roleId}` | Elimina un rol de firmante de la versión | ✅ | ✅ | ✅ | ❌ | ❌ |
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/template_version_controller.go`
+
+**Alcance de workspace:** además del template (ver Templates), `{versionId}` debe ser una versión de `{templateId}` (`versionInTemplate`) y `{injectableId}` un vínculo de esa versión; si no, **404** como si no existiera. `from-existing` exige que `sourceVersionId` sea una versión del mismo template. `promote` se llama en producción sobre un template del sandbox: el template origen debe pertenecer al workspace destino o a su sandbox, y `targetTemplateId` (modo `NEW_VERSION`) al workspace destino; si no, **404**.
 
 ### Resumen de Roles Mínimos por Operación
 

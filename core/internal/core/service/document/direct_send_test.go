@@ -93,7 +93,7 @@ type directSendTemplateRepo struct {
 func (directSendTemplateRepo) FindTemplateWorkspaceByTemplateID(context.Context, string) (*port.TemplateWorkspace, error) {
 	docType := "doctype-1"
 	return &port.TemplateWorkspace{
-		Template:  &entity.Template{ID: "tpl-1", DocumentTypeID: &docType},
+		Template:  &entity.Template{ID: "tpl-1", WorkspaceID: "ws-1", DocumentTypeID: &docType},
 		Workspace: &entity.Workspace{ID: "ws-1", Type: entity.WorkspaceTypeClient},
 	}, nil
 }

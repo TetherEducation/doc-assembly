@@ -108,7 +108,7 @@ func read(c context.Context, data []byte) (ctx *model.Context, err error) {
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
 	conf.Limits = limits()
-	ctx, err = pdfcpu.ReadWithContext(c, bytes.NewReader(data), conf)
+	ctx, err = pdfcpu.Read(c, bytes.NewReader(data), conf)
 	if errors.Is(err, pdfcpu.ErrWrongPassword) {
 		return nil, errPassword
 	}
