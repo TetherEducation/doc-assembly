@@ -68,6 +68,16 @@ export function CreateDocumentWizard({
     [selectedVersion]
   )
 
+  // Values typed for another template or version stay in state (so going
+  // back restores them), but only the selected version's keys are reviewed
+  // and sent.
+  const injectedValues = useMemo(() => {
+    const keys = new Set(injectables.map((i) => i.definition.key))
+    return Object.fromEntries(
+      Object.entries(values).filter(([key]) => keys.has(key))
+    )
+  }, [injectables, values])
+
   const signerRoleNames = useMemo(() => {
     const map: Record<string, string> = {}
     for (const role of signerRoles) {
@@ -78,26 +88,22 @@ export function CreateDocumentWizard({
 
   const stepIndex = STEPS.indexOf(step)
 
-  const resetForm = useCallback(() => {
-    setStep('version')
-    setTemplateId('')
-    setVersionId('')
-    setTitle('')
-    setValues({})
-    setRecipients([])
-    setAwaitingInputResult(null)
-    setResultLinkCopied(false)
-  }, [])
-
-  const handleOpenChange = useCallback(
-    (isOpen: boolean) => {
-      if (isOpen) {
-        resetForm()
-      }
-      onOpenChange(isOpen)
-    },
-    [onOpenChange, resetForm]
-  )
+  // Reset form when the dialog opens. The parent opens it through the `open`
+  // prop, which never calls onOpenChange(true), so adjust state on the prop.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) {
+      setStep('version')
+      setTemplateId('')
+      setVersionId('')
+      setTitle('')
+      setValues({})
+      setRecipients([])
+      setAwaitingInputResult(null)
+      setResultLinkCopied(false)
+    }
+  }
 
   // Initialize recipients when version changes and we move to recipients step
   const initRecipients = useCallback(() => {
@@ -171,7 +177,7 @@ export function CreateDocumentWizard({
     const request: CreateDocumentRequest = {
       templateVersionId: versionId,
       title: title.trim(),
-      injectedValues: values,
+      injectedValues,
       recipients,
     }
 
@@ -199,7 +205,7 @@ export function CreateDocumentWizard({
   }
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
@@ -346,7 +352,7 @@ export function CreateDocumentWizard({
                 templateTitle={templateDetail?.title ?? ''}
                 version={selectedVersion}
                 title={title}
-                values={values}
+                values={injectedValues}
                 recipients={recipients}
                 signerRoleNames={signerRoleNames}
               />
