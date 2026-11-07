@@ -88,6 +88,10 @@ signing:
   # Send each template's language to the provider, so its emails to signers and
   # its signing certificate use it instead of the provider's default. Off by default.
   document_language: false    # DOC_ENGINE_SIGNING_DOCUMENT_LANGUAGE
+  # Upload each document to the provider under its title instead of
+  # "document.pdf", so the files the provider emails and stores carry the
+  # document's name. Off by default.
+  document_filename_from_title: false # DOC_ENGINE_SIGNING_DOCUMENT_FILENAME_FROM_TITLE
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
   # Send documents with no signer-fillable fields straight to the provider at
   # creation, skipping the AWAITING_INPUT pre-signing step. Off by default.

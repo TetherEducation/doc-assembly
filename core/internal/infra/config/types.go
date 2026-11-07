@@ -207,6 +207,11 @@ type SigningConfig struct {
 	// signers and its signing certificate in that language instead of its own
 	// default. Off by default.
 	DocumentLanguage bool `mapstructure:"document_language"`
+	// DocumentFilenameFromTitle uploads each document to the provider under
+	// its title instead of "document.pdf", so the files the provider emails
+	// and stores (the completed-document attachment, its signed copy) carry
+	// the document's name. Off by default.
+	DocumentFilenameFromTitle bool `mapstructure:"document_filename_from_title"`
 	// HidePublicDocLink hides the engine's own public signing link
 	// (/public/doc/{id}) in the panel, for deployments where signers cannot use
 	// that page and reach documents only through the provider's links (its
