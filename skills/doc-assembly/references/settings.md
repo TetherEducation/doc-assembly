@@ -84,6 +84,8 @@ signing:
   document_language: false               # true → each document's template language (meta.language) goes to
                                          # Documenso as envelope meta.language: signer emails and the signing
                                          # certificate use it; false → the Documenso team's default language
+  document_filename_from_title: false    # true → the PDF is uploaded under the document's title, so Documenso's
+                                         # completion-email attachment and signed file carry it; false → "document.pdf"
   webhook_url: "https://app.example.com/webhooks/signing/documenso"
   direct_send: false                     # DOC_ENGINE_SIGNING_DIRECT_SEND — true sends documents with no
                                          # signer-fillable fields straight to the provider at creation
@@ -205,6 +207,7 @@ These are the env vars the lib `Getenv`s explicitly — they always win over YAM
 | `DOC_ENGINE_SIGNING_WEBHOOK_SECRET` | `signing.webhook_secret` | |
 | `DOC_ENGINE_SIGNING_SEQUENTIAL_ORDER` | `signing.sequential_order` | `true`/`false`; default `false` (all signers invited at once). |
 | `DOC_ENGINE_SIGNING_DOCUMENT_LANGUAGE` | `signing.document_language` | `true`/`false`; default `false` (provider's default language). `true` sends the template's `meta.language`, so Documenso's emails and signing certificate follow it; codes Documenso does not support are left out. |
+| `DOC_ENGINE_SIGNING_DOCUMENT_FILENAME_FROM_TITLE` | `signing.document_filename_from_title` | `true`/`false`; default `false` (every PDF uploaded as `document.pdf`). `true` uploads it under the document's title (no `.pdf`; quotes and control characters dropped, slashes become `-`, capped at 150 characters), so Documenso's completion-email attachment reads `<title>.pdf`. |
 | `DOC_ENGINE_SIGNING_WEBHOOK_URL` | `signing.webhook_url` | |
 | `DOC_ENGINE_SIGNING_DIRECT_SEND` | `signing.direct_send` | Default `false`. `true` skips `AWAITING_INPUT` for documents whose template has no interactive (signer-fillable) fields. |
 | `DOC_ENGINE_STORAGE_ENABLED` | `storage.enabled` | |

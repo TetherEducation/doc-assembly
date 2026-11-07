@@ -40,6 +40,13 @@ type Config struct {
 	// releases.
 	DocumentLanguage bool
 
+	// TitleAsFileName uploads each document's PDF under its title instead of
+	// "document.pdf". Documenso names the envelope item, the files attached
+	// to its completion email and its stored signed file after that name, so
+	// they carry the document's title. Off by default: the envelope-create
+	// request is then byte-identical to previous releases.
+	TitleAsFileName bool
+
 	// Embed customizes the embedded signing widget (theme, language,
 	// branding, signer-name prefill). Zero value keeps embedded URLs
 	// byte-identical to previous releases.

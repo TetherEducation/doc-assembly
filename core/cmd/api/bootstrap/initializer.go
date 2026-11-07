@@ -557,6 +557,7 @@ func (e *Engine) resolveSigningProvider(cfg *config.Config) (port.SigningProvide
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 			DocumentLanguage:       cfg.Signing.DocumentLanguage,
+			TitleAsFileName:        cfg.Signing.DocumentFilenameFromTitle,
 		})
 	}
 }
@@ -645,6 +646,7 @@ func (e *Engine) resolveWebhookHandlers(cfg *config.Config) (map[string]port.Web
 
 			SequentialSigningOrder: cfg.Signing.SequentialOrder,
 			DocumentLanguage:       cfg.Signing.DocumentLanguage,
+			TitleAsFileName:        cfg.Signing.DocumentFilenameFromTitle,
 		})
 		if err != nil {
 			return nil, err

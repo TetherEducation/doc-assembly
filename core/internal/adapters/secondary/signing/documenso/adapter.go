@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
@@ -109,13 +110,15 @@ func (a *Adapter) SubmitAttemptDocument(ctx context.Context, req *port.SubmitAtt
 // when false Documenso defaults to PARALLEL. A language Documenso supports goes
 // in meta.language, which sets the language of the envelope's emails and
 // signing certificate; otherwise Documenso uses the team's default language.
-// With neither, no meta key is sent.
-func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, language string) (*bytes.Buffer, string, error) {
+// With neither, no meta key is sent. fileName is the uploaded file's name,
+// which Documenso keeps as the envelope item's title and uses to name the
+// files it sends and stores (see envelopeFileName).
+func buildEnvelopeBody(title, fileName, externalRef string, pdf []byte, sequential bool, language string) (*bytes.Buffer, string, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
 	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", `form-data; name="files"; filename="document.pdf"`)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="files"; filename="%s"`, fileName))
 	h.Set("Content-Type", "application/pdf")
 
 	part, err := writer.CreatePart(h)
@@ -155,13 +158,54 @@ func buildEnvelopeBody(title, externalRef string, pdf []byte, sequential bool, l
 	return &buf, writer.FormDataContentType(), nil
 }
 
+// defaultEnvelopeFileName is the uploaded file's name when TitleAsFileName is
+// off, and the fallback when a title leaves nothing usable.
+const defaultEnvelopeFileName = "document.pdf"
+
+// maxEnvelopeFileNameRunes caps the uploaded file name's length.
+const maxEnvelopeFileNameRunes = 150
+
+// envelopeFileName turns a document title into the uploaded file's name.
+// Documenso's API keeps that name, unchanged, as the envelope item's title and
+// appends ".pdf" when it attaches the signed document to its completion email,
+// so the name carries no ".pdf" of its own: "Mutual NDA" arrives as
+// "Mutual NDA.pdf". Control characters and quotes are dropped, slashes become
+// "-", and a trailing ".pdf" in the title is removed. A title that leaves
+// nothing falls back to defaultEnvelopeFileName.
+func envelopeFileName(title string) string {
+	name := strings.Map(func(r rune) rune {
+		switch {
+		case r == '/' || r == '\\':
+			return '-'
+		case r == '"' || unicode.IsControl(r):
+			return -1
+		}
+		return r
+	}, title)
+	name = strings.TrimSpace(name)
+	for strings.HasSuffix(strings.ToLower(name), ".pdf") {
+		name = strings.TrimSpace(name[:len(name)-len(".pdf")])
+	}
+	if runes := []rune(name); len(runes) > maxEnvelopeFileNameRunes {
+		name = strings.TrimSpace(string(runes[:maxEnvelopeFileNameRunes]))
+	}
+	if name == "" {
+		return defaultEnvelopeFileName
+	}
+	return name
+}
+
 // createEnvelope creates a new envelope with the PDF document. The document's
 // language is sent only when the DocumentLanguage setting is on.
 func (a *Adapter) createEnvelope(ctx context.Context, title string, externalRef string, pdf []byte, language string) (string, error) {
 	if !a.config.DocumentLanguage {
 		language = ""
 	}
-	buf, contentType, err := buildEnvelopeBody(title, externalRef, pdf, a.config.SequentialSigningOrder, language)
+	fileName := defaultEnvelopeFileName
+	if a.config.TitleAsFileName {
+		fileName = envelopeFileName(title)
+	}
+	buf, contentType, err := buildEnvelopeBody(title, fileName, externalRef, pdf, a.config.SequentialSigningOrder, language)
 	if err != nil {
 		return "", err
 	}

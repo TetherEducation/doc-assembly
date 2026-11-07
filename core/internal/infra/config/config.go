@@ -231,6 +231,11 @@ func applySigningEnvOverrides(cfg *SigningConfig) {
 			cfg.DocumentLanguage = parsed
 		}
 	}
+	if v := os.Getenv("DOC_ENGINE_SIGNING_DOCUMENT_FILENAME_FROM_TITLE"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.DocumentFilenameFromTitle = parsed
+		}
+	}
 	if v := os.Getenv("DOC_ENGINE_SIGNING_WEBHOOK_URL"); v != "" {
 		cfg.WebhookURL = v
 	}
