@@ -15,7 +15,7 @@ type DocumentEventRepository interface {
 
 	// CreateOnce records a timeline event unless the same event is already
 	// recorded. Same event = same document, event type, recipient (both may be
-	// empty) and metadata attemptId. For RECIPIENT_SIGNED, an event whose
+	// empty), metadata attemptId and metadata recipientEmail. For RECIPIENT_SIGNED, an event whose
 	// metadata timeSource is "provider" replaces the time (and metadata) of an
 	// existing one the engine guessed. Concurrent calls for one document are
 	// serialized, so each event is written once.

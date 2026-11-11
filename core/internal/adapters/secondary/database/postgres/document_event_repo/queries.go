@@ -24,7 +24,8 @@ const (
 	queryLockDocumentEvents = `SELECT pg_advisory_xact_lock(hashtext('document_events:' || $1::text))`
 
 	// queryCreateOnce inserts the event unless one with the same document,
-	// type, recipient and attemptId exists.
+	// type, recipient, attemptId and recipientEmail exists. The email keeps two
+	// signers apart when an attempt recipient has no document recipient.
 	queryCreateOnce = `
 		INSERT INTO execution.document_events (
 			document_id, event_type, actor_type, actor_id,
@@ -37,6 +38,7 @@ const (
 			  AND event_type = $2::varchar
 			  AND recipient_id IS NOT DISTINCT FROM $7::uuid
 			  AND metadata->>'attemptId' IS NOT DISTINCT FROM $8::jsonb->>'attemptId'
+			  AND metadata->>'recipientEmail' IS NOT DISTINCT FROM $8::jsonb->>'recipientEmail'
 		)
 	`
 
@@ -49,6 +51,7 @@ const (
 		  AND event_type = $2::varchar
 		  AND recipient_id IS NOT DISTINCT FROM $3::uuid
 		  AND metadata->>'attemptId' IS NOT DISTINCT FROM $4::jsonb->>'attemptId'
+		  AND metadata->>'recipientEmail' IS NOT DISTINCT FROM $4::jsonb->>'recipientEmail'
 		  AND COALESCE(metadata->>'timeSource', '') <> 'provider'
 	`
 )
