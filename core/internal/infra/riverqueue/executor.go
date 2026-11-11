@@ -40,6 +40,7 @@ type SigningAttemptExecutor struct {
 	storageEnabled    bool
 	completionHandler port.DocumentCompletedHandler
 	failpoints        AttemptFailpoints
+	timelineEvents    port.DocumentEventRepository
 }
 
 type SigningAttemptExecutorConfig struct {
@@ -58,6 +59,11 @@ type SigningAttemptExecutorConfig struct {
 	StorageEnabled    bool
 	CompletionHandler port.DocumentCompletedHandler
 	Failpoints        AttemptFailpoints
+	// TimelineEvents records the signing timeline (signing.document_timeline)
+	// in document_events: the document sent, completed or declined, and each
+	// signer's status changes seen by a status refresh. Nil (the default)
+	// records nothing.
+	TimelineEvents port.DocumentEventRepository
 }
 
 func NewSigningAttemptExecutor(cfg SigningAttemptExecutorConfig) *SigningAttemptExecutor {
@@ -77,6 +83,7 @@ func NewSigningAttemptExecutor(cfg SigningAttemptExecutorConfig) *SigningAttempt
 		storageEnabled:    cfg.StorageEnabled,
 		completionHandler: cfg.CompletionHandler,
 		failpoints:        cfg.Failpoints,
+		timelineEvents:    cfg.TimelineEvents,
 	}
 }
 
@@ -507,7 +514,7 @@ func (e *SigningAttemptExecutor) persistProviderStatusRefresh(ctx context.Contex
 	}
 
 	old := current.Status
-	if err := e.updateAttemptRecipientStatusesTx(ctx, tx, attempt.ID, status); err != nil {
+	if err := e.updateAttemptRecipientStatusesTx(ctx, tx, attempt, status); err != nil {
 		return err
 	}
 	if err := e.attemptRepo.UpdateTx(ctx, tx, attempt); err != nil {
@@ -761,8 +768,7 @@ func (e *SigningAttemptExecutor) transition(ctx context.Context, attempt *entity
 	if _, err := tx.Exec(ctx, `UPDATE execution.documents SET status=$3, updated_at=now() WHERE id=$1 AND active_attempt_id=$2`, attempt.DocumentID, attempt.ID, entity.ProjectDocumentStatusFromAttempt(attempt.Status)); err != nil {
 		return err
 	}
-	newStatus := attempt.Status
-	if err := e.attemptRepo.InsertEventTx(ctx, tx, &entity.SigningAttemptEvent{AttemptID: attempt.ID, DocumentID: attempt.DocumentID, EventType: eventType, OldStatus: &old, NewStatus: &newStatus, ProviderName: attempt.ProviderName, ProviderDocumentID: attempt.ProviderDocumentID, CorrelationKey: attempt.ProviderCorrelationKey, ErrorClass: attempt.LastErrorClass}); err != nil {
+	if err := e.insertTransitionEventTx(ctx, tx, attempt, eventType, old); err != nil {
 		return err
 	}
 	if phase != nil {
@@ -801,6 +807,9 @@ func (e *SigningAttemptExecutor) persistProviderSuccess(ctx context.Context, att
 	}
 	newStatus := attempt.Status
 	if err := e.attemptRepo.InsertEventTx(ctx, tx, &entity.SigningAttemptEvent{AttemptID: attempt.ID, DocumentID: attempt.DocumentID, EventType: "ATTEMPT_SIGNING_READY", OldStatus: &old, NewStatus: &newStatus, ProviderName: attempt.ProviderName, ProviderDocumentID: attempt.ProviderDocumentID, CorrelationKey: attempt.ProviderCorrelationKey}); err != nil {
+		return err
+	}
+	if err := recordAttemptTimelineTx(ctx, tx, e.timelineEvents, attempt, old); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -965,13 +974,13 @@ func (e *SigningAttemptExecutor) updateAttemptRecipientsTx(
 func (e *SigningAttemptExecutor) updateAttemptRecipientStatusesTx(
 	ctx context.Context,
 	tx pgx.Tx,
-	attemptID string,
+	attempt *entity.SigningAttempt,
 	status *port.ProviderDocumentStatusResult,
 ) error {
 	if status == nil {
 		return nil
 	}
-	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attemptID)
+	attemptRecipients, err := e.attemptRepo.FindRecipientsByAttemptID(ctx, attempt.ID)
 	if err != nil {
 		return err
 	}
@@ -983,7 +992,7 @@ func (e *SigningAttemptExecutor) updateAttemptRecipientStatusesTx(
 	}
 	now := time.Now().UTC()
 	for _, rec := range attemptRecipients {
-		if err := applyProviderRecipientStatusTx(ctx, tx, e.attemptRepo, rec, status, byProviderID, now); err != nil {
+		if err := applyProviderRecipientStatusTx(ctx, tx, e.attemptRepo, e.timelineEvents, attempt.DocumentID, rec, status, byProviderID, now); err != nil {
 			return err
 		}
 	}
@@ -994,6 +1003,8 @@ func applyProviderRecipientStatusTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	attemptRepo port.SigningAttemptRepository,
+	timelineEvents port.DocumentEventRepository,
+	documentID string,
 	rec *entity.SigningAttemptRecipient,
 	status *port.ProviderDocumentStatusResult,
 	byProviderID map[string]port.RecipientStatusResult,
@@ -1004,11 +1015,15 @@ func applyProviderRecipientStatusTx(
 	if newStatus == "" {
 		return nil
 	}
+	oldStatus := rec.Status
 	rec.Status = newStatus
+	at, timeSource := now, entity.TimelineTimeEngine
 	if rec.Status == entity.RecipientStatusSigned {
 		rec.SignedAt = result.SignedAt
 		if rec.SignedAt == nil {
 			rec.SignedAt = &now
+		} else {
+			at, timeSource = *rec.SignedAt, entity.TimelineTimeProvider
 		}
 	}
 	if err := attemptRepo.UpdateRecipientTx(ctx, tx, rec); err != nil {
@@ -1016,6 +1031,12 @@ func applyProviderRecipientStatusTx(
 	}
 	if err := markLinkedDocumentRecipientSignedTx(ctx, tx, rec); err != nil {
 		return err
+	}
+	if eventType := entity.TimelineEventForRecipientStatus(oldStatus, rec.Status); eventType != "" {
+		event := entity.NewRecipientTimelineEvent(documentID, rec, eventType, entity.ActorScheduler, oldStatus, at, timeSource)
+		if err := recordTimelineEventTx(ctx, tx, timelineEvents, event); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1056,6 +1077,9 @@ func (e *SigningAttemptExecutor) insertTransitionEventTx(
 	eventType string,
 	old entity.SigningAttemptStatus,
 ) error {
+	if err := recordAttemptTimelineTx(ctx, tx, e.timelineEvents, attempt, old); err != nil {
+		return err
+	}
 	if eventType == "" {
 		return nil
 	}

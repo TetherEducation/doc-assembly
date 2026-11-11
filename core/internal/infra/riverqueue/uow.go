@@ -22,6 +22,7 @@ type SigningExecutionUnitOfWork struct {
 	attemptRepo      port.SigningAttemptRepository
 	documentCreator  DocumentCreator
 	recipientCreator RecipientCreator
+	timelineEvents   port.DocumentEventRepository
 }
 
 // DocumentCreator inserts a document within a caller-owned transaction
@@ -39,12 +40,15 @@ type RecipientCreator interface {
 
 // NewSigningExecutionUnitOfWork builds the unit of work. documentCreator and
 // recipientCreator may be nil; CreateDocumentAndStartSigning then fails.
+// timelineEvents records the signing timeline (signing.document_timeline); nil
+// records nothing.
 func NewSigningExecutionUnitOfWork(
 	pool *pgxpool.Pool,
 	client *river.Client[pgx.Tx],
 	attemptRepo port.SigningAttemptRepository,
 	documentCreator DocumentCreator,
 	recipientCreator RecipientCreator,
+	timelineEvents port.DocumentEventRepository,
 ) *SigningExecutionUnitOfWork {
 	return &SigningExecutionUnitOfWork{
 		pool:             pool,
@@ -52,6 +56,7 @@ func NewSigningExecutionUnitOfWork(
 		attemptRepo:      attemptRepo,
 		documentCreator:  documentCreator,
 		recipientCreator: recipientCreator,
+		timelineEvents:   timelineEvents,
 	}
 }
 
@@ -325,6 +330,9 @@ func (u *SigningExecutionUnitOfWork) transition(ctx context.Context, attempt *en
 			return err
 		}
 	}
+	if err := recordAttemptTimelineTx(ctx, tx, u.timelineEvents, attempt, oldStatus); err != nil {
+		return err
+	}
 	if phase != nil {
 		if err := u.enqueueTx(ctx, tx, *phase, attempt); err != nil {
 			return err
@@ -394,6 +402,9 @@ func (u *SigningExecutionUnitOfWork) recordActiveWebhookStatusTx(ctx context.Con
 		eventType = "ATTEMPT_COMPLETED"
 	}
 	if err := u.insertEventTx(ctx, tx, attempt, &oldStatus, attempt.Status, eventType); err != nil {
+		return err
+	}
+	if err := recordAttemptTimelineTx(ctx, tx, u.timelineEvents, attempt, oldStatus); err != nil {
 		return err
 	}
 	if !completed {
