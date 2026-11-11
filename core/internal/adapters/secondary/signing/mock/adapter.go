@@ -383,6 +383,23 @@ func (a *Adapter) SimulateSign(recipientID string) {
 	r.SignedAt = &now
 }
 
+// SimulateView marks a recipient as having opened the document (DELIVERED),
+// unless it already signed or declined, and the document as opened.
+func (a *Adapter) SimulateView(recipientID string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	r, ok := a.recipients[recipientID]
+	if !ok {
+		return
+	}
+	if r.Status != "SIGNED" && r.Status != "DECLINED" {
+		r.Status = "DELIVERED"
+	}
+	if doc, ok := a.documents[r.DocumentID]; ok && doc.Status != "COMPLETED" {
+		doc.Status = "OPENED"
+	}
+}
+
 func (a *Adapter) SimulateComplete(documentID string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

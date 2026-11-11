@@ -9,9 +9,11 @@ import {
   RefreshCw,
   AlertTriangle,
   Activity,
+  Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDocumentEvents } from '../hooks/useDocumentEvents'
+import { eventRecipient } from './eventRecipient'
 
 const EVENT_CONFIG: Record<
   string,
@@ -33,8 +35,9 @@ const EVENT_CONFIG: Record<
     colorClass: 'text-yellow-500',
   },
   RECIPIENT_DELIVERED: {
-    icon: CheckCircle2,
-    label: 'Delivered to recipient',
+    // The provider's DELIVERED is the signer opening the document.
+    icon: Eye,
+    label: 'Recipient viewed',
     colorClass: 'text-blue-500',
   },
   RECIPIENT_SIGNED: {
@@ -143,6 +146,9 @@ export function DocumentEventTimeline({
           colorClass: 'text-muted-foreground',
         }
         const Icon = config.icon
+        const recipient = event.eventType.startsWith('RECIPIENT_')
+          ? eventRecipient(event.metadata)
+          : null
         const isLast = index === sortedEvents.length - 1
 
         return (
@@ -166,6 +172,12 @@ export function DocumentEventTimeline({
             <div className="flex-1 pt-0.5">
               <p className="text-sm text-foreground">
                 {config.label}
+                {recipient && (
+                  <span className="font-medium">
+                    {' '}
+                    &middot; {recipient}
+                  </span>
+                )}
                 {event.oldStatus && event.newStatus && (
                   <span className="ml-1 text-muted-foreground">
                     ({event.oldStatus} &rarr; {event.newStatus})

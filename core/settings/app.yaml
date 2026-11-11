@@ -92,6 +92,9 @@ signing:
   # "document.pdf", so the files the provider emails and stores carry the
   # document's name. Off by default.
   document_filename_from_title: false # DOC_ENGINE_SIGNING_DOCUMENT_FILENAME_FROM_TITLE
+  # Record the full signing timeline (sent, each signer viewed/signed/declined,
+  # completed/declined) in the document's events. Off by default.
+  document_timeline: false    # DOC_ENGINE_SIGNING_DOCUMENT_TIMELINE
   webhook_url: ""             # DOC_ENGINE_SIGNING_WEBHOOK_URL (public URL for receiving webhooks)
   # Send documents with no signer-fillable fields straight to the provider at
   # creation, skipping the AWAITING_INPUT pre-signing step. Off by default.

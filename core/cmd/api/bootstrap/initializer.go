@@ -253,7 +253,14 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	}
 
 	// --- Services: Document ---
-	eventEmitter := documentsvc.NewEventEmitter(documentEventRepo)
+	// Opt-in (signing.document_timeline): record the full signing timeline
+	// (sent, each signer viewed/signed/declined, completed/declined) in
+	// document_events. Off, only creation and user actions are recorded.
+	eventEmitter := documentsvc.NewEventEmitter(documentEventRepo, documentsvc.WithDocumentTimeline(cfg.Signing.DocumentTimeline))
+	var timelineEvents port.DocumentEventRepository
+	if cfg.Signing.DocumentTimeline {
+		timelineEvents = documentEventRepo
+	}
 	publicURL := cfg.Server.PublicURL
 	notificationSvc := documentsvc.NewNotificationService(notificationProvider, documentRecipientRepo, documentRepo, documentAccessTokenRepo, publicURL)
 
@@ -275,6 +282,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		StorageAdapter:    storageAdapter,
 		StorageEnabled:    cfg.Storage.Enabled,
 		CompletionHandler: e.documentCompletedHandler,
+		TimelineEvents:    timelineEvents,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("river: %w", err)

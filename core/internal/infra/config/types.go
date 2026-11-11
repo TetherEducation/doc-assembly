@@ -212,6 +212,11 @@ type SigningConfig struct {
 	// and stores (the completed-document attachment, its signed copy) carry
 	// the document's name. Off by default.
 	DocumentFilenameFromTitle bool `mapstructure:"document_filename_from_title"`
+	// DocumentTimeline records the full signing timeline in document_events
+	// (GET /documents/{id}/events): the document sent to signers, each signer
+	// viewing, signing or declining, and the document completed or declined.
+	// Off by default: only creation and user actions are recorded.
+	DocumentTimeline bool `mapstructure:"document_timeline"`
 	// HidePublicDocLink hides the engine's own public signing link
 	// (/public/doc/{id}) in the panel, for deployments where signers cannot use
 	// that page and reach documents only through the provider's links (its

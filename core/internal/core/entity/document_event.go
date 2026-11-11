@@ -11,6 +11,7 @@ const (
 	EventDocumentSent       = "DOCUMENT_SENT"
 	EventDocumentCancelled  = "DOCUMENT_CANCELLED"
 	EventDocumentCompleted  = "DOCUMENT_COMPLETED"
+	EventDocumentDeclined   = "DOCUMENT_DECLINED"
 	EventDocumentDeprecated = "DOCUMENT_DEPRECATED"
 	EventDocumentExpired    = "DOCUMENT_EXPIRED"
 	EventDocumentError      = "DOCUMENT_ERROR"
@@ -21,6 +22,25 @@ const (
 	EventWebhookReceived    = "WEBHOOK_RECEIVED"
 	EventStatusRefreshed    = "STATUS_REFRESHED"
 )
+
+// Timeline metadata time sources: where a timeline event's time came from.
+const (
+	// TimelineTimeProvider is a time the signing provider reported.
+	TimelineTimeProvider = "provider"
+	// TimelineTimeEngine is the time the engine saw the change (a webhook's
+	// arrival, a status refresh), used when the provider gave none.
+	TimelineTimeEngine = "engine"
+)
+
+// TimelineMetadata is the metadata of the signing timeline events
+// (DOCUMENT_SENT/COMPLETED/DECLINED and RECIPIENT_*) written when
+// signing.document_timeline is on.
+type TimelineMetadata struct {
+	AttemptID      string `json:"attemptId"`
+	RecipientName  string `json:"recipientName,omitempty"`
+	RecipientEmail string `json:"recipientEmail,omitempty"`
+	TimeSource     string `json:"timeSource,omitempty"`
+}
 
 // Actor type constants.
 const (

@@ -12,11 +12,48 @@ import (
 // EventEmitter handles creating document audit events.
 type EventEmitter struct {
 	eventRepo port.DocumentEventRepository
+	timeline  bool
+}
+
+// EventEmitterOption configures an EventEmitter.
+type EventEmitterOption func(*EventEmitter)
+
+// WithDocumentTimeline turns on the signing timeline events
+// (signing.document_timeline): each signer's viewed/signed/declined. Off,
+// EmitTimelineEvent writes nothing.
+func WithDocumentTimeline(enabled bool) EventEmitterOption {
+	return func(e *EventEmitter) { e.timeline = enabled }
 }
 
 // NewEventEmitter creates a new event emitter.
-func NewEventEmitter(repo port.DocumentEventRepository) *EventEmitter {
-	return &EventEmitter{eventRepo: repo}
+func NewEventEmitter(repo port.DocumentEventRepository, opts ...EventEmitterOption) *EventEmitter {
+	e := &EventEmitter{eventRepo: repo}
+	for _, opt := range opts {
+		opt(e)
+	}
+	return e
+}
+
+// TimelineEnabled reports whether signing timeline events are written.
+func (e *EventEmitter) TimelineEnabled() bool {
+	return e != nil && e.timeline && e.eventRepo != nil
+}
+
+// EmitTimelineEvent records a signing timeline event once (CreateOnce), when
+// the timeline is enabled. A failure is logged, not returned: the timeline
+// must not fail the webhook that carried the change.
+func (e *EventEmitter) EmitTimelineEvent(ctx context.Context, event *entity.DocumentEvent) {
+	if !e.TimelineEnabled() || event == nil {
+		return
+	}
+	if err := e.eventRepo.CreateOnce(ctx, event); err != nil {
+		slog.WarnContext(ctx, "failed to record signing timeline event",
+			slog.String("document_id", event.DocumentID),
+			slog.String("recipient_id", event.RecipientID),
+			slog.String("event_type", event.EventType),
+			slog.String("error", err.Error()),
+		)
+	}
 }
 
 // EmitDocumentEvent creates a document-level event.

@@ -44,6 +44,10 @@ type Dependencies struct {
 	// Without them SigningExecutionUnitOfWork.CreateDocumentAndStartSigning fails.
 	DocumentCreator  DocumentCreator
 	RecipientCreator RecipientCreator
+
+	// TimelineEvents records the signing timeline in document_events
+	// (signing.document_timeline). Nil, the default, records nothing.
+	TimelineEvents port.DocumentEventRepository
 }
 
 // New creates a RiverService. When cfg.Enabled is false the client operates in
@@ -78,6 +82,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg config.WorkerConfig, deps 
 			StorageEnabled:    deps.StorageEnabled,
 			CompletionHandler: deps.CompletionHandler,
 			Failpoints:        workerFailpoints(cfg),
+			TimelineEvents:    deps.TimelineEvents,
 		})
 		river.AddWorker(workers, &RenderAttemptPDFWorker{executor: executor})
 		river.AddWorker(workers, &SubmitAttemptToProviderWorker{executor: executor})
@@ -98,7 +103,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, cfg config.WorkerConfig, deps 
 		executor.client = client
 	}
 
-	signingUOW := NewSigningExecutionUnitOfWork(pool, client, deps.AttemptRepo, deps.DocumentCreator, deps.RecipientCreator)
+	signingUOW := NewSigningExecutionUnitOfWork(pool, client, deps.AttemptRepo, deps.DocumentCreator, deps.RecipientCreator, deps.TimelineEvents)
 	slog.InfoContext(ctx, "river signing queue initialized", slog.Bool("workers_enabled", cfg.Enabled), slog.Int("max_workers", cfg.MaxWorkersOrDefault()))
 	return &RiverService{client: client, signingUOW: signingUOW, workersEnabled: cfg.Enabled}, nil
 }
