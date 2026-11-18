@@ -26,6 +26,12 @@ type ConverterFactory func(
 	fieldResponses map[string]json.RawMessage,
 ) TypstConverter
 
+// WorkspaceFinder loads a workspace by ID. It is the part of
+// port.WorkspaceRepository the renderer uses.
+type WorkspaceFinder interface {
+	FindByID(ctx context.Context, id string) (*entity.Workspace, error)
+}
+
 // Service implements the PDFRenderer interface using Typst.
 type Service struct {
 	typst            *TypstRenderer
@@ -36,12 +42,15 @@ type Service struct {
 	converterFactory ConverterFactory
 	tokens           TypstDesignTokens
 	storageAdapter   port.StorageAdapter
+	workspaces       WorkspaceFinder
 }
 
 // NewService creates a new Typst-based PDF renderer service.
 // storageAdapter is optional (may be nil); when provided, storage:// image URLs in documents
 // are resolved directly from storage rather than failing during PDF rendering.
-func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFactory, tokens TypstDesignTokens, storageAdapter port.StorageAdapter) (*Service, error) {
+// workspaces is optional (may be nil); it tells which workspace a sandbox belongs to, so that
+// a render for a sandbox can resolve the images of that workspace's gallery.
+func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFactory, tokens TypstDesignTokens, storageAdapter port.StorageAdapter, workspaces WorkspaceFinder) (*Service, error) {
 	typst, err := NewTypstRenderer(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create typst renderer: %w", err)
@@ -57,6 +66,7 @@ func NewService(opts TypstOptions, imageCache *ImageCache, factory ConverterFact
 		converterFactory: factory,
 		tokens:           tokens,
 		storageAdapter:   storageAdapter,
+		workspaces:       workspaces,
 	}
 
 	if opts.MaxConcurrent > 0 {
@@ -80,17 +90,10 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 		return nil, fmt.Errorf("document is required")
 	}
 
-	signerRoleValues, injectableDefaults, fieldResponses := s.renderPreviewInputs(req)
-
-	converter := s.converterFactory(req.Injectables, injectableDefaults, signerRoleValues, req.Document.SignerRoles, fieldResponses)
-
 	// Build Typst document
-	builder := NewTypstBuilder(converter, s.tokens)
-	typstSource, pageCount, signatureFields := builder.Build(req.Document)
+	typstSource, pageCount, signatureFields, remoteImages := s.buildTypst(ctx, req)
 
 	// Resolve remote images
-	remoteImages := builder.RemoteImages()
-	remoteImages = s.resolveStorageEntries(ctx, remoteImages)
 	rootDir, renames, cleanup, err := s.resolveRemoteImages(ctx, remoteImages)
 	if err != nil {
 		return nil, err
@@ -129,6 +132,22 @@ func (s *Service) RenderPreview(ctx context.Context, req *port.RenderPreviewRequ
 	}, nil
 }
 
+// buildTypst converts the request's document to Typst source. It returns the source, the page
+// count, the signature fields, and the images the source refers to (url -> local filename),
+// with the stored ones already resolved for the request's workspace.
+func (s *Service) buildTypst(ctx context.Context, req *port.RenderPreviewRequest) (string, int, []port.SignatureField, map[string]string) {
+	signerRoleValues, injectableDefaults, fieldResponses := s.renderPreviewInputs(req)
+
+	converter := s.converterFactory(req.Injectables, injectableDefaults, signerRoleValues, req.Document.SignerRoles, fieldResponses)
+
+	builder := NewTypstBuilder(converter, s.tokens)
+	typstSource, pageCount, signatureFields := builder.Build(req.Document)
+
+	remoteImages := s.resolveStorageEntries(ctx, builder.RemoteImages(), req.WorkspaceID)
+
+	return typstSource, pageCount, signatureFields, remoteImages
+}
+
 func (s *Service) renderPreviewInputs(req *port.RenderPreviewRequest) (map[string]port.SignerRoleValue, map[string]string, map[string]json.RawMessage) {
 	signerRoleValues := req.SignerRoleValues
 	if signerRoleValues == nil {
@@ -151,10 +170,16 @@ func (s *Service) renderPreviewInputs(req *port.RenderPreviewRequest) (map[strin
 // resolveStorageEntries converts storage:// entries in the images map to data: URIs
 // by downloading bytes directly from the storage adapter. Non-storage entries pass through.
 // images is url -> localFilename (same layout as typstConverter.remoteImages).
-func (s *Service) resolveStorageEntries(ctx context.Context, images map[string]string) map[string]string {
+//
+// workspaceID is the workspace the render is for. Only a key of that workspace's gallery
+// (or, for a sandbox, of the gallery of the workspace it belongs to) is downloaded. Any other
+// key is left out without storage being asked for it, which is where a key that storage does
+// not have ends up too.
+func (s *Service) resolveStorageEntries(ctx context.Context, images map[string]string, workspaceID string) map[string]string {
 	if s.storageAdapter == nil || len(images) == 0 {
 		return images
 	}
+	scope := newStoredImageScope(s.workspaces, workspaceID)
 	out := make(map[string]string, len(images))
 	for rawURL, filename := range images {
 		if !strings.HasPrefix(rawURL, "storage://") {
@@ -162,6 +187,14 @@ func (s *Service) resolveStorageEntries(ctx context.Context, images map[string]s
 			continue
 		}
 		key := strings.TrimPrefix(rawURL, "storage://")
+		if !scope.allows(ctx, key) {
+			slog.WarnContext(ctx, "gallery image not found for PDF render",
+				slog.String("key", key),
+				slog.String("workspace_id", workspaceID),
+				slog.String("error", "not an image of the gallery of the render's workspace"),
+			)
+			continue
+		}
 		data, err := s.storageAdapter.Download(ctx, &port.StorageRequest{
 			Key:         key,
 			Environment: entity.EnvironmentProd,

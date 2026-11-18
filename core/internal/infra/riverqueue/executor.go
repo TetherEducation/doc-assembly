@@ -703,6 +703,7 @@ func (e *SigningAttemptExecutor) renderPDF(ctx context.Context, doc *entity.Docu
 		Injectables:      injectables,
 		SignerRoleValues: buildSignerRoleValues(recipients, signerRoles, portableDoc.SignerRoles),
 		FieldResponses:   loadFieldResponseMap(ctx, e.fieldResponseRepo, doc.ID),
+		WorkspaceID:      doc.WorkspaceID,
 	})
 	return renderResult, signerRoles, portableDoc, err
 }

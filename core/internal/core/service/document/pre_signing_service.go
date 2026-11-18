@@ -350,6 +350,7 @@ func (s *PreSigningService) RenderPreviewPDF(ctx context.Context, token string) 
 		Injectables:      injectables,
 		SignerRoleValues: signerRoleValues,
 		FieldResponses:   fieldResponses,
+		WorkspaceID:      doc.WorkspaceID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("rendering preview PDF: %w", err)

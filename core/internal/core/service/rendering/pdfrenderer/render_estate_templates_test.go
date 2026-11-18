@@ -58,7 +58,7 @@ func TestRenderEstateTemplates(t *testing.T) {
 	}
 
 	service, err := NewService(opts, cache, NewTypstConverterFactory(DefaultDesignTokens()),
-		DefaultDesignTokens(), nil)
+		DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Fatalf("renderer: %v", err)
 	}

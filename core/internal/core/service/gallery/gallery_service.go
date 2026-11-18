@@ -17,8 +17,6 @@ import (
 	galleryuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/gallery"
 )
 
-const galleryKeyPrefix = "gallery"
-
 // Service implements the GalleryUseCase input port.
 type Service struct {
 	adapter   port.StorageAdapter
@@ -99,7 +97,7 @@ func (s *Service) UploadAsset(ctx context.Context, cmd galleryuc.UploadAssetCmd)
 		return existing, nil
 	}
 
-	key := buildStorageKey(cmd.WorkspaceID, digest, cmd.Filename)
+	key := entity.NewGalleryAssetKey(cmd.WorkspaceID, digest, cmd.Filename)
 	if err := s.adapter.Upload(ctx, &port.StorageUploadRequest{
 		Key:         key,
 		Data:        cmd.Data,
@@ -258,18 +256,4 @@ func validateUpload(contentType string, size int64) error {
 		return entity.ErrGalleryFileTooLarge
 	}
 	return nil
-}
-
-func buildStorageKey(workspaceID, digest, filename string) string {
-	safeFilename := sanitizeFilename(filename)
-	return fmt.Sprintf("%s/%s/%s-%s", galleryKeyPrefix, workspaceID, digest[:12], safeFilename)
-}
-
-func sanitizeFilename(name string) string {
-	replacer := strings.NewReplacer("/", "_", "\\", "_", "\x00", "")
-	sanitized := strings.TrimSpace(replacer.Replace(name))
-	if sanitized == "" {
-		return "asset"
-	}
-	return sanitized
 }

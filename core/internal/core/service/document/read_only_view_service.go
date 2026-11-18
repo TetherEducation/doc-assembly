@@ -743,7 +743,8 @@ func (s *ReadOnlyViewService) renderBlankPrintPDF(ctx context.Context, doc *enti
 	}
 
 	renderResult, err := s.pdfRenderer.RenderPreview(ctx, &port.RenderPreviewRequest{
-		Document: portableDoc,
+		Document:    portableDoc,
+		WorkspaceID: doc.WorkspaceID,
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("render blank PDF: %w", err)
@@ -824,6 +825,7 @@ func (s *ReadOnlyViewService) renderReadOnlyViewPreviewPDF(ctx context.Context, 
 		Injectables:      injectables,
 		SignerRoleValues: buildSignerRoleValues(recipients, signerRoles, portableDoc.SignerRoles),
 		FieldResponses:   fieldResponses,
+		WorkspaceID:      doc.WorkspaceID,
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("render preview PDF: %w", err)
