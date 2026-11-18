@@ -126,6 +126,8 @@ Gestión de inyectores del sistema definidos en código (extensibility system).
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/tenant_controller.go`
 
+**Alcance de tenant:** `{workspaceId}` (`PATCH .../status`, `DELETE`) debe ser un workspace del tenant de `X-Tenant-ID`, y `{memberId}` un miembro de ese tenant (`workspaceInTenant`, `tenantMemberInTenant`, después del chequeo de rol). Un ID de otro tenant responde **404**, igual que uno inexistente.
+
 ### Endpoints de Procesos (`/api/v1/tenant/processes`)
 
 Gestión de procesos a nivel de tenant para organizar plantillas.
