@@ -390,6 +390,9 @@ func (s *TemplateVersionService) AddInjectable(ctx context.Context, cmd template
 	if err := version.CanEdit(); err != nil {
 		return nil, err
 	}
+	if err := s.definitionAvailable(ctx, cmd.VersionID, cmd.InjectableDefinitionID); err != nil {
+		return nil, err
+	}
 
 	exists, err := s.injectableRepo.Exists(ctx, cmd.VersionID, cmd.InjectableDefinitionID)
 	if err != nil {
@@ -423,6 +426,26 @@ func (s *TemplateVersionService) AddInjectable(ctx context.Context, cmd template
 	)
 
 	return injectable, nil
+}
+
+// definitionAvailable checks that an injectable definition may be linked to a
+// version: it must be a global one or belong to the workspace of the version's
+// template (for a sandbox template, the workspace the sandbox belongs to). A
+// definition of another workspace, like an ID that is not a UUID, answers as
+// missing, so it cannot be used or probed.
+func (s *TemplateVersionService) definitionAvailable(ctx context.Context, versionID, injectableDefID string) error {
+	if _, err := uuid.Parse(injectableDefID); err != nil {
+		return fmt.Errorf("finding injectable: %w", entity.ErrInjectableNotFound)
+	}
+
+	available, err := s.injectableRepo.DefinitionAvailable(ctx, versionID, injectableDefID)
+	if err != nil {
+		return fmt.Errorf("finding injectable: %w", err)
+	}
+	if !available {
+		return fmt.Errorf("finding injectable: %w", entity.ErrInjectableNotFound)
+	}
+	return nil
 }
 
 // RemoveInjectable removes an injectable from a version. A link of another version

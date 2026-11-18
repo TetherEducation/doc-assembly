@@ -7,6 +7,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	"github.com/TetherEducation/doc-assembly/core/internal/core/port"
 	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
@@ -45,9 +47,18 @@ type InjectableService struct {
 	workspaceProvider    port.WorkspaceInjectableProvider // can be nil
 }
 
-// GetInjectable retrieves an injectable definition by ID.
-func (s *InjectableService) GetInjectable(ctx context.Context, id string) (*entity.InjectableDefinition, error) {
+// GetInjectable retrieves an injectable definition by ID: a global one or one
+// of the workspace. A definition of another workspace, like an ID that is not a
+// UUID, answers as missing, so it cannot be read or probed.
+func (s *InjectableService) GetInjectable(ctx context.Context, id, workspaceID string) (*entity.InjectableDefinition, error) {
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, fmt.Errorf("finding injectable %s: %w", id, entity.ErrInjectableNotFound)
+	}
+
 	injectable, err := s.injectableRepo.FindByID(ctx, id)
+	if err == nil && injectable.WorkspaceID != nil && *injectable.WorkspaceID != workspaceID {
+		err = entity.ErrInjectableNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("finding injectable %s: %w", id, err)
 	}

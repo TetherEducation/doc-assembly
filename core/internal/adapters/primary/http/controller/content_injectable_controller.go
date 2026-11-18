@@ -78,9 +78,10 @@ func (c *ContentInjectableController) ListInjectables(ctx *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/content/injectables/{injectableId} [get]
 func (c *ContentInjectableController) GetInjectable(ctx *gin.Context) {
+	workspaceID, _ := middleware.GetWorkspaceID(ctx)
 	injectableID := ctx.Param("injectableId")
 
-	injectable, err := c.injectableUC.GetInjectable(ctx.Request.Context(), injectableID)
+	injectable, err := c.injectableUC.GetInjectable(ctx.Request.Context(), injectableID, workspaceID)
 	if err != nil {
 		HandleError(ctx, err)
 		return

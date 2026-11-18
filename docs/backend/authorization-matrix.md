@@ -302,6 +302,8 @@ Gestión de imágenes del workspace para reutilizarlas en el editor y en render/
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/content_injectable_controller.go`
 
+**Alcance de workspace:** `{injectableId}` debe ser una definición global o del workspace de `X-Workspace-ID`. La de otro workspace responde **404**, igual que una inexistente. La misma regla vale para `injectableDefinitionId` al vincular un injectable a una versión (`POST /content/templates/{templateId}/versions/{versionId}/injectables`); la versión de un template del sandbox usa las definiciones del workspace al que pertenece el sandbox.
+
 > Para crear, editar o eliminar injectables del workspace, usar los endpoints de `/workspace/injectables`.
 
 ### Endpoints de Templates (`/api/v1/content/templates`)

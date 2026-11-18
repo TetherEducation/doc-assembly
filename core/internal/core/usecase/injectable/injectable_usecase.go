@@ -33,8 +33,9 @@ type CompleteGenerationInjectablesRequest struct {
 // InjectableUseCase defines the input port for injectable definition operations.
 // Note: Injectables are read-only - they are managed via database migrations/seeds.
 type InjectableUseCase interface {
-	// GetInjectable retrieves an injectable definition by ID.
-	GetInjectable(ctx context.Context, id string) (*entity.InjectableDefinition, error)
+	// GetInjectable retrieves an injectable definition by ID: a global one or
+	// one of the workspace. A definition of another workspace answers as missing.
+	GetInjectable(ctx context.Context, id, workspaceID string) (*entity.InjectableDefinition, error)
 
 	// ListInjectables lists all injectable definitions for a workspace (including global, system, and provider).
 	ListInjectables(ctx context.Context, req *ListInjectablesRequest) (*ListInjectablesResult, error)
