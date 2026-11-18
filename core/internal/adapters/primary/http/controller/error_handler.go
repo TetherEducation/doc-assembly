@@ -37,6 +37,8 @@ var notFoundErrors = []error{
 	entity.ErrProcessNotFound,
 	entity.ErrAPIKeyNotFound,
 	entity.ErrInternalTemplateResolutionNotFound,
+	entity.ErrSystemInjectableNotFound,
+	entity.ErrAssignmentNotFound,
 }
 
 var conflictErrors = []error{
@@ -61,6 +63,7 @@ var conflictErrors = []error{
 	entity.ErrProcessCodeExists,
 	entity.ErrInvalidDocumentState,
 	entity.ErrSigningURLNotReady,
+	entity.ErrProcessSlotConflict,
 }
 
 var badRequestErrors = []error{
@@ -119,6 +122,18 @@ var badRequestErrors = []error{
 	entity.ErrDocumentNotTerminal,
 	entity.ErrRelatedDocumentRequired,
 	entity.ErrRelatedDocumentNotAllowed,
+	entity.ErrFieldTooShort,
+	entity.ErrCannotEditScheduled,
+	entity.ErrCannotPromoteToSandbox,
+	entity.ErrCannotModifySystemTenant,
+	entity.ErrCannotModifySystemWorkspace,
+	entity.ErrTenantIDRequired,
+	entity.ErrInvalidKeyType,
+	entity.ErrInvalidProcessType,
+	entity.ErrInvalidScopeType,
+	entity.ErrInvalidTenantStatus,
+	entity.ErrInvalidTagColor,
+	entity.ErrInvalidEmail,
 }
 
 var forbiddenErrors = []error{
