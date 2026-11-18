@@ -107,7 +107,6 @@ var (
 	ErrFolderAlreadyExists = errors.New("folder with this name already exists")
 	ErrFolderHasChildren   = errors.New("folder has child folders")
 	ErrFolderHasTemplates  = errors.New("folder contains templates")
-	ErrInvalidParentFolder = errors.New("invalid parent folder")
 	ErrCircularReference   = errors.New("circular folder reference detected")
 )
 

@@ -26,6 +26,7 @@ func NewTemplateVersionService(
 	contentValidator port.ContentValidator,
 	workspaceRepo port.WorkspaceRepository,
 	sourceRepo port.UploadedSourceRepository,
+	folderRepo port.FolderRepository,
 ) templateuc.TemplateVersionUseCase {
 	return &TemplateVersionService{
 		versionRepo:          versionRepo,
@@ -37,6 +38,7 @@ func NewTemplateVersionService(
 		contentValidator:     contentValidator,
 		workspaceRepo:        workspaceRepo,
 		sourceRepo:           sourceRepo,
+		folderRepo:           folderRepo,
 	}
 }
 
@@ -51,6 +53,7 @@ type TemplateVersionService struct {
 	contentValidator     port.ContentValidator
 	workspaceRepo        port.WorkspaceRepository
 	sourceRepo           port.UploadedSourceRepository
+	folderRepo           port.FolderRepository
 }
 
 // CreateVersion creates a new version for a template.
@@ -557,7 +560,12 @@ func (s *TemplateVersionService) PromoteVersion(ctx context.Context, cmd templat
 }
 
 // promoteAsNewTemplate creates a new template in production with the promoted version.
+// The folder it is filed in, if any, must be one of the production workspace.
 func (s *TemplateVersionService) promoteAsNewTemplate(ctx context.Context, sourceVersion *entity.TemplateVersion, cmd templateuc.PromoteVersionCommand) (*templateuc.PromoteVersionResult, error) {
+	if err := folderInWorkspace(ctx, s.folderRepo, cmd.TargetFolderID, cmd.TargetWorkspaceID); err != nil {
+		return nil, err
+	}
+
 	sourceTemplate, err := s.templateRepo.FindByIDWithDetails(ctx, sourceVersion.TemplateID)
 	if err != nil {
 		return nil, fmt.Errorf("finding source template: %w", err)
