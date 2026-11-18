@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -105,10 +106,16 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 	// Workspaces (tenant-scoped)
 	g.GET("/tenants/:tenantId/workspaces", ctrl.listWorkspaces)
 	g.POST("/tenants/:tenantId/workspaces", ctrl.createWorkspace)
-	g.PATCH("/tenants/:tenantId/workspaces/:workspaceId", ctrl.updateWorkspace)
-	g.POST("/tenants/:tenantId/workspaces/:workspaceId/suspend", ctrl.suspendWorkspace)
-	g.POST("/tenants/:tenantId/workspaces/:workspaceId/activate", ctrl.activateWorkspace)
-	g.POST("/tenants/:tenantId/workspaces/:workspaceId/archive", ctrl.archiveWorkspace)
+
+	// Routes that name one workspace of a tenant. requireWorkspaceInTenant runs
+	// before the handler, so the workspace belongs to the tenant in the URL
+	// whatever the handler does with it.
+	tenantWorkspace := g.Group("/tenants/:tenantId/workspaces/:workspaceId")
+	tenantWorkspace.Use(ctrl.requireWorkspaceInTenant)
+	tenantWorkspace.PATCH("", ctrl.updateWorkspace)
+	tenantWorkspace.POST("/suspend", ctrl.suspendWorkspace)
+	tenantWorkspace.POST("/activate", ctrl.activateWorkspace)
+	tenantWorkspace.POST("/archive", ctrl.archiveWorkspace)
 
 	// Workspace-scoped routes with sandbox support.
 	// AutomationSandboxContext reads :workspaceId from the URL path,
@@ -202,6 +209,44 @@ func (ctrl *AutomationController) checkTenantAccess(c *gin.Context, tenantID str
 	}
 	c.JSON(http.StatusForbidden, gin.H{"error": "API key does not have access to this tenant"})
 	return false
+}
+
+// requireWorkspaceInTenant holds :workspaceId to the tenant in the URL. The key's
+// tenant scope is checked against :tenantId, and workspace lookups select by ID
+// alone, so the two have to be tied together before a handler renames, suspends,
+// activates or archives the workspace. A workspace of another tenant answers 404,
+// the same as one that does not exist. The key's own check comes first, so a
+// tenant it may not use answers 403 whatever the workspace ID is.
+func (ctrl *AutomationController) requireWorkspaceInTenant(c *gin.Context) {
+	tenantID := c.Param("tenantId")
+	if !ctrl.checkTenantAccess(c, tenantID) {
+		c.Abort()
+		return
+	}
+
+	workspaceID := c.Param("workspaceId")
+	if _, err := uuid.Parse(workspaceID); err != nil {
+		HandleError(c, entity.ErrWorkspaceNotFound)
+		c.Abort()
+		return
+	}
+
+	workspace, err := ctrl.workspaceUC.GetWorkspace(c.Request.Context(), workspaceID)
+	// IDs are compared without regard to case: the stored form is lower case, and
+	// the tenant ID in the URL is accepted in either.
+	if errors.Is(err, entity.ErrWorkspaceNotFound) ||
+		(err == nil && (workspace.TenantID == nil || !strings.EqualFold(*workspace.TenantID, tenantID))) {
+		HandleError(c, entity.ErrWorkspaceNotFound)
+		c.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(c, err)
+		c.Abort()
+		return
+	}
+
+	c.Next()
 }
 
 // --- Tenant Handlers ---
