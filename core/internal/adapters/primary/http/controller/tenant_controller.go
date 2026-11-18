@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
@@ -33,8 +35,81 @@ func NewTenantController(
 	}
 }
 
+// workspaceInTenant aborts a request whose :workspaceId does not belong to the
+// caller's tenant. Workspace lookups select by ID alone, and TenantContext only
+// checks the caller's role in the tenant the header names, so without this the
+// owner of any tenant could suspend or archive another tenant's workspace by its
+// ID. A mismatch answers 404, the same as a missing workspace, so IDs from other
+// tenants cannot be probed.
+func (c *TenantController) workspaceInTenant(ctx *gin.Context) {
+	tenantID, ok := middleware.GetTenantID(ctx)
+	if !ok {
+		HandleError(ctx, entity.ErrMissingTenantID)
+		ctx.Abort()
+		return
+	}
+
+	workspaceID := ctx.Param("workspaceId")
+	if _, err := uuid.Parse(workspaceID); err != nil {
+		HandleError(ctx, entity.ErrWorkspaceNotFound)
+		ctx.Abort()
+		return
+	}
+
+	workspace, err := c.workspaceUC.GetWorkspace(ctx.Request.Context(), workspaceID)
+	if errors.Is(err, entity.ErrWorkspaceNotFound) ||
+		(err == nil && (workspace.TenantID == nil || *workspace.TenantID != tenantID)) {
+		HandleError(ctx, entity.ErrWorkspaceNotFound)
+		ctx.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
+// tenantMemberInTenant aborts a request whose :memberId is not a member of the
+// caller's tenant. Member lookups select by ID alone, so without this the
+// admin of any tenant could read another tenant's members by ID. A mismatch
+// answers 404, the same as a missing member.
+func (c *TenantController) tenantMemberInTenant(ctx *gin.Context) {
+	tenantID, ok := middleware.GetTenantID(ctx)
+	if !ok {
+		HandleError(ctx, entity.ErrMissingTenantID)
+		ctx.Abort()
+		return
+	}
+
+	memberID := ctx.Param("memberId")
+	if _, err := uuid.Parse(memberID); err != nil {
+		HandleError(ctx, entity.ErrTenantMemberNotFound)
+		ctx.Abort()
+		return
+	}
+
+	member, err := c.tenantMemberUC.GetMember(ctx.Request.Context(), memberID)
+	if errors.Is(err, entity.ErrTenantMemberNotFound) || (err == nil && member.TenantID != tenantID) {
+		HandleError(ctx, entity.ErrTenantMemberNotFound)
+		ctx.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
 // RegisterRoutes registers all /tenant routes.
-// These routes require X-Tenant-ID header and tenant context.
+// These routes require X-Tenant-ID header and tenant context. The routes that
+// name a workspace or a member check, after the role check, that it belongs to
+// the caller's tenant.
 func (c *TenantController) RegisterRoutes(rg *gin.RouterGroup, middlewareProvider *middleware.Provider) {
 	tenant := rg.Group("/tenant")
 	tenant.Use(middlewareProvider.TenantContext())
@@ -46,15 +121,15 @@ func (c *TenantController) RegisterRoutes(rg *gin.RouterGroup, middlewareProvide
 		// Workspace routes within tenant
 		tenant.GET("/workspaces", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.ListWorkspaces)
 		tenant.POST("/workspaces", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.CreateWorkspace)
-		tenant.PATCH("/workspaces/:workspaceId/status", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.UpdateWorkspaceStatus)
-		tenant.DELETE("/workspaces/:workspaceId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.DeleteWorkspace)
+		tenant.PATCH("/workspaces/:workspaceId/status", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.workspaceInTenant, c.UpdateWorkspaceStatus)
+		tenant.DELETE("/workspaces/:workspaceId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.workspaceInTenant, c.DeleteWorkspace)
 
 		// Tenant member routes
 		tenant.GET("/members", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.ListTenantMembers)
 		tenant.POST("/members", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.AddTenantMember)
-		tenant.GET("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.GetTenantMember)
-		tenant.PUT("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.UpdateTenantMemberRole)
-		tenant.DELETE("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.RemoveTenantMember)
+		tenant.GET("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleAdmin), c.tenantMemberInTenant, c.GetTenantMember)
+		tenant.PUT("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.tenantMemberInTenant, c.UpdateTenantMemberRole)
+		tenant.DELETE("/members/:memberId", middleware.AuthorizeTenantRole(entity.TenantRoleOwner), c.tenantMemberInTenant, c.RemoveTenantMember)
 	}
 }
 
@@ -279,7 +354,6 @@ func (c *TenantController) UpdateWorkspaceStatus(ctx *gin.Context) {
 func (c *TenantController) DeleteWorkspace(ctx *gin.Context) {
 	workspaceID := ctx.Param("workspaceId")
 
-	// TODO: Verify workspace belongs to current tenant before deleting
 	if err := c.workspaceUC.ArchiveWorkspace(ctx.Request.Context(), workspaceID); err != nil {
 		HandleError(ctx, err)
 		return
