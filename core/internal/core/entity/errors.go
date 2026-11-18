@@ -280,6 +280,11 @@ var (
 	ErrFieldTooShort    = errors.New("field is below minimum length")
 )
 
+// ErrInternal is what a response says about a server error (a 5xx). The error
+// that caused it is logged, not sent: its text can carry SQL, constraint
+// names or paths.
+var ErrInternal = errors.New("internal server error")
+
 // Database errors.
 var (
 	ErrDatabaseConnection = errors.New("database connection error")

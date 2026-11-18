@@ -273,8 +273,10 @@ func TestDocumentController_CreateDocument(t *testing.T) {
 			},
 		}
 
-		resp, _ := env.operatorClient().POST("/api/v1/documents", req)
+		resp, body := env.operatorClient().POST("/api/v1/documents", req)
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		// A 500 says only that the server failed; what failed is in the log.
+		assert.JSONEq(t, `{"error":"internal server error"}`, string(body))
 	})
 
 	t.Run("forbidden for viewer", func(t *testing.T) {

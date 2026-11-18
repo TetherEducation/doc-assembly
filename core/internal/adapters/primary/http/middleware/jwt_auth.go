@@ -313,8 +313,17 @@ func getStringFromContext(c *gin.Context, key string) (string, bool) {
 	return "", false
 }
 
-// abortWithError aborts the request with a JSON error response.
+// abortWithError aborts the request with a JSON error response. A server error
+// (5xx) is logged and answered with entity.ErrInternal: its text can carry
+// SQL, constraint names or paths.
 func abortWithError(c *gin.Context, status int, err error) {
+	if status >= http.StatusInternalServerError {
+		slog.ErrorContext(c.Request.Context(), "server error",
+			slog.Int("status", status),
+			slog.Any("error", err),
+		)
+		err = entity.ErrInternal
+	}
 	c.AbortWithStatusJSON(status, gin.H{
 		"error": err.Error(),
 	})
