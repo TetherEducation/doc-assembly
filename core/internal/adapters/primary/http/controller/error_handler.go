@@ -143,9 +143,38 @@ var unavailableErrors = []error{
 	entity.ErrRendererBusy,
 }
 
-// respondError sends an error response.
+// respondError sends an error response. A server error (5xx) is logged here,
+// with the request's operation ID, and the response carries only what
+// clientError lets through. A 500 keeps the log message it has always had.
 func respondError(ctx *gin.Context, statusCode int, err error) {
-	ctx.JSON(statusCode, dto.NewErrorResponse(err))
+	if statusCode >= http.StatusInternalServerError {
+		message := "server error"
+		if statusCode == http.StatusInternalServerError {
+			message = "unhandled error"
+		}
+		slog.ErrorContext(ctx.Request.Context(), message,
+			slog.Int("status", statusCode),
+			slog.Any("error", err),
+		)
+	}
+	ctx.JSON(statusCode, dto.NewErrorResponse(clientError(statusCode, err)))
+}
+
+// clientError returns the error a response with statusCode may carry. Below
+// 500 that is err itself. The text of a server error can carry SQL, constraint
+// names or paths, so a 5xx carries a fixed message instead: for a 503, the
+// condition it was mapped from, whose text is written for the client, without
+// what wraps it, and otherwise only that the server failed.
+func clientError(statusCode int, err error) error {
+	if statusCode < http.StatusInternalServerError {
+		return err
+	}
+	for _, unavailable := range unavailableErrors {
+		if errors.Is(err, unavailable) {
+			return unavailable
+		}
+	}
+	return entity.ErrInternal
 }
 
 // HandleError maps domain errors to HTTP status codes.
@@ -174,11 +203,7 @@ func HandleError(ctx *gin.Context, err error) {
 	}
 
 	statusCode := mapErrorToStatusCode(err)
-	//nolint:staticcheck
-	switch {
-	case statusCode == http.StatusInternalServerError:
-		slog.ErrorContext(ctx.Request.Context(), "unhandled error", slog.Any("error", err))
-	case statusCode == http.StatusNotFound:
+	if statusCode == http.StatusNotFound {
 		slog.WarnContext(ctx.Request.Context(), "not found",
 			slog.String("error", err.Error()),
 			slog.String("path", ctx.Request.URL.Path),
