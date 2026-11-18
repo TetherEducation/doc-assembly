@@ -97,9 +97,15 @@ func (c *ProcessController) ListProcesses(ctx *gin.Context) {
 // @Router /api/v1/tenant/processes/{id} [get]
 // @Security BearerAuth
 func (c *ProcessController) GetProcess(ctx *gin.Context) {
+	tenantID, ok := middleware.GetTenantID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusBadRequest, dto.NewErrorResponse(entity.ErrMissingTenantID))
+		return
+	}
+
 	id := ctx.Param("id")
 
-	process, err := c.processUC.GetProcess(ctx.Request.Context(), id)
+	process, err := c.processUC.GetProcess(ctx.Request.Context(), id, tenantID)
 	if err != nil {
 		HandleError(ctx, err)
 		return

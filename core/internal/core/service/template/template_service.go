@@ -424,6 +424,10 @@ func (s *TemplateService) AssignDocumentType(ctx context.Context, cmd templateuc
 		return &templateuc.AssignDocumentTypeResult{Template: template}, nil
 	}
 
+	if err := s.documentTypeAvailable(ctx, template.WorkspaceID, *cmd.DocumentTypeID); err != nil {
+		return nil, err
+	}
+
 	// Check if another template in the same workspace has this type+process
 	existingTemplate, err := s.templateRepo.FindByDocumentType(ctx, cmd.WorkspaceID, *cmd.DocumentTypeID, template.Process)
 	if err != nil {
@@ -469,6 +473,25 @@ func (s *TemplateService) AssignDocumentType(ctx context.Context, cmd templateuc
 	)
 
 	return &templateuc.AssignDocumentTypeResult{Template: template}, nil
+}
+
+// documentTypeAvailable checks that a document type may be assigned to the
+// templates of a workspace: it must belong to the workspace's tenant or be a
+// global type. A type of another tenant, like an ID that is not a UUID,
+// answers as missing, so it cannot be used or probed.
+func (s *TemplateService) documentTypeAvailable(ctx context.Context, workspaceID, documentTypeID string) error {
+	if _, err := uuid.Parse(documentTypeID); err != nil {
+		return fmt.Errorf("finding document type: %w", entity.ErrDocumentTypeNotFound)
+	}
+
+	available, err := s.templateRepo.DocumentTypeAvailable(ctx, workspaceID, documentTypeID)
+	if err != nil {
+		return fmt.Errorf("finding document type: %w", err)
+	}
+	if !available {
+		return fmt.Errorf("finding document type: %w", entity.ErrDocumentTypeNotFound)
+	}
+	return nil
 }
 
 // SetProcessFields sets the process and processType on a template.

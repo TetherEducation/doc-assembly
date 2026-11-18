@@ -142,6 +142,8 @@ Gestión de procesos a nivel de tenant para organizar plantillas.
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/process_controller.go`
 
+**Alcance de tenant:** `{id}` debe ser un proceso del tenant de `X-Tenant-ID` o un proceso global (del tenant de sistema). Un ID de otro tenant responde **404**, igual que uno inexistente, al leer, actualizar y eliminar. Un proceso global se puede leer pero no modificar (**400**). La misma regla vale para los tipos de documento (`/api/v1/tenant/document-types/{id}`, `document_type_controller.go`), para `replaceWithId` al eliminar un tipo y para `documentTypeId` al asignar un tipo a un template (`PUT /content/templates/{templateId}/document-type`): el tipo debe ser del tenant del workspace o global.
+
 ### Endpoint `/tenant/workspaces` - Detalle
 
 Lista workspaces del tenant actual con paginación y búsqueda opcional.

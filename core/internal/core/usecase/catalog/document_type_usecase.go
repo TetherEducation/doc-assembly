@@ -43,8 +43,9 @@ type DocumentTypeUseCase interface {
 	// CreateDocumentType creates a new document type.
 	CreateDocumentType(ctx context.Context, cmd CreateDocumentTypeCommand) (*entity.DocumentType, error)
 
-	// GetDocumentType retrieves a document type by ID.
-	GetDocumentType(ctx context.Context, id string) (*entity.DocumentType, error)
+	// GetDocumentType retrieves a document type by ID: one of the tenant's own
+	// or a global one. A type of another tenant answers as missing.
+	GetDocumentType(ctx context.Context, id, tenantID string) (*entity.DocumentType, error)
 
 	// GetDocumentTypeByCode retrieves a document type by code within a tenant.
 	GetDocumentTypeByCode(ctx context.Context, tenantID, code string) (*entity.DocumentType, error)
