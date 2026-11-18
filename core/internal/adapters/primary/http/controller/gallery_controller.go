@@ -107,7 +107,6 @@ func (c *GalleryController) SearchAssets(ctx *gin.Context) {
 // @Accept mpfd
 // @Produce json
 // @Security BearerAuth
-// @Param X-Tenant-ID header string true "Tenant ID"
 // @Param X-Workspace-ID header string true "Workspace ID"
 // @Param file formData file true "Image file"
 // @Success 201 {object} dto.GalleryAssetResponse
@@ -117,7 +116,6 @@ func (c *GalleryController) SearchAssets(ctx *gin.Context) {
 // @Router /api/v1/workspace/gallery [post]
 func (c *GalleryController) UploadAsset(ctx *gin.Context) {
 	workspaceID, _ := middleware.GetWorkspaceID(ctx)
-	tenantID, _ := middleware.GetTenantIDFromHeader(ctx)
 	userID, _ := middleware.GetInternalUserID(ctx)
 
 	if err := ctx.Request.ParseMultipartForm(galleryMaxUploadBytes); err != nil {
@@ -144,7 +142,6 @@ func (c *GalleryController) UploadAsset(ctx *gin.Context) {
 	}
 
 	asset, err := c.galleryUC.UploadAsset(ctx.Request.Context(), galleryuc.UploadAssetCmd{
-		TenantID:    tenantID,
 		WorkspaceID: workspaceID,
 		UserID:      userID,
 		Filename:    header.Filename,

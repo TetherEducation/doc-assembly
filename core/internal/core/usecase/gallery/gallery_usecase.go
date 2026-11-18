@@ -56,7 +56,6 @@ type SearchAssetsCmd struct {
 
 // UploadAssetCmd is the command for uploading a new gallery asset.
 type UploadAssetCmd struct {
-	TenantID    string
 	WorkspaceID string
 	UserID      string
 	Filename    string

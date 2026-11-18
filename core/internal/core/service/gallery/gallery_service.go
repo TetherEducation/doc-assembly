@@ -109,8 +109,8 @@ func (s *Service) UploadAsset(ctx context.Context, cmd galleryuc.UploadAssetCmd)
 		return nil, fmt.Errorf("uploading gallery asset: %w", err)
 	}
 
+	// The repository stores the asset under its workspace's tenant.
 	asset := &entity.GalleryAsset{
-		TenantID:    cmd.TenantID,
 		WorkspaceID: cmd.WorkspaceID,
 		Key:         key,
 		Filename:    cmd.Filename,

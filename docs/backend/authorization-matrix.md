@@ -287,7 +287,7 @@ Gestión de imágenes del workspace para reutilizarlas en el editor y en render/
 **Notas:**
 - Todos los endpoints exigen `X-Workspace-ID` y operan estrictamente sobre assets pertenecientes a ese workspace.
 - `url`, `serve` y `delete` validan ownership por `workspace + key` antes de tocar storage.
-- `POST /workspace/gallery` además requiere `X-Tenant-ID` porque persiste metadata multi-tenant.
+- `POST /workspace/gallery` guarda el asset bajo el tenant del workspace; no usa `X-Tenant-ID`.
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/gallery_controller.go`
 

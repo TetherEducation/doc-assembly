@@ -22,10 +22,10 @@ func New(pool *pgxpool.Pool) port.GalleryRepository {
 	return &Repository{pool: pool}
 }
 
-// Save persists a new gallery asset and sets its generated ID.
+// Save persists a new gallery asset under its workspace's tenant, and sets its
+// generated ID and that tenant.
 func (r *Repository) Save(ctx context.Context, asset *entity.GalleryAsset) error {
 	err := r.pool.QueryRow(ctx, querySave,
-		asset.TenantID,
 		asset.WorkspaceID,
 		asset.Key,
 		asset.Filename,
@@ -34,7 +34,10 @@ func (r *Repository) Save(ctx context.Context, asset *entity.GalleryAsset) error
 		asset.SHA256,
 		asset.CreatedBy,
 		asset.CreatedAt,
-	).Scan(&asset.ID)
+	).Scan(&asset.ID, &asset.TenantID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return entity.ErrWorkspaceNotFound
+	}
 	if err != nil {
 		return fmt.Errorf("inserting gallery asset: %w", err)
 	}
