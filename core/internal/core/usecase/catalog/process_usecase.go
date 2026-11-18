@@ -56,6 +56,10 @@ type ProcessUseCase interface {
 	// ListProcessesWithCount lists processes with template usage count.
 	ListProcessesWithCount(ctx context.Context, tenantID string, filters port.ProcessFilters) ([]*entity.ProcessListItem, int64, error)
 
+	// ListProcessTemplates lists the tenant's templates assigned to the process
+	// with the given code: one of the tenant's own or a global one.
+	ListProcessTemplates(ctx context.Context, tenantID, code string) ([]*entity.ProcessTemplateInfo, error)
+
 	// UpdateProcess updates a process's details (name and description only).
 	UpdateProcess(ctx context.Context, cmd UpdateProcessCommand) (*entity.Process, error)
 

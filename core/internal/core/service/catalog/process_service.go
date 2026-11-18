@@ -141,6 +141,22 @@ func (s *ProcessService) ListProcessesWithCount(ctx context.Context, tenantID st
 	return processes, total, nil
 }
 
+// ListProcessTemplates lists the tenant's templates assigned to the process
+// with the given code. The process is looked up as GetProcessByCode does, so a
+// global process answers with the tenant's own templates that use its code.
+func (s *ProcessService) ListProcessTemplates(ctx context.Context, tenantID, code string) ([]*entity.ProcessTemplateInfo, error) {
+	process, err := s.GetProcessByCode(ctx, tenantID, code)
+	if err != nil {
+		return nil, err
+	}
+
+	templates, err := s.processRepo.FindTemplatesByProcess(ctx, tenantID, process.Code)
+	if err != nil {
+		return nil, fmt.Errorf("finding templates by process: %w", err)
+	}
+	return templates, nil
+}
+
 // UpdateProcess updates a process's details (name and description only).
 // Global processes (from SYS tenant) cannot be modified by other tenants.
 func (s *ProcessService) UpdateProcess(ctx context.Context, cmd cataloguc.UpdateProcessCommand) (*entity.Process, error) {
