@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -114,6 +115,9 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 	// AutomationSandboxContext reads :workspaceId from the URL path,
 	// and when X-Sandbox-Mode: true is set, resolves/auto-creates the sandbox workspace.
 	ws := g.Group("")
+	// requireWorkspaceAccess comes first: resolving the sandbox can create it, and
+	// that is for a key allowed on the workspace's tenant only.
+	ws.Use(ctrl.requireWorkspaceAccess)
 	ws.Use(middlewareProvider.AutomationSandboxContext())
 
 	// Injectables (workspace-scoped)
@@ -122,8 +126,8 @@ func (ctrl *AutomationController) RegisterRoutes(base gin.IRouter, middlewarePro
 	// Templates (workspace-scoped)
 	ws.GET("/workspaces/:workspaceId/templates", ctrl.listTemplates)
 	ws.POST("/workspaces/:workspaceId/templates", ctrl.createTemplate)
-	ws.GET("/workspaces/:workspaceId/templates/:templateId", ctrl.getTemplate)
-	ws.PATCH("/workspaces/:workspaceId/templates/:templateId", ctrl.updateTemplate)
+	ws.GET("/workspaces/:workspaceId/templates/:templateId", ctrl.requireTemplateInWorkspace, ctrl.getTemplate)
+	ws.PATCH("/workspaces/:workspaceId/templates/:templateId", ctrl.requireTemplateInWorkspace, ctrl.updateTemplate)
 
 	// Template process fields
 	templates := g.Group("/templates/:templateId")
@@ -185,6 +189,69 @@ func (ctrl *AutomationController) requireTemplateAccess(c *gin.Context) {
 			return
 		}
 	}
+	c.Next()
+}
+
+// requireWorkspaceAccess resolves the workspace's tenant from storage and holds
+// the key to it, as requireTemplateAccess does for the routes addressed by
+// template. A key limited to tenants answers 403 on a workspace of another
+// tenant, and on one with no tenant at all. It runs before the sandbox is
+// resolved and before any handler, so a refusal means nothing was read or
+// written.
+func (ctrl *AutomationController) requireWorkspaceAccess(c *gin.Context) {
+	workspaceID := c.Param("workspaceId")
+	if _, err := uuid.Parse(workspaceID); err != nil {
+		HandleError(c, entity.ErrWorkspaceNotFound)
+		c.Abort()
+		return
+	}
+	workspace, err := ctrl.workspaceUC.GetWorkspace(c.Request.Context(), workspaceID)
+	if err != nil {
+		HandleError(c, err)
+		c.Abort()
+		return
+	}
+	if workspace.TenantID == nil && len(middleware.GetAutomationAllowedTenants(c)) > 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "workspace has no accessible tenant"})
+		c.Abort()
+		return
+	}
+	if workspace.TenantID != nil && !ctrl.checkTenantAccess(c, *workspace.TenantID) {
+		c.Abort()
+		return
+	}
+	c.Next()
+}
+
+// requireTemplateInWorkspace holds :templateId to the workspace the request
+// resolved to: the one in the URL, or its sandbox with X-Sandbox-Mode: true.
+// Template lookups select by ID alone, so this ties the template to the
+// workspace whose tenant requireWorkspaceAccess checked. A template of another
+// workspace answers 404, the same as one that does not exist.
+func (ctrl *AutomationController) requireTemplateInWorkspace(c *gin.Context) {
+	workspaceID, _ := middleware.GetWorkspaceID(c)
+
+	templateID := c.Param("templateId")
+	if _, err := uuid.Parse(templateID); err != nil {
+		HandleError(c, entity.ErrTemplateNotFound)
+		c.Abort()
+		return
+	}
+
+	tmpl, err := ctrl.templateUC.GetTemplate(c.Request.Context(), templateID)
+	// IDs are compared without regard to case: the stored form is lower case, and
+	// the workspace ID in the URL is accepted in either.
+	if errors.Is(err, entity.ErrTemplateNotFound) || (err == nil && !strings.EqualFold(tmpl.WorkspaceID, workspaceID)) {
+		HandleError(c, entity.ErrTemplateNotFound)
+		c.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(c, err)
+		c.Abort()
+		return
+	}
+
 	c.Next()
 }
 
@@ -460,6 +527,8 @@ func (ctrl *AutomationController) archiveWorkspace(c *gin.Context) {
 // @Param X-Sandbox-Mode header string false "Enable sandbox mode"
 // @Success 200 {object} dto.ListInjectablesResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/injectables [get]
 // @Security AutomationKey
 func (ctrl *AutomationController) listInjectables(c *gin.Context) {
@@ -486,6 +555,8 @@ func (ctrl *AutomationController) listInjectables(c *gin.Context) {
 // @Param X-Sandbox-Mode header string false "Enable sandbox mode"
 // @Success 200 {object} dto.ListResponse[dto.TemplateListItemResponse]
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates [get]
 // @Security AutomationKey
 func (ctrl *AutomationController) listTemplates(c *gin.Context) {
@@ -513,6 +584,8 @@ func (ctrl *AutomationController) listTemplates(c *gin.Context) {
 // @Success 201 {object} dto.TemplateCreateResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
 // @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates [post]
 // @Security AutomationKey
@@ -551,6 +624,7 @@ func (ctrl *AutomationController) createTemplate(c *gin.Context) {
 // @Param X-Sandbox-Mode header string false "Enable sandbox mode"
 // @Success 200 {object} dto.TemplateWithDetailsResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [get]
 // @Security AutomationKey
@@ -578,6 +652,7 @@ func (ctrl *AutomationController) getTemplate(c *gin.Context) {
 // @Success 200 {object} dto.TemplateResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 413 {object} dto.ErrorResponse
 // @Router /api/v1/automation/workspaces/{workspaceId}/templates/{templateId} [patch]
