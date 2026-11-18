@@ -80,6 +80,10 @@ func (r *recordingTemplateVersionInjectableRepo) DeleteByVersionID(context.Conte
 	return nil
 }
 
+func (r *recordingTemplateVersionInjectableRepo) DefinitionAvailable(context.Context, string, string) (bool, error) {
+	panic("not implemented")
+}
+
 func (r *recordingTemplateVersionInjectableRepo) Exists(context.Context, string, string) (bool, error) {
 	panic("not implemented")
 }

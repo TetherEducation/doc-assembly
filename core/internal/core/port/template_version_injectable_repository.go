@@ -26,6 +26,12 @@ type TemplateVersionInjectableRepository interface {
 	// DeleteByVersionID deletes all injectable configurations for a template version.
 	DeleteByVersionID(ctx context.Context, versionID string) error
 
+	// DefinitionAvailable reports whether an injectable definition can be linked
+	// to a version: it is a global definition, or it belongs to the workspace of
+	// the version's template or, for a template of a sandbox, to the workspace
+	// the sandbox belongs to.
+	DefinitionAvailable(ctx context.Context, versionID, injectableDefID string) (bool, error)
+
 	// Exists checks if an injectable definition is already linked to a version.
 	Exists(ctx context.Context, versionID, injectableDefID string) (bool, error)
 

@@ -32,6 +32,20 @@ const (
 
 	queryDeleteByVersionID = `DELETE FROM content.template_version_injectables WHERE template_version_id = $1`
 
+	// A version takes the global definitions and those of its template's
+	// workspace. A sandbox template also takes those of the workspace the
+	// sandbox belongs to, where a workspace's definitions are managed.
+	queryDefinitionAvailable = `
+		SELECT EXISTS(
+			SELECT 1
+			FROM content.injectable_definitions d
+			JOIN content.template_versions v ON v.id = $1
+			JOIN content.templates t ON t.id = v.template_id
+			JOIN tenancy.workspaces w ON w.id = t.workspace_id
+			WHERE d.id = $2
+			  AND (d.workspace_id IS NULL OR d.workspace_id = w.id OR (w.is_sandbox AND d.workspace_id = w.sandbox_of_id))
+		)`
+
 	queryExists = `SELECT EXISTS(SELECT 1 FROM content.template_version_injectables WHERE template_version_id = $1 AND injectable_definition_id = $2)`
 
 	queryExistsSystemKey = `SELECT EXISTS(SELECT 1 FROM content.template_version_injectables WHERE template_version_id = $1 AND system_injectable_key = $2)`

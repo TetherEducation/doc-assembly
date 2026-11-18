@@ -171,6 +171,19 @@ func (r *Repository) DeleteByVersionID(ctx context.Context, versionID string) er
 	return nil
 }
 
+// DefinitionAvailable reports whether an injectable definition can be linked to
+// a version: it is global, or it belongs to the workspace of the version's
+// template or, for a template of a sandbox, to the sandbox's workspace.
+func (r *Repository) DefinitionAvailable(ctx context.Context, versionID, injectableDefID string) (bool, error) {
+	var available bool
+	err := r.pool.QueryRow(ctx, queryDefinitionAvailable, versionID, injectableDefID).Scan(&available)
+	if err != nil {
+		return false, fmt.Errorf("checking injectable definition availability: %w", err)
+	}
+
+	return available, nil
+}
+
 // Exists checks if an injectable definition is already linked to a version.
 func (r *Repository) Exists(ctx context.Context, versionID, injectableDefID string) (bool, error) {
 	var exists bool
