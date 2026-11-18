@@ -151,6 +151,11 @@ type TemplateRepository interface {
 	// FindByDocumentTypeCode finds templates by document type code across a tenant.
 	FindByDocumentTypeCode(ctx context.Context, tenantID, documentTypeCode string) ([]*entity.TemplateListItem, error)
 
+	// DocumentTypeAvailable reports whether a document type can be assigned to
+	// templates of a workspace: it belongs to the workspace's tenant, or it is a
+	// global type (the system tenant's).
+	DocumentTypeAvailable(ctx context.Context, workspaceID, documentTypeID string) (bool, error)
+
 	// UpdateDocumentType updates the document type assignment for a template.
 	UpdateDocumentType(ctx context.Context, templateID string, documentTypeID *string) error
 

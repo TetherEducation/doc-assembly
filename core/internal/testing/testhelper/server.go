@@ -29,6 +29,7 @@ import (
 	folderrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/folder_repo"
 	galleryassetrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/gallery_asset_repo"
 	injectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/injectable_repo"
+	processrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/process_repo"
 	signingattemptrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/signing_attempt_repo"
 	systeminjectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/system_injectable_repo"
 	systemrolerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/system_role_repo"
@@ -336,6 +337,12 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	)
 	galleryController := controller.NewGalleryController(galleryService)
 
+	// Create controllers - Tenant catalog (document types, processes)
+	documentTypeService := catalogsvc.NewDocumentTypeService(documentTypeRepo, templateRepo)
+	processService := catalogsvc.NewProcessService(processrepo.New(pool), templateRepo)
+	documentTypeController := controller.NewDocumentTypeController(documentTypeService, templateService, templateMapper)
+	processController := controller.NewProcessController(processService, mapper.NewProcessMapper())
+
 	// Create controllers - Document & Webhook
 	readOnlyViewService := documentsvc.NewReadOnlyViewService(
 		docRepo,
@@ -387,6 +394,8 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	adminController.RegisterRoutes(v1)
 	meController.RegisterRoutes(v1)
 	tenantController.RegisterRoutes(v1, middlewareProvider)
+	documentTypeController.RegisterRoutes(v1, middlewareProvider)
+	processController.RegisterRoutes(v1, middlewareProvider)
 	workspaceController.RegisterRoutes(v1, middlewareProvider)
 	injectableController.RegisterRoutes(v1, middlewareProvider)
 	templateController.RegisterRoutes(v1, middlewareProvider)
@@ -420,7 +429,6 @@ func NewTestServerWithResolver(t *testing.T, pool *pgxpool.Pool, templateResolve
 	// Public read-only view routes (no auth, registered on engine root)
 	publicReadOnlyViewController.RegisterRoutes(engine)
 	apiKeyUseCase := automationuc.NewAPIKeyUseCase(automationKeyRepo, automationAuditRepo)
-	documentTypeService := catalogsvc.NewDocumentTypeService(documentTypeRepo, templateRepo)
 	docTypeMapper := mapper.NewDocumentTypeMapper()
 
 	automationKeyCtrl := controller.NewAutomationKeyController(apiKeyUseCase)

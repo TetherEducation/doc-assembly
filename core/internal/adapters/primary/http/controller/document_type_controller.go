@@ -103,9 +103,15 @@ func (c *DocumentTypeController) ListDocumentTypes(ctx *gin.Context) {
 // @Router /api/v1/tenant/document-types/{id} [get]
 // @Security BearerAuth
 func (c *DocumentTypeController) GetDocumentType(ctx *gin.Context) {
+	tenantID, ok := middleware.GetTenantID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusBadRequest, dto.NewErrorResponse(entity.ErrMissingTenantID))
+		return
+	}
+
 	id := ctx.Param("id")
 
-	docType, err := c.docTypeUC.GetDocumentType(ctx.Request.Context(), id)
+	docType, err := c.docTypeUC.GetDocumentType(ctx.Request.Context(), id, tenantID)
 	if err != nil {
 		HandleError(ctx, err)
 		return

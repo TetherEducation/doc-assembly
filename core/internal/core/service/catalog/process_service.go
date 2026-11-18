@@ -71,11 +71,38 @@ func (s *ProcessService) CreateProcess(ctx context.Context, cmd cataloguc.Create
 	return process, nil
 }
 
-// GetProcess retrieves a process by ID.
-func (s *ProcessService) GetProcess(ctx context.Context, id string) (*entity.Process, error) {
+// GetProcess retrieves, by ID, a process the tenant can see.
+func (s *ProcessService) GetProcess(ctx context.Context, id, tenantID string) (*entity.Process, error) {
+	process, err := s.findVisible(ctx, id, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("finding process: %w", err)
+	}
+	return process, nil
+}
+
+// findVisible finds a process that tenantID can see: one of its own or a
+// global one, which belongs to the system tenant. A process of another tenant,
+// like an ID that is not a UUID, answers as missing, so it cannot be read or
+// probed.
+func (s *ProcessService) findVisible(ctx context.Context, id, tenantID string) (*entity.Process, error) {
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, entity.ErrProcessNotFound
+	}
+
 	process, err := s.processRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("finding process %s: %w", id, err)
+		return nil, err
+	}
+	if process.TenantID == tenantID {
+		return process, nil
+	}
+
+	global, err := s.processRepo.IsSysTenant(ctx, process.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("checking tenant type: %w", err)
+	}
+	if !global {
+		return nil, entity.ErrProcessNotFound
 	}
 	return process, nil
 }
@@ -144,7 +171,7 @@ func (s *ProcessService) ListProcessesWithCount(ctx context.Context, tenantID st
 // UpdateProcess updates a process's details (name and description only).
 // Global processes (from SYS tenant) cannot be modified by other tenants.
 func (s *ProcessService) UpdateProcess(ctx context.Context, cmd cataloguc.UpdateProcessCommand) (*entity.Process, error) {
-	process, err := s.processRepo.FindByID(ctx, cmd.ID)
+	process, err := s.findVisible(ctx, cmd.ID, cmd.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("finding process: %w", err)
 	}
@@ -178,7 +205,7 @@ func (s *ProcessService) UpdateProcess(ctx context.Context, cmd cataloguc.Update
 // DeleteProcess attempts to delete a process.
 // Global processes (from SYS tenant) cannot be deleted by other tenants.
 func (s *ProcessService) DeleteProcess(ctx context.Context, cmd cataloguc.DeleteProcessCommand) (*cataloguc.DeleteProcessResult, error) {
-	process, err := s.processRepo.FindByID(ctx, cmd.ID)
+	process, err := s.findVisible(ctx, cmd.ID, cmd.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("finding process: %w", err)
 	}

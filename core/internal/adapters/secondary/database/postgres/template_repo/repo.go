@@ -1123,6 +1123,17 @@ func (r *Repository) FindByDocumentTypeCode(ctx context.Context, tenantID, docum
 	return templates, nil
 }
 
+// DocumentTypeAvailable reports whether a document type can be assigned to
+// templates of a workspace: it belongs to the workspace's tenant or is global.
+func (r *Repository) DocumentTypeAvailable(ctx context.Context, workspaceID, documentTypeID string) (bool, error) {
+	var available bool
+	if err := r.pool.QueryRow(ctx, queryDocumentTypeAvailable, workspaceID, documentTypeID).Scan(&available); err != nil {
+		return false, fmt.Errorf("checking document type availability: %w", err)
+	}
+
+	return available, nil
+}
+
 // UpdateDocumentType updates the document type assignment for a template.
 func (r *Repository) UpdateDocumentType(ctx context.Context, templateID string, documentTypeID *string) error {
 	result, err := r.pool.Exec(ctx, queryUpdateDocumentType, templateID, documentTypeID)

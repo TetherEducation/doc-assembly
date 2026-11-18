@@ -111,6 +111,7 @@ var badRequestErrors = []error{
 	entity.ErrCannotModifyGlobal,
 	entity.ErrDocumentTypeCodeImmutable,
 	entity.ErrDocumentTypeHasTemplates,
+	entity.ErrCannotModifyGlobalType,
 	entity.ErrProcessHasTemplates,
 	entity.ErrCannotModifyGlobalProcess,
 	entity.ErrCannotDeleteDefaultProcess,

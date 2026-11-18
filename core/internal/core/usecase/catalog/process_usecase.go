@@ -44,8 +44,9 @@ type ProcessUseCase interface {
 	// CreateProcess creates a new process.
 	CreateProcess(ctx context.Context, cmd CreateProcessCommand) (*entity.Process, error)
 
-	// GetProcess retrieves a process by ID.
-	GetProcess(ctx context.Context, id string) (*entity.Process, error)
+	// GetProcess retrieves a process by ID: one of the tenant's own or a global
+	// one. A process of another tenant answers as missing.
+	GetProcess(ctx context.Context, id, tenantID string) (*entity.Process, error)
 
 	// GetProcessByCode retrieves a process by code within a tenant.
 	GetProcessByCode(ctx context.Context, tenantID, code string) (*entity.Process, error)

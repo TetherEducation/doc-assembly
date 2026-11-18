@@ -535,4 +535,15 @@ const (
 		UPDATE content.templates
 		SET document_type_id = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1`
+
+	// A workspace's templates take the document types of its own tenant and the
+	// global ones, which belong to the system tenant.
+	queryDocumentTypeAvailable = `
+		SELECT EXISTS(
+			SELECT 1
+			FROM content.document_types dt
+			JOIN tenancy.tenants owner ON owner.id = dt.tenant_id
+			JOIN tenancy.workspaces w ON w.id = $1
+			WHERE dt.id = $2 AND (dt.tenant_id = w.tenant_id OR owner.is_system = TRUE)
+		)`
 )

@@ -69,11 +69,38 @@ func (s *DocumentTypeService) CreateDocumentType(ctx context.Context, cmd catalo
 	return docType, nil
 }
 
-// GetDocumentType retrieves a document type by ID.
-func (s *DocumentTypeService) GetDocumentType(ctx context.Context, id string) (*entity.DocumentType, error) {
+// GetDocumentType retrieves, by ID, a document type the tenant can see.
+func (s *DocumentTypeService) GetDocumentType(ctx context.Context, id, tenantID string) (*entity.DocumentType, error) {
+	docType, err := s.findVisible(ctx, id, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("finding document type: %w", err)
+	}
+	return docType, nil
+}
+
+// findVisible finds a document type that tenantID can see: one of its own or a
+// global one, which belongs to the system tenant. A type of another tenant,
+// like an ID that is not a UUID, answers as missing, so it cannot be read,
+// used or probed.
+func (s *DocumentTypeService) findVisible(ctx context.Context, id, tenantID string) (*entity.DocumentType, error) {
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, entity.ErrDocumentTypeNotFound
+	}
+
 	docType, err := s.docTypeRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("finding document type %s: %w", id, err)
+		return nil, err
+	}
+	if docType.TenantID == tenantID {
+		return docType, nil
+	}
+
+	global, err := s.docTypeRepo.IsSysTenant(ctx, docType.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("checking tenant type: %w", err)
+	}
+	if !global {
+		return nil, entity.ErrDocumentTypeNotFound
 	}
 	return docType, nil
 }
@@ -142,7 +169,7 @@ func (s *DocumentTypeService) ListDocumentTypesWithCount(ctx context.Context, te
 // UpdateDocumentType updates a document type's details (name and description only).
 // Global types (from SYS tenant) cannot be modified by other tenants.
 func (s *DocumentTypeService) UpdateDocumentType(ctx context.Context, cmd cataloguc.UpdateDocumentTypeCommand) (*entity.DocumentType, error) {
-	docType, err := s.docTypeRepo.FindByID(ctx, cmd.ID)
+	docType, err := s.findVisible(ctx, cmd.ID, cmd.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("finding document type: %w", err)
 	}
@@ -176,7 +203,7 @@ func (s *DocumentTypeService) UpdateDocumentType(ctx context.Context, cmd catalo
 // DeleteDocumentType attempts to delete a document type.
 // Global types (from SYS tenant) cannot be deleted by other tenants.
 func (s *DocumentTypeService) DeleteDocumentType(ctx context.Context, cmd cataloguc.DeleteDocumentTypeCommand) (*cataloguc.DeleteDocumentTypeResult, error) {
-	docType, err := s.docTypeRepo.FindByID(ctx, cmd.ID)
+	docType, err := s.findVisible(ctx, cmd.ID, cmd.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("finding document type: %w", err)
 	}
@@ -224,9 +251,9 @@ func (s *DocumentTypeService) handleTemplatesBeforeDelete(ctx context.Context, t
 		return nil
 	}
 
-	// Replace with another type
+	// Replace with another type, which must be one the tenant can see
 	if cmd.ReplaceWithID != nil {
-		if _, err := s.docTypeRepo.FindByID(ctx, *cmd.ReplaceWithID); err != nil {
+		if _, err := s.findVisible(ctx, *cmd.ReplaceWithID, cmd.TenantID); err != nil {
 			return fmt.Errorf("replacement document type not found: %w", err)
 		}
 		return s.updateTemplatesDocumentType(ctx, templates, cmd.ReplaceWithID)
