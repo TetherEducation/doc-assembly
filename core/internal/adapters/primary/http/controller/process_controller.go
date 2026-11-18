@@ -289,27 +289,17 @@ func (c *ProcessController) ListTemplatesByProcessCode(ctx *gin.Context) {
 
 	code := ctx.Param("code")
 
-	// Validate the process exists (with global fallback for non-SYS tenants)
-	process, err := c.processUC.GetProcessByCode(ctx.Request.Context(), tenantID, code)
+	// A read: the process is looked up (with global fallback for non-SYS
+	// tenants) and its templates listed. Nothing is changed.
+	templates, err := c.processUC.ListProcessTemplates(ctx.Request.Context(), tenantID, code)
 	if err != nil {
 		HandleError(ctx, err)
 		return
 	}
 
-	// Dry-run delete (no force, no replace) to retrieve the templates list.
-	// This returns Deleted=false with the template list when templates exist,
-	// or Deleted=true with empty templates when none exist.
-	result, err := c.processUC.DeleteProcess(ctx.Request.Context(), cataloguc.DeleteProcessCommand{
-		ID:       process.ID,
-		TenantID: tenantID,
-	})
-	if err != nil {
-		// Global or DEFAULT processes cannot be deleted, but we still want to
-		// list their templates. Since we cannot query templates through the use case
-		// in this case, return an empty list.
-		ctx.JSON(http.StatusOK, []*dto.ProcessTemplateInfoResponse{})
-		return
+	responses := c.processMapper.ToTemplateInfoResponses(templates)
+	if responses == nil {
+		responses = []*dto.ProcessTemplateInfoResponse{}
 	}
-
-	ctx.JSON(http.StatusOK, c.processMapper.ToTemplateInfoResponses(result.Templates))
+	ctx.JSON(http.StatusOK, responses)
 }
