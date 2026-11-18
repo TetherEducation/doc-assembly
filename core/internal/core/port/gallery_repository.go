@@ -8,7 +8,8 @@ import (
 
 // GalleryRepository defines the output port for gallery asset persistence.
 type GalleryRepository interface {
-	// Save persists a new gallery asset.
+	// Save persists a new gallery asset under the tenant of its workspace, and
+	// sets the asset's ID and TenantID.
 	Save(ctx context.Context, asset *entity.GalleryAsset) error
 
 	// FindBySHA256 looks up an asset by its content hash within a workspace.

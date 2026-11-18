@@ -1,11 +1,15 @@
 package galleryassetrepo
 
 const (
+	// The asset's tenant is its workspace's: it is read from the workspace row,
+	// not taken from the caller.
 	querySave = `
 		INSERT INTO content.gallery_assets
 			(tenant_id, workspace_id, key, filename, content_type, size, sha256, created_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id`
+		SELECT w.tenant_id, w.id, $2, $3, $4, $5, $6, $7, $8
+		FROM tenancy.workspaces w
+		WHERE w.id = $1
+		RETURNING id, tenant_id`
 
 	queryFindBySHA256 = `
 		SELECT id, tenant_id, workspace_id, key, filename, content_type, size, sha256, created_by, created_at
