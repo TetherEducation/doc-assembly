@@ -242,6 +242,8 @@ Lista workspaces del tenant actual con paginación y búsqueda opcional.
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/workspace_controller.go`
 
+**Alcance de workspace:** `{memberId}`, `{folderId}` y `{tagId}` deben pertenecer al workspace efectivo del request (`memberInWorkspace`, `folderInWorkspace`, `tagInWorkspace`, después del chequeo de rol). Un ID de otro workspace responde **404**, igual que uno inexistente. Las carpetas son propias de cada workspace, también del sandbox (`X-Sandbox-Mode: true`); los miembros y las etiquetas son siempre los del workspace de `X-Workspace-ID`. La misma regla vale para los IDs que viajan en el body: `parentId` y `newParentId` de carpetas, `folderId` y `targetFolderId` de templates (crear, actualizar, clonar, promover) y `tagIds` al etiquetar un template. Un template del sandbox usa las etiquetas del workspace al que pertenece el sandbox. Los injectables del workspace se seleccionan por ID y workspace.
+
 ### Endpoints de Documentos (`/api/v1/documents`)
 
 Gestión de documentos dentro del workspace actual.

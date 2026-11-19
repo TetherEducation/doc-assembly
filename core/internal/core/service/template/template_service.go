@@ -13,30 +13,59 @@ import (
 	templateuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/template"
 )
 
-// NewTemplateService creates a new template service.
+// NewTemplateService creates a new template service. folderRepo and
+// workspaceTagRepo look up the folder a request files a template in and the
+// tags it puts on one, to check that they belong to the template's workspace.
 func NewTemplateService(
 	templateRepo port.TemplateRepository,
 	versionRepo port.TemplateVersionRepository,
 	tagRepo port.TemplateTagRepository,
+	folderRepo port.FolderRepository,
+	workspaceTagRepo port.TagRepository,
 	workspaceRepo port.WorkspaceRepository,
 	processResolver port.ProcessResolver,
 ) templateuc.TemplateUseCase {
 	return &TemplateService{
-		templateRepo:    templateRepo,
-		versionRepo:     versionRepo,
-		tagRepo:         tagRepo,
-		workspaceRepo:   workspaceRepo,
-		processResolver: processResolver,
+		templateRepo:     templateRepo,
+		versionRepo:      versionRepo,
+		tagRepo:          tagRepo,
+		folderRepo:       folderRepo,
+		workspaceTagRepo: workspaceTagRepo,
+		workspaceRepo:    workspaceRepo,
+		processResolver:  processResolver,
 	}
 }
 
 // TemplateService implements template business logic.
 type TemplateService struct {
-	templateRepo    port.TemplateRepository
-	versionRepo     port.TemplateVersionRepository
-	tagRepo         port.TemplateTagRepository
-	workspaceRepo   port.WorkspaceRepository
-	processResolver port.ProcessResolver
+	templateRepo     port.TemplateRepository
+	versionRepo      port.TemplateVersionRepository
+	tagRepo          port.TemplateTagRepository // links between templates and tags
+	folderRepo       port.FolderRepository
+	workspaceTagRepo port.TagRepository // the workspaces' tags themselves
+	workspaceRepo    port.WorkspaceRepository
+	processResolver  port.ProcessResolver
+}
+
+// folderInWorkspace checks that the folder a request files a template in, if
+// it names one, belongs to workspaceID. A folder of another workspace answers
+// as missing, so its ID cannot be used or probed.
+func folderInWorkspace(ctx context.Context, folders port.FolderRepository, folderID *string, workspaceID string) error {
+	if folderID == nil {
+		return nil
+	}
+	if _, err := uuid.Parse(*folderID); err != nil {
+		return fmt.Errorf("finding folder: %w", entity.ErrFolderNotFound)
+	}
+
+	folder, err := folders.FindByID(ctx, *folderID)
+	if err == nil && folder.WorkspaceID != workspaceID {
+		err = entity.ErrFolderNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("finding folder: %w", err)
+	}
+	return nil
 }
 
 // CreateTemplate creates a new template with an initial draft version.
@@ -44,6 +73,9 @@ type TemplateService struct {
 //nolint:funlen
 func (s *TemplateService) CreateTemplate(ctx context.Context, cmd templateuc.CreateTemplateCommand) (*entity.Template, *entity.TemplateVersion, error) {
 	if err := s.validateTemplateWorkspace(ctx, cmd.WorkspaceID); err != nil {
+		return nil, nil, err
+	}
+	if err := folderInWorkspace(ctx, s.folderRepo, cmd.FolderID, cmd.WorkspaceID); err != nil {
 		return nil, nil, err
 	}
 
@@ -201,12 +233,16 @@ func (s *TemplateService) UpdateTemplate(ctx context.Context, cmd templateuc.Upd
 		template.Title = *cmd.Title
 	}
 
-	if cmd.FolderID != nil {
-		if *cmd.FolderID == "root" {
-			template.FolderID = nil
-		} else {
-			template.FolderID = cmd.FolderID
+	switch {
+	case cmd.FolderID == nil:
+		// Keep the template where it is.
+	case *cmd.FolderID == "root":
+		template.FolderID = nil
+	default:
+		if err := folderInWorkspace(ctx, s.folderRepo, cmd.FolderID, template.WorkspaceID); err != nil {
+			return nil, err
 		}
+		template.FolderID = cmd.FolderID
 	}
 
 	if cmd.IsPublicLibrary != nil {
@@ -236,6 +272,9 @@ func (s *TemplateService) UpdateTemplate(ctx context.Context, cmd templateuc.Upd
 func (s *TemplateService) CloneTemplate(ctx context.Context, cmd templateuc.CloneTemplateCommand) (*entity.Template, *entity.TemplateVersion, error) {
 	source, sourceVersion, err := s.validateCloneSource(ctx, cmd.SourceTemplateID, cmd.VersionID)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := folderInWorkspace(ctx, s.folderRepo, cmd.TargetFolderID, source.WorkspaceID); err != nil {
 		return nil, nil, err
 	}
 
@@ -365,6 +404,10 @@ func (s *TemplateService) DeleteTemplate(ctx context.Context, id string) error {
 
 // AddTag adds a tag to a template.
 func (s *TemplateService) AddTag(ctx context.Context, templateID, tagID string) error {
+	if err := s.tagUsableByTemplate(ctx, templateID, tagID); err != nil {
+		return err
+	}
+
 	// Check if already linked
 	exists, err := s.tagRepo.Exists(ctx, templateID, tagID)
 	if err != nil {
@@ -384,6 +427,53 @@ func (s *TemplateService) AddTag(ctx context.Context, templateID, tagID string) 
 	)
 
 	return nil
+}
+
+// tagUsableByTemplate checks that a tag may be put on a template: it must
+// belong to the template's workspace or, for a template of a sandbox, to the
+// workspace the sandbox belongs to, whose tags the sandbox uses. Any other tag
+// answers as missing, so its ID cannot be used or probed.
+func (s *TemplateService) tagUsableByTemplate(ctx context.Context, templateID, tagID string) error {
+	template, err := s.templateRepo.FindByID(ctx, templateID)
+	if err != nil {
+		return fmt.Errorf("finding template: %w", err)
+	}
+	if _, err := uuid.Parse(tagID); err != nil {
+		return fmt.Errorf("finding tag: %w", entity.ErrTagNotFound)
+	}
+
+	tag, err := s.workspaceTagRepo.FindByID(ctx, tagID)
+	if err != nil {
+		return fmt.Errorf("finding tag: %w", err)
+	}
+	if tag.WorkspaceID == template.WorkspaceID {
+		return nil
+	}
+
+	sandboxOf, err := s.sandboxParent(ctx, template.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	if sandboxOf != tag.WorkspaceID {
+		return fmt.Errorf("finding tag: %w", entity.ErrTagNotFound)
+	}
+	return nil
+}
+
+// sandboxParent returns the workspace that workspaceID is the sandbox of, or
+// "" when workspaceID is not a sandbox.
+func (s *TemplateService) sandboxParent(ctx context.Context, workspaceID string) (string, error) {
+	if s.workspaceRepo == nil {
+		return "", nil
+	}
+	workspace, err := s.workspaceRepo.FindByID(ctx, workspaceID)
+	if err != nil {
+		return "", fmt.Errorf("finding template workspace: %w", err)
+	}
+	if !workspace.IsSandbox || workspace.SandboxOfID == nil {
+		return "", nil
+	}
+	return *workspace.SandboxOfID, nil
 }
 
 // RemoveTag removes a tag from a template.

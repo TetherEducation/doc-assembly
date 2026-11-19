@@ -92,7 +92,6 @@ var badRequestErrors = []error{
 	entity.ErrTagInUse,
 	entity.ErrCircularReference,
 	entity.ErrCannotArchiveSystem,
-	entity.ErrInvalidParentFolder,
 	entity.ErrCannotRemoveOwner,
 	entity.ErrCannotRemoveLastSystemMember,
 	entity.ErrInvalidRole,

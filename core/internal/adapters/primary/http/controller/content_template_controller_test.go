@@ -1685,8 +1685,8 @@ func TestContentTemplateController_AddTemplateTags(t *testing.T) {
 				"tagIds": []string{"00000000-0000-0000-0000-000000000000"},
 			})
 
-		// API returns 500 when tag not found during add (FK constraint)
-		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		// The tag is looked up in the template's workspace before it is linked
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 }
 

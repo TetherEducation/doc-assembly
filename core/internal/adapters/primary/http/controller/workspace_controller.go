@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/dto"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/mapper"
 	"github.com/TetherEducation/doc-assembly/core/internal/adapters/primary/http/middleware"
+	"github.com/TetherEducation/doc-assembly/core/internal/core/entity"
 	cataloguc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/catalog"
 	injectableuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/injectable"
 	organizationuc "github.com/TetherEducation/doc-assembly/core/internal/core/usecase/organization"
@@ -42,9 +45,83 @@ func NewWorkspaceController(
 	}
 }
 
+// requireInWorkspace aborts a request unless id names a resource of the
+// caller's workspace. workspaceOf returns the workspace the resource belongs
+// to, or notFound when there is none. Lookups select by ID alone, and
+// WorkspaceContext only checks the caller's role in the workspace the header
+// names, so without this a member of any workspace could read or change
+// another workspace's resource by its ID. A mismatch answers notFound, the
+// same as a missing resource, so IDs from other workspaces cannot be probed.
+func requireInWorkspace(ctx *gin.Context, id string, notFound error, workspaceOf func(id string) (string, error)) {
+	workspaceID, ok := middleware.GetWorkspaceID(ctx)
+	if !ok {
+		HandleError(ctx, entity.ErrMissingWorkspaceID)
+		ctx.Abort()
+		return
+	}
+
+	if _, err := uuid.Parse(id); err != nil {
+		HandleError(ctx, notFound)
+		ctx.Abort()
+		return
+	}
+
+	owner, err := workspaceOf(id)
+	if errors.Is(err, notFound) || (err == nil && owner != workspaceID) {
+		HandleError(ctx, notFound)
+		ctx.Abort()
+		return
+	}
+	if err != nil {
+		HandleError(ctx, err)
+		ctx.Abort()
+		return
+	}
+
+	ctx.Next()
+}
+
+// memberInWorkspace requires :memberId to be a member of the caller's workspace.
+func (c *WorkspaceController) memberInWorkspace(ctx *gin.Context) {
+	requireInWorkspace(ctx, ctx.Param("memberId"), entity.ErrMemberNotFound, func(id string) (string, error) {
+		member, err := c.memberUC.GetMember(ctx.Request.Context(), id)
+		if err != nil {
+			return "", err
+		}
+		return member.WorkspaceID, nil
+	})
+}
+
+// folderInWorkspace requires :folderId to be a folder of the caller's workspace
+// (after sandbox resolution: a sandbox has folders of its own).
+func (c *WorkspaceController) folderInWorkspace(ctx *gin.Context) {
+	requireInWorkspace(ctx, ctx.Param("folderId"), entity.ErrFolderNotFound, func(id string) (string, error) {
+		folder, err := c.folderUC.GetFolder(ctx.Request.Context(), id)
+		if err != nil {
+			return "", err
+		}
+		return folder.WorkspaceID, nil
+	})
+}
+
+// tagInWorkspace requires :tagId to be a tag of the caller's workspace.
+func (c *WorkspaceController) tagInWorkspace(ctx *gin.Context) {
+	requireInWorkspace(ctx, ctx.Param("tagId"), entity.ErrTagNotFound, func(id string) (string, error) {
+		tag, err := c.tagUC.GetTag(ctx.Request.Context(), id)
+		if err != nil {
+			return "", err
+		}
+		return tag.WorkspaceID, nil
+	})
+}
+
 // RegisterRoutes registers all workspace routes.
 // Note: Workspace listing and creation are now handled by TenantController under /tenant/workspaces.
 // This controller only handles operations within a specific workspace (requiring X-Workspace-ID).
+// The routes that name a member, a folder or a tag check, after the role check,
+// that it belongs to that workspace (memberInWorkspace, folderInWorkspace,
+// tagInWorkspace). Injectable routes pass the workspace to the use case, which
+// selects by ID and workspace.
 func (c *WorkspaceController) RegisterRoutes(rg *gin.RouterGroup, middlewareProvider *middleware.Provider) {
 	// Workspace-scoped routes (requires X-Workspace-ID header)
 	workspace := rg.Group("/workspace")
@@ -56,31 +133,31 @@ func (c *WorkspaceController) RegisterRoutes(rg *gin.RouterGroup, middlewareProv
 		workspace.DELETE("", middleware.RequireOwner(), c.ArchiveWorkspace) // OWNER only
 
 		// Member routes (NO sandbox - members are shared with parent workspace)
-		workspace.GET("/members", c.ListMembers)                                           // VIEWER+
-		workspace.POST("/members", middleware.RequireAdmin(), c.InviteMember)              // ADMIN+
-		workspace.GET("/members/:memberId", c.GetMember)                                   // VIEWER+
-		workspace.PUT("/members/:memberId", middleware.RequireOwner(), c.UpdateMemberRole) // OWNER only
-		workspace.DELETE("/members/:memberId", middleware.RequireAdmin(), c.RemoveMember)  // ADMIN+
+		workspace.GET("/members", c.ListMembers)                                                                // VIEWER+
+		workspace.POST("/members", middleware.RequireAdmin(), c.InviteMember)                                   // ADMIN+
+		workspace.GET("/members/:memberId", c.memberInWorkspace, c.GetMember)                                   // VIEWER+
+		workspace.PUT("/members/:memberId", middleware.RequireOwner(), c.memberInWorkspace, c.UpdateMemberRole) // OWNER only
+		workspace.DELETE("/members/:memberId", middleware.RequireAdmin(), c.memberInWorkspace, c.RemoveMember)  // ADMIN+
 
 		// Folder routes (WITH sandbox support - each workspace has its own folders)
 		folders := workspace.Group("/folders")
 		folders.Use(middlewareProvider.SandboxContext())
 		{
-			folders.GET("", c.ListFolders)                                             // VIEWER+
-			folders.GET("/tree", c.GetFolderTree)                                      // VIEWER+
-			folders.POST("", middleware.RequireEditor(), c.CreateFolder)               // EDITOR+
-			folders.GET("/:folderId", c.GetFolder)                                     // VIEWER+
-			folders.PUT("/:folderId", middleware.RequireEditor(), c.UpdateFolder)      // EDITOR+
-			folders.PATCH("/:folderId/move", middleware.RequireEditor(), c.MoveFolder) // EDITOR+
-			folders.DELETE("/:folderId", middleware.RequireAdmin(), c.DeleteFolder)    // ADMIN+
+			folders.GET("", c.ListFolders)                                                                  // VIEWER+
+			folders.GET("/tree", c.GetFolderTree)                                                           // VIEWER+
+			folders.POST("", middleware.RequireEditor(), c.CreateFolder)                                    // EDITOR+
+			folders.GET("/:folderId", c.folderInWorkspace, c.GetFolder)                                     // VIEWER+
+			folders.PUT("/:folderId", middleware.RequireEditor(), c.folderInWorkspace, c.UpdateFolder)      // EDITOR+
+			folders.PATCH("/:folderId/move", middleware.RequireEditor(), c.folderInWorkspace, c.MoveFolder) // EDITOR+
+			folders.DELETE("/:folderId", middleware.RequireAdmin(), c.folderInWorkspace, c.DeleteFolder)    // ADMIN+
 		}
 
 		// Tag routes (NO sandbox - tags are shared with parent workspace)
-		workspace.GET("/tags", c.ListTags)                                       // VIEWER+
-		workspace.POST("/tags", middleware.RequireEditor(), c.CreateTag)         // EDITOR+
-		workspace.GET("/tags/:tagId", c.GetTag)                                  // VIEWER+
-		workspace.PUT("/tags/:tagId", middleware.RequireEditor(), c.UpdateTag)   // EDITOR+
-		workspace.DELETE("/tags/:tagId", middleware.RequireAdmin(), c.DeleteTag) // ADMIN+
+		workspace.GET("/tags", c.ListTags)                                                         // VIEWER+
+		workspace.POST("/tags", middleware.RequireEditor(), c.CreateTag)                           // EDITOR+
+		workspace.GET("/tags/:tagId", c.tagInWorkspace, c.GetTag)                                  // VIEWER+
+		workspace.PUT("/tags/:tagId", middleware.RequireEditor(), c.tagInWorkspace, c.UpdateTag)   // EDITOR+
+		workspace.DELETE("/tags/:tagId", middleware.RequireAdmin(), c.tagInWorkspace, c.DeleteTag) // ADMIN+
 
 		// Injectable routes (NO sandbox - injectables are shared with parent workspace)
 		workspace.GET("/injectables", c.ListWorkspaceInjectables)                                                   // VIEWER+

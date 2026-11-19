@@ -38,12 +38,8 @@ func (s *FolderService) CreateFolder(ctx context.Context, cmd cataloguc.CreateFo
 
 	// Validate parent folder if specified
 	if cmd.ParentID != nil {
-		parent, err := s.folderRepo.FindByID(ctx, *cmd.ParentID)
-		if err != nil {
+		if err := s.parentInWorkspace(ctx, *cmd.ParentID, cmd.WorkspaceID); err != nil {
 			return nil, fmt.Errorf("finding parent folder: %w", err)
-		}
-		if parent.WorkspaceID != cmd.WorkspaceID {
-			return nil, entity.ErrInvalidParentFolder
 		}
 	}
 
@@ -267,16 +263,29 @@ func (s *FolderService) validateNewParent(ctx context.Context, folder *entity.Fo
 		return entity.ErrCircularReference
 	}
 
-	parent, err := s.folderRepo.FindByID(ctx, newParentID)
-	if err != nil {
+	if err := s.parentInWorkspace(ctx, newParentID, folder.WorkspaceID); err != nil {
 		return fmt.Errorf("finding new parent folder: %w", err)
 	}
 
-	if parent.WorkspaceID != folder.WorkspaceID {
-		return entity.ErrInvalidParentFolder
+	return s.checkCircularReference(ctx, folder.ID, newParentID)
+}
+
+// parentInWorkspace checks that the folder a request names as a parent belongs
+// to workspaceID. A folder of another workspace answers as missing, so its ID
+// cannot be used or probed.
+func (s *FolderService) parentInWorkspace(ctx context.Context, parentID, workspaceID string) error {
+	if _, err := uuid.Parse(parentID); err != nil {
+		return entity.ErrFolderNotFound
 	}
 
-	return s.checkCircularReference(ctx, folder.ID, newParentID)
+	parent, err := s.folderRepo.FindByID(ctx, parentID)
+	if err != nil {
+		return err
+	}
+	if parent.WorkspaceID != workspaceID {
+		return entity.ErrFolderNotFound
+	}
+	return nil
 }
 
 // checkCircularReference checks if moving a folder to a new parent would create a cycle.

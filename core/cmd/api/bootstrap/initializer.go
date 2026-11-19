@@ -209,12 +209,14 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	systemInjectableSvc := injectablesvc.NewSystemInjectableService(systemInjectableRepo, injReg)
 
 	// --- Services: Template ---
-	templateSvc := templatesvc.NewTemplateService(templateRepo, templateVersionRepo, templateTagRepo, workspaceRepo, e.processResolver)
+	templateSvc := templatesvc.NewTemplateService(
+		templateRepo, templateVersionRepo, templateTagRepo, folderRepo, tagRepo, workspaceRepo, e.processResolver,
+	)
 	contentValidator := contentvalidator.New(injectableSvc)
 	templateVersionSvc := templatesvc.NewTemplateVersionService(
 		templateVersionRepo, templateVersionInjectableRepo, templateVersionSignerRoleRepo,
 		systemInjectableRepo, templateRepo, templateTagRepo, contentValidator, workspaceRepo,
-		uploadedSourceRepo,
+		uploadedSourceRepo, folderRepo,
 	)
 
 	// --- Storage Adapter ---
