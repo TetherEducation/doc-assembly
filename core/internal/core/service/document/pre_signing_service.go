@@ -118,10 +118,11 @@ func (s *PreSigningService) GetPublicSigningPage(ctx context.Context, token stri
 		return nil, fmt.Errorf("access token has already been used")
 	}
 	if doc.IsAwaitingInput() && accessToken.IsPreSigning() {
-		if s.hasFieldResponses(ctx, doc.ID) {
-			return s.buildPreviewPDFResponse(doc, recipient, title, accessToken.Token)
+		resp, ready, err := s.awaitingInputResponse(ctx, doc, recipient, title, accessToken.Token)
+		if err != nil || !ready {
+			return resp, err
 		}
-		return s.buildPreviewFormResponse(ctx, doc, recipient, title, accessToken.Token)
+		return s.buildPreviewPDFResponse(doc, recipient, title, accessToken.Token)
 	}
 	if doc.IsAwaitingInput() && accessToken.IsSigning() {
 		return s.buildPreviewPDFResponse(doc, recipient, title, accessToken.Token)
@@ -203,20 +204,9 @@ func (s *PreSigningService) ProceedToSigning(ctx context.Context, token string) 
 	if doc.ActiveAttemptID != nil && *doc.ActiveAttemptID != "" {
 		attemptID = *doc.ActiveAttemptID
 	} else {
-		if !doc.IsAwaitingInput() && doc.Status != entity.DocumentStatusPreparingSignature {
-			return nil, fmt.Errorf("document is not pending signing")
-		}
-		recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID)
-		if err != nil {
-			return nil, fmt.Errorf("loading recipients: %w", err)
-		}
-		signerOrders, err := s.signerOrderMap(ctx, doc.TemplateVersionID)
-		if err != nil {
-			return nil, err
-		}
-		attempt, err := s.signingUOW.CreateAttemptAndEnqueueRender(ctx, doc.ID, recipients, signerOrders)
-		if err != nil {
-			return nil, fmt.Errorf("creating signing attempt: %w", err)
+		pending, attempt, err := s.startSigningAttempt(ctx, doc, recipient, title, accessToken.Token)
+		if err != nil || pending != nil {
+			return pending, err
 		}
 		attemptID = attempt.ID
 	}
@@ -493,46 +483,199 @@ func stringValueFromJSON(raw json.RawMessage, key string) *string {
 	return &value
 }
 
-// hasFieldResponses checks whether field responses have been saved for a document.
-func (s *PreSigningService) hasFieldResponses(ctx context.Context, documentID string) bool {
+// startSigningAttempt creates the document's first signing attempt. While the
+// document is still waiting for required pre-signing answers it starts nothing
+// and returns the page the signer should see instead: an attempt fixes the PDF
+// sent to the provider, so one started early would carry no answers, and the
+// signer the questions belong to would never be shown them.
+func (s *PreSigningService) startSigningAttempt(
+	ctx context.Context,
+	doc *entity.Document,
+	recipient *entity.DocumentRecipient,
+	title string,
+	token string,
+) (*documentuc.PublicSigningResponse, *entity.SigningAttempt, error) {
+	if !doc.IsAwaitingInput() && doc.Status != entity.DocumentStatusPreparingSignature {
+		return nil, nil, fmt.Errorf("document is not pending signing")
+	}
+	if doc.IsAwaitingInput() {
+		resp, ready, err := s.awaitingInputResponse(ctx, doc, recipient, title, token)
+		if err != nil || !ready {
+			return resp, nil, err
+		}
+	}
+	recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading recipients: %w", err)
+	}
+	signerOrders, err := s.signerOrderMap(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	attempt, err := s.signingUOW.CreateAttemptAndEnqueueRender(ctx, doc.ID, recipients, signerOrders)
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating signing attempt: %w", err)
+	}
+	return nil, attempt, nil
+}
+
+// awaitingInputResponse decides what a signer's link shows while the document
+// waits for its pre-signing answers. A signer with questions of their own sees
+// them until they have answered. A signer who has answered, or has no
+// questions, waits while another signer's required questions are unanswered.
+// ready reports that every required question is answered, so the PDF preview
+// can be shown and a signing attempt can start; the response is nil then.
+func (s *PreSigningService) awaitingInputResponse(
+	ctx context.Context,
+	doc *entity.Document,
+	recipient *entity.DocumentRecipient,
+	title string,
+	token string,
+) (*documentuc.PublicSigningResponse, bool, error) {
+	version, portableDoc, err := s.loadPortableDocument(ctx, doc)
+	if err != nil {
+		return nil, false, err
+	}
+	fields := interactiveFieldAttrs(portableDoc)
+	if len(fields) == 0 {
+		return nil, true, nil
+	}
+	portableRoleID, err := s.resolvePortableRoleID(ctx, version, portableDoc, recipient.TemplateVersionRoleID)
+	if err != nil {
+		return nil, false, err
+	}
+	answered, err := s.answeredFieldIDs(ctx, doc.ID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	state := summarizeAnswers(fields, portableRoleID, answered)
+	switch {
+	case state.ownQuestions && !state.ownAnswered:
+		form, err := s.buildPreviewFormResponse(ctx, doc, recipient, title, token, portableDoc, portableRoleID)
+		return form, false, err
+	case state.othersPending:
+		return s.buildWaitingForAnswersResponse(ctx, doc, recipient, token), false, nil
+	}
+	return nil, true, nil
+}
+
+// answerState summarizes the pre-signing questions from one signer's side.
+type answerState struct {
+	ownQuestions  bool // the signer has questions of their own
+	ownAnswered   bool // the signer has submitted their answers
+	othersPending bool // another signer's required questions are unanswered
+}
+
+func summarizeAnswers(
+	fields []*portabledoc.InteractiveFieldAttrs,
+	portableRoleID string,
+	answered map[string]bool,
+) answerState {
+	var state answerState
+	for _, field := range fields {
+		if field.RoleID == portableRoleID {
+			state.ownQuestions = true
+			// A submission saves all of the signer's answers together, so one
+			// saved answer means the signer has submitted.
+			state.ownAnswered = state.ownAnswered || answered[field.ID]
+			continue
+		}
+		if field.Required && !answered[field.ID] {
+			state.othersPending = true
+		}
+	}
+	return state
+}
+
+// loadPortableDocument loads and parses the content of the document's template version.
+func (s *PreSigningService) loadPortableDocument(
+	ctx context.Context,
+	doc *entity.Document,
+) (*entity.TemplateVersion, *portabledoc.Document, error) {
+	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("finding template version: %w", err)
+	}
+	portableDoc, err := parsePortableDocument(version.ContentStructure)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parsing document content: %w", err)
+	}
+	if portableDoc == nil {
+		return nil, nil, fmt.Errorf("document has no content")
+	}
+	return version, portableDoc, nil
+}
+
+// answeredFieldIDs returns the IDs of the interactive fields that have a saved answer.
+func (s *PreSigningService) answeredFieldIDs(ctx context.Context, documentID string) (map[string]bool, error) {
 	responses, err := s.fieldResponseRepo.FindByDocumentID(ctx, documentID)
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("loading field responses: %w", err)
 	}
-	return len(responses) > 0
+	answered := make(map[string]bool, len(responses))
+	for _, resp := range responses {
+		answered[resp.FieldID] = true
+	}
+	return answered, nil
+}
+
+// interactiveFieldAttrs returns the attributes of every interactive field in the document.
+func interactiveFieldAttrs(doc *portabledoc.Document) []*portabledoc.InteractiveFieldAttrs {
+	nodes := doc.CollectNodesOfType(portabledoc.NodeTypeInteractiveField)
+	fields := make([]*portabledoc.InteractiveFieldAttrs, 0, len(nodes))
+	for _, node := range nodes {
+		attrs, err := portabledoc.ParseInteractiveFieldAttrs(node.Attrs)
+		if err != nil {
+			continue
+		}
+		fields = append(fields, attrs)
+	}
+	return fields
 }
 
 // --- Response builders ---
 
-// buildPreviewFormResponse builds a preview response with the pre-signing form (Path B).
+// buildWaitingForAnswersResponse tells a signer that another signer still has
+// required questions to answer. The page polls this step and moves on to the
+// PDF preview once the answers are in.
+func (s *PreSigningService) buildWaitingForAnswersResponse(
+	ctx context.Context,
+	doc *entity.Document,
+	recipient *entity.DocumentRecipient,
+	token string,
+) *documentuc.PublicSigningResponse {
+	resp := &documentuc.PublicSigningResponse{
+		Step:               documentuc.StepWaiting,
+		DocumentTitle:      documentTitle(doc),
+		RecipientName:      recipient.Name,
+		WaitingForPrevious: true,
+	}
+	// Position and total only fill in the page's copy.
+	if recipients, err := s.recipientRepo.FindByDocumentID(ctx, doc.ID); err == nil {
+		resp.TotalSigners = len(recipients)
+	}
+	if orders, err := s.signerOrderMap(ctx, doc.TemplateVersionID); err == nil {
+		resp.SigningPosition = orders[recipient.TemplateVersionRoleID]
+	}
+	s.applyAccessFlags(resp, doc, recipient, token)
+	return resp
+}
+
+// buildPreviewFormResponse builds a preview response with the signer's own
+// pre-signing questions (Path B).
 func (s *PreSigningService) buildPreviewFormResponse(
 	ctx context.Context,
 	doc *entity.Document,
 	recipient *entity.DocumentRecipient,
 	title string,
 	token string,
+	portableDoc *portabledoc.Document,
+	portableRoleID string,
 ) (*documentuc.PublicSigningResponse, error) {
-	version, err := s.versionRepo.FindByID(ctx, doc.TemplateVersionID)
-	if err != nil {
-		return nil, fmt.Errorf("finding template version: %w", err)
-	}
-
-	portableDoc, err := parsePortableDocument(version.ContentStructure)
-	if err != nil {
-		return nil, fmt.Errorf("parsing document content: %w", err)
-	}
-	if portableDoc == nil {
-		return nil, fmt.Errorf("document has no content")
-	}
-
 	content, err := s.resolveContent(ctx, portableDoc, doc)
 	if err != nil {
 		return nil, fmt.Errorf("resolving content: %w", err)
-	}
-
-	portableRoleID, err := s.resolvePortableRoleID(ctx, version, portableDoc, recipient.TemplateVersionRoleID)
-	if err != nil {
-		return nil, err
 	}
 	fields := extractInteractiveFieldsForRole(portableDoc, portableRoleID)
 
