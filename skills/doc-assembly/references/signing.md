@@ -143,7 +143,7 @@ Always validate the signature/secret before parsing. Never trust event ordering:
 
 ## SignatureFieldPosition
 
-The lib gives you per-role coordinates with origin **bottom-left** and units in PDF points (1 pt = 1/72 in). Translate to your provider's coordinate system inside `SubmitAttemptDocument`. Roles are matched by `RoleID`, not by name, so you can rename signer roles in the editor without re-mapping fields.
+The lib gives you per-role coordinates with origin **bottom-left** and units in PDF points (1 pt = 1/72 in). Translate to your provider's coordinate system inside `SubmitAttemptDocument`. Field positions are matched by `RoleID`, so renaming a signer role does not require re-mapping fields. Recipient resolution at generation time is a different lookup: `DocumentGenerator` matches each declared role to the `anchor_string` persisted when the version was published, which is `GenerateAnchorString(label)` — a function of the **label**. Rename a role's label without re-publishing the version through `TemplateVersionService.PublishVersion` and every document creation fails with `role '<label>': no matching signature anchor found` (HTTP 422). Rename, then publish.
 
 ## Capacity / safety rules
 
