@@ -8,6 +8,13 @@ limitada a tenants recibe 403 al acceder a otro tenant o a un template global.
 Las rutas con `versionId` también verifican que la versión pertenece al template
 de la URL. Estas comprobaciones preceden al almacenamiento y a la publicación.
 
+Las rutas que nombran un workspace bajo un tenant,
+`/api/v1/automation/tenants/{tenantId}/workspaces/{workspaceId}` (`PATCH`,
+`/suspend`, `/activate` y `/archive`), verifican el tenant de la key contra
+`{tenantId}` y después que el workspace pertenece a ese tenant
+(`requireWorkspaceInTenant`). Un workspace de otro tenant responde 404, igual
+que uno inexistente.
+
 | Método | Endpoint | Autorización |
 |---|---|---|
 | POST | `/api/v1/automation/document-types` | `X-Automation-Key` válida y tenant permitido en el body |
