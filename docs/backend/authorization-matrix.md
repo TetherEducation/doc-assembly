@@ -277,6 +277,8 @@ Gestión de documentos dentro del workspace actual.
 
 Gestión de imágenes del workspace para reutilizarlas en el editor y en render/PDF mediante referencias `storage://`.
 
+**Alcance en el render:** al generar un PDF, una referencia `storage://` se resuelve solo si su clave es de la galería del workspace del template (`gallery/{workspaceId}/{archivo}`); el template de un sandbox usa la galería del workspace al que pertenece el sandbox. Cualquier otra clave no se descarga y se trata igual que una imagen que no existe.
+
 | Método | Endpoint | Descripción | OWNER | ADMIN | EDITOR | OPERATOR | VIEWER |
 |--------|----------|-------------|:-----:|:-----:|:------:|:--------:|:------:|
 | GET | `/workspace/gallery?page=1&perPage=20` | Lista assets de la galería del workspace | ✅ | ✅ | ✅ | ✅ | ✅ |

@@ -29,6 +29,13 @@ type RenderPreviewRequest struct {
 	// Keys are field IDs, values are the response JSON
 	// (e.g., {"selectedOptionIds":["id1"]} or {"text":"value"}).
 	FieldResponses map[string]json.RawMessage
+
+	// WorkspaceID is the workspace the document is rendered for: the workspace
+	// of its template. A stored image (a storage:// source) is resolved only
+	// from the gallery of this workspace or, when this workspace is a sandbox,
+	// from the gallery of the workspace the sandbox belongs to. When it is
+	// empty, no stored image is resolved.
+	WorkspaceID string
 }
 
 // SignerRoleValue contains the resolved name and email for a signer role.

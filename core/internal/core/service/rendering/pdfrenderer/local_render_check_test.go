@@ -48,7 +48,7 @@ func TestLocalRenderCheck(t *testing.T) {
 	}
 
 	service, err := NewService(DefaultTypstOptions(), cache,
-		NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+		NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Fatalf("render service: %v", err)
 	}

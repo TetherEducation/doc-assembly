@@ -12,7 +12,7 @@ import (
 
 func TestRenderPreview_Basic(t *testing.T) {
 	// Skip if Typst is not available (CI environments)
-	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestRenderPreview_Basic(t *testing.T) {
 }
 
 func TestRenderPreview_EmptyInjectables(t *testing.T) {
-	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestRenderPreview_EmptyInjectables(t *testing.T) {
 }
 
 func TestRenderPreview_RoleVariableFromInjectables(t *testing.T) {
-	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestRequireExtractedSignaturePositionsAcceptsPDFCoordinates(t *testing.T) {
 }
 
 func TestRenderPreview_SignatureFieldsTrackRenderedLineWithVariableContent(t *testing.T) {
-	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+	service, err := NewService(DefaultTypstOptions(), nil, NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Skipf("Typst not available, skipping test: %v", err)
 	}

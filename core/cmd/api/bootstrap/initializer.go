@@ -226,7 +226,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	}
 
 	// --- PDF Renderer ---
-	pdfRenderer, err := buildPDFRenderer(cfg, e.designTokens, storageAdapter)
+	pdfRenderer, err := buildPDFRenderer(cfg, e.designTokens, storageAdapter, workspaceRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +485,12 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 }
 
 // buildPDFRenderer creates the Typst-based PDF renderer service.
-func buildPDFRenderer(cfg *config.Config, customTokens *pdfrenderer.TypstDesignTokens, storageAdapter port.StorageAdapter) (port.PDFRenderer, error) {
+func buildPDFRenderer(
+	cfg *config.Config,
+	customTokens *pdfrenderer.TypstDesignTokens,
+	storageAdapter port.StorageAdapter,
+	workspaceRepo port.WorkspaceRepository,
+) (port.PDFRenderer, error) {
 	typstCfg := &cfg.Typst
 	opts := pdfrenderer.TypstOptions{
 		BinPath:        typstCfg.BinPath,
@@ -514,7 +519,7 @@ func buildPDFRenderer(cfg *config.Config, customTokens *pdfrenderer.TypstDesignT
 	}
 
 	factory := pdfrenderer.NewTypstConverterFactory(tokens)
-	return pdfrenderer.NewService(opts, imageCache, factory, tokens, storageAdapter)
+	return pdfrenderer.NewService(opts, imageCache, factory, tokens, storageAdapter, workspaceRepo)
 }
 
 func resolveTypstFontDirs(fontDirs []string) []string {

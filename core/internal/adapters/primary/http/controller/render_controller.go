@@ -96,11 +96,14 @@ func (c *RenderController) PreviewVersion(ctx *gin.Context) {
 	// Build injectable defaults map from version injectables
 	injectableDefaults := buildInjectableDefaults(details.Injectables)
 
-	// Render PDF
+	// Render PDF for the caller's workspace (its sandbox, in sandbox mode); the
+	// route guards have tied the version to it.
+	workspaceID, _ := middleware.GetWorkspaceID(ctx)
 	result, err := c.pdfRenderer.RenderPreview(ctx.Request.Context(), &port.RenderPreviewRequest{
 		Document:           doc,
 		Injectables:        req.Injectables,
 		InjectableDefaults: injectableDefaults,
+		WorkspaceID:        workspaceID,
 	})
 	if err != nil {
 		slog.ErrorContext(ctx.Request.Context(), "failed to render PDF",

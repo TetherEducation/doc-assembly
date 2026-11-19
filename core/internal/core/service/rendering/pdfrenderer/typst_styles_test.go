@@ -47,7 +47,7 @@ func TestBuildTableBodyStyleRules_EmptyWhenNothingSet(t *testing.T) {
 // the property that actually broke. It needs the typst binary, so it skips without one.
 func TestTableWithBodyStylesCompiles(t *testing.T) {
 	service, err := NewService(DefaultTypstOptions(), nil,
-		NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil)
+		NewTypstConverterFactory(DefaultDesignTokens()), DefaultDesignTokens(), nil, nil)
 	if err != nil {
 		t.Skipf("typst unavailable: %v", err)
 	}
