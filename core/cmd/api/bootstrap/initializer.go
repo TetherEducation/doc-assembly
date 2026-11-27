@@ -31,6 +31,7 @@ import (
 	systeminjectablerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/system_injectable_repo"
 	systemrolerepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/system_role_repo"
 	tagrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/tag_repo"
+	templatecommentrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_comment_repo"
 	templaterepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_repo"
 	templatetagrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_tag_repo"
 	templateversionapprovalrepo "github.com/TetherEducation/doc-assembly/core/internal/adapters/secondary/database/postgres/template_version_approval_repo"
@@ -138,6 +139,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 	templateVersionRepo := templateversionrepo.New(pool)
 	uploadedSourceRepo := uploadedsourcerepo.New(pool)
 	templateVersionApprovalRepo := templateversionapprovalrepo.New(pool)
+	templateCommentRepo := templatecommentrepo.New(pool)
 	templateTagRepo := templatetagrepo.New(pool)
 	templateVersionInjectableRepo := templateversioninjectablerepo.New(pool)
 	templateVersionSignerRoleRepo := templateversionsignerrolerepo.New(pool)
@@ -374,6 +376,10 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		templateVersionApprovalRepo, templateVersionRepo,
 	)
 	internalApprovalCtrl := controller.NewInternalApprovalController(templateApprovalSvc)
+	templateCommentSvc := templatesvc.NewTemplateCommentService(
+		templateCommentRepo, templateVersionRepo, templateRepo,
+	)
+	internalCommentCtrl := controller.NewInternalCommentController(templateCommentSvc)
 	// --- Document Access Service (email-verification gate) ---
 	paCfg := &cfg.PublicAccess
 	rateLimitMax := paCfg.RateLimitMax
@@ -454,6 +460,7 @@ func (e *Engine) initialize(ctx context.Context) (*appComponents, error) { //nol
 		internalDocCtrl,
 		internalTemplateCtrl,
 		internalApprovalCtrl,
+		internalCommentCtrl,
 		publicDocAccessCtrl,
 		publicSigningCtrl,
 		publicReadOnlyViewCtrl,

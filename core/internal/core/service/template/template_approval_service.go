@@ -80,13 +80,24 @@ func (s *TemplateApprovalService) assertVersionInWorkspace(
 	if err != nil {
 		return fmt.Errorf("finding template version context: %w", err)
 	}
-	if versionCtx == nil || versionCtx.Workspace == nil {
-		return fmt.Errorf("template version %s has no workspace: %w", versionID, ErrWorkspaceMismatch)
+	var workspace *entity.Workspace
+	if versionCtx != nil {
+		workspace = versionCtx.Workspace
 	}
-	if !strings.EqualFold(versionCtx.Workspace.Code, claimed) {
+	return checkClaimedWorkspace(claimed, workspace, "template version "+versionID)
+}
+
+// checkClaimedWorkspace compares a caller's non-empty workspace claim with the
+// workspace a resource actually belongs to. A resource with no workspace never
+// matches.
+func checkClaimedWorkspace(claimed string, actual *entity.Workspace, subject string) error {
+	if actual == nil {
+		return fmt.Errorf("%s has no workspace: %w", subject, ErrWorkspaceMismatch)
+	}
+	if !strings.EqualFold(actual.Code, claimed) {
 		return fmt.Errorf(
-			"template version %s belongs to workspace %s, not %s: %w",
-			versionID, versionCtx.Workspace.Code, claimed, ErrWorkspaceMismatch,
+			"%s belongs to workspace %s, not %s: %w",
+			subject, actual.Code, claimed, ErrWorkspaceMismatch,
 		)
 	}
 	return nil

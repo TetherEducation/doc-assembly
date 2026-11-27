@@ -40,19 +40,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -81,7 +81,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest"
                         }
                     }
                 ],
@@ -89,25 +89,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -140,25 +140,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -189,19 +189,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -236,7 +236,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest"
                         }
                     }
                 ],
@@ -244,31 +244,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -315,25 +315,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -366,25 +366,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -421,7 +421,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest"
                         }
                     }
                 ],
@@ -429,25 +429,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -484,7 +490,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest"
                         }
                     }
                 ],
@@ -492,25 +498,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -543,19 +555,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -590,7 +602,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest"
                         }
                     }
                 ],
@@ -598,25 +610,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -656,19 +674,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -710,7 +728,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest"
                         }
                     }
                 ],
@@ -718,25 +736,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -776,13 +800,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -822,19 +846,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -873,7 +897,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest"
                         }
                     }
                 ],
@@ -884,19 +908,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -936,13 +966,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -966,13 +996,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1005,19 +1035,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1052,7 +1082,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest"
                         }
                     }
                 ],
@@ -1060,25 +1090,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1122,7 +1158,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateWorkspaceRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateWorkspaceRequest"
                         }
                     }
                 ],
@@ -1130,37 +1166,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1200,25 +1242,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1258,25 +1300,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1316,25 +1358,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1373,13 +1415,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1418,13 +1460,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1477,7 +1519,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest"
                         }
                     }
                 ],
@@ -1485,19 +1527,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1543,19 +1591,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1603,7 +1651,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest"
                         }
                     }
                 ],
@@ -1611,25 +1659,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1660,13 +1714,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1697,13 +1751,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1780,13 +1834,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1822,7 +1876,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTemplateRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTemplateRequest"
                         }
                     }
                 ],
@@ -1830,19 +1884,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1886,13 +1940,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1936,7 +1990,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTemplateRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTemplateRequest"
                         }
                     }
                 ],
@@ -1944,19 +1998,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2001,7 +2055,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2045,13 +2099,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithAllVersionsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithAllVersionsResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2097,7 +2151,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CloneTemplateRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CloneTemplateRequest"
                         }
                     }
                 ],
@@ -2105,25 +2159,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad request (invalid versionId, version doesn't belong to template, validation error)",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Template or version not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Template title already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2169,7 +2223,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeRequest"
                         }
                     }
                 ],
@@ -2177,25 +2231,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2240,7 +2294,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest"
                         }
                     }
                 ],
@@ -2248,25 +2302,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2311,7 +2365,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddTagsRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddTagsRequest"
                         }
                     }
                 ],
@@ -2322,13 +2376,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2382,7 +2436,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2426,13 +2480,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2475,7 +2529,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionRequest"
                         }
                     }
                 ],
@@ -2483,19 +2537,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2540,7 +2594,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionFromExistingRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionFromExistingRequest"
                         }
                     }
                 ],
@@ -2548,19 +2602,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2611,13 +2665,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2667,7 +2721,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateVersionRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateVersionRequest"
                         }
                     }
                 ],
@@ -2675,19 +2729,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2739,13 +2793,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2799,13 +2853,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2857,7 +2911,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddVersionInjectableRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddVersionInjectableRequest"
                         }
                     }
                 ],
@@ -2865,19 +2919,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2938,7 +2992,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2984,7 +3038,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RenderPreviewRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RenderPreviewRequest"
                         }
                     }
                 ],
@@ -2998,19 +3052,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3057,7 +3111,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromoteVersionRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromoteVersionRequest"
                         }
                     }
                 ],
@@ -3065,25 +3119,25 @@ const docTemplate = `{
                     "201": {
                         "description": "When mode=NEW_VERSION",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewVersionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewVersionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad request or target workspace is a sandbox",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3137,13 +3191,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3197,13 +3251,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3255,7 +3309,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ScheduleArchiveRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ScheduleArchiveRequest"
                         }
                     }
                 ],
@@ -3266,13 +3320,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3324,7 +3378,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SchedulePublishRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SchedulePublishRequest"
                         }
                     }
                 ],
@@ -3335,13 +3389,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3404,20 +3458,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3447,7 +3501,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest"
                         }
                     }
                 ],
@@ -3455,19 +3509,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3499,7 +3553,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentRequest"
                         }
                     }
                 ],
@@ -3507,19 +3561,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3552,20 +3606,137 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/documents/from-pdf": {
+            "post": {
+                "description": "Multipart form with \"file\" (the PDF, at most 12 MiB) and \"payload\" (JSON: title, and signers with name, email, order and boxes in PDF points from the page's bottom-left). Builds a one-off template, publishes it and creates the document; with signing.direct_send on, the provider emails the signers. Registered only when signing.pdf_send is on.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Send a PDF for signature",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace ID",
+                        "name": "X-Workspace-ID",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "The PDF",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "JSON: title and signers",
+                        "name": "payload",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentWithRecipients"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/documents/signing-state": {
+            "post": {
+                "description": "Reports, per document, whether it was actually signed, plus per-recipient progress. Lets a caller tell \"nobody ever signed\" apart from \"signed\" instead of trusting its own workflow state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Get documents signing state",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Document IDs to report on",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3596,13 +3767,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.DocumentStatistics"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.DocumentStatistics"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3640,19 +3811,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3699,19 +3870,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3749,7 +3920,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
                         }
                     }
                 ],
@@ -3757,37 +3928,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3841,20 +4012,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentEventResponse"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentEventResponse"
                             }
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3899,19 +4070,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3952,13 +4123,85 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/documents/{documentId}/print-pdf": {
+            "get": {
+                "description": "Renders the document's current unsigned PDF, or the blank template when blank=true, so campuses can print it for in-person signing.",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Download unsigned document PDF for printing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Render the blank template without injected values",
+                        "name": "blank",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3998,20 +4241,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse"
                             }
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4056,19 +4299,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SigningURLResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningURLResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4106,19 +4349,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4165,19 +4408,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4216,37 +4459,167 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/approvals/{approvalId}": {
+            "delete": {
+                "description": "Removes a PENDING proposal so one sent by mistake need not be answered by the school. A decided approval is never retracted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Withdraw an undecided proposal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Approval ID",
+                        "name": "approvalId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/approvals/{approvalId}/decision": {
+            "post": {
+                "description": "Approves or requests changes. A change request requires a comment. A proposal already decided is refused rather than overwritten.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Record a school's decision on a proposed version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Approval ID",
+                        "name": "approvalId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Decision",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDecideApprovalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     }
                 }
@@ -4314,7 +4687,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest"
                         }
                     }
                 ],
@@ -4322,37 +4695,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
                         }
                     },
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     }
                 }
@@ -4420,7 +4793,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest"
                         }
                     }
                 ],
@@ -4428,31 +4801,108 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/documents/{documentId}/cancel": {
+            "post": {
+                "description": "Cancels a document pending signatures and terminates its signing attempt, killing any live signing links. Refuses documents in a terminal state.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Cancel an in-flight document via internal API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cancellation request",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCancelDocumentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCancelDocumentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     }
                 }
@@ -4491,7 +4941,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest"
                         }
                     }
                 ],
@@ -4499,37 +4949,540 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/template-versions/{versionId}/approval": {
+            "get": {
+                "description": "Reports whether publishing is authorized, and separately whether an approval went stale because the content was edited after sign-off.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Current approval state of a template version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalStateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/template-versions/{versionId}/approvals": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Approval history for a template version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalHistoryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Records a PENDING approval pinned to the version's content as it stands now. Refuses when a proposal is already outstanding.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Propose a template version for school approval",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Proposal",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalProposeApprovalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/template-versions/{versionId}/comments": {
+            "post": {
+                "description": "Appends a comment to the version's template, tagged with that version. The template is derived from the version. Comments are append-only and never part of the template content.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Add a CRM-only comment to a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Comment",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/templates/resolve": {
+            "get": {
+                "description": "Runs the configured template resolver and reports the version a document created now would use. Creates nothing.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Resolve the template a create would use",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tenant business code",
+                        "name": "X-Tenant-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Document type code",
+                        "name": "X-Document-Type",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Environment (prod|dev)",
+                        "name": "X-Environment",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Process key (default: default)",
+                        "name": "X-Process",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolveTemplateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/templates/{templateId}/comments": {
+            "get": {
+                "description": "Lists the comments of one audience on a template, oldest first, each tagged with the version it was written against.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "List CRM-only comments on a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template ID",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Audience the thread belongs to",
+                        "name": "audience",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/templates/{templateId}/versions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "List template versions via internal API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template ID",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/templates/{templateId}/versions/{versionId}/content": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Get template version content via internal API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template ID",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
                     }
                 }
@@ -4560,7 +5513,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecordAccessRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RecordAccessRequest"
                         }
                     }
                 ],
@@ -4571,19 +5524,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4625,13 +5578,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MyRolesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MyRolesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4681,13 +5634,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsWithRoleResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsWithRoleResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4722,7 +5675,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse"
                         }
                     },
                     "401": {
@@ -4785,19 +5738,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListSystemInjectablesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListSystemInjectablesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4827,7 +5780,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest"
                         }
                     }
                 ],
@@ -4835,25 +5788,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4881,7 +5834,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest"
                         }
                     }
                 ],
@@ -4889,25 +5842,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4946,19 +5899,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4994,25 +5947,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListAssignmentsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListAssignmentsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5047,7 +6000,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAssignmentRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAssignmentRequest"
                         }
                     }
                 ],
@@ -5055,31 +6008,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5125,19 +6078,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5183,19 +6136,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5241,19 +6194,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5292,19 +6245,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5353,19 +6306,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5393,7 +6346,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTenantRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTenantRequest"
                         }
                     }
                 ],
@@ -5401,31 +6354,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5461,25 +6414,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5514,7 +6467,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest"
                         }
                     }
                 ],
@@ -5522,31 +6475,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5583,19 +6536,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5632,7 +6585,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantStatusRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantStatusRequest"
                         }
                     }
                 ],
@@ -5640,31 +6593,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5720,25 +6673,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5765,19 +6718,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_SystemRoleWithUserResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_SystemRoleWithUserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5805,7 +6758,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddSystemRoleRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddSystemRoleRequest"
                         }
                     }
                 ],
@@ -5813,25 +6766,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5868,7 +6821,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignSystemRoleRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignSystemRoleRequest"
                         }
                     }
                 ],
@@ -5876,31 +6829,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5937,19 +6890,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5985,25 +6938,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6038,7 +6991,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest"
                         }
                     }
                 ],
@@ -6046,31 +6999,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6126,19 +7079,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedDocumentTypesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedDocumentTypesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6173,7 +7126,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentTypeRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentTypeRequest"
                         }
                     }
                 ],
@@ -6181,31 +7134,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6248,25 +7201,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6309,25 +7262,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6370,25 +7323,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6430,7 +7383,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateDocumentTypeRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateDocumentTypeRequest"
                         }
                     }
                 ],
@@ -6438,31 +7391,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6503,7 +7456,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeRequest"
                         }
                     }
                 ],
@@ -6511,31 +7464,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6571,19 +7524,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantMemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TenantMemberResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6618,7 +7571,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddTenantMemberRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddTenantMemberRequest"
                         }
                     }
                 ],
@@ -6626,31 +7579,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6693,25 +7646,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6753,7 +7706,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantMemberRoleRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantMemberRoleRequest"
                         }
                     }
                 ],
@@ -6761,31 +7714,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6829,25 +7782,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6903,19 +7856,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedProcessesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedProcessesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -6950,7 +7903,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateProcessRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateProcessRequest"
                         }
                     }
                 ],
@@ -6958,31 +7911,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7025,25 +7978,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7088,26 +8041,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7150,25 +8103,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7210,7 +8163,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateProcessRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateProcessRequest"
                         }
                     }
                 ],
@@ -7218,31 +8171,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7283,7 +8236,7 @@ const docTemplate = `{
                         "name": "request",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessRequest"
                         }
                     }
                 ],
@@ -7291,31 +8244,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7377,19 +8330,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7424,7 +8377,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceRequest"
                         }
                     }
                 ],
@@ -7432,25 +8385,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7496,19 +8449,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7552,7 +8505,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceStatusRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceStatusRequest"
                         }
                     }
                 ],
@@ -7560,31 +8513,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7615,19 +8568,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7657,7 +8610,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceRequest"
                         }
                     }
                 ],
@@ -7665,19 +8618,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7709,13 +8662,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7752,19 +8705,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_FolderResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_FolderResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7800,7 +8753,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateFolderRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateFolderRequest"
                         }
                     }
                 ],
@@ -7808,13 +8761,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7853,20 +8806,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse"
+                                "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7910,19 +8863,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -7965,7 +8918,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateFolderRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateFolderRequest"
                         }
                     }
                 ],
@@ -7973,19 +8926,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8030,13 +8983,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8081,7 +9034,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MoveFolderRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MoveFolderRequest"
                         }
                     }
                 ],
@@ -8089,19 +9042,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8146,25 +9099,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8212,25 +9165,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8271,25 +9224,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8341,25 +9294,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8405,25 +9358,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8463,31 +9416,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryURLResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryURLResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8518,19 +9471,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListWorkspaceInjectablesResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListWorkspaceInjectablesResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8560,7 +9513,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceInjectableRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceInjectableRequest"
                         }
                     }
                 ],
@@ -8568,13 +9521,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8612,19 +9565,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8661,7 +9614,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceInjectableRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceInjectableRequest"
                         }
                     }
                 ],
@@ -8669,19 +9622,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8720,13 +9673,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8764,19 +9717,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8814,19 +9767,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8857,19 +9810,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_MemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_MemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8899,7 +9852,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InviteMemberRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InviteMemberRequest"
                         }
                     }
                 ],
@@ -8907,19 +9860,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -8957,19 +9910,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9006,7 +9959,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateMemberRoleRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateMemberRoleRequest"
                         }
                     }
                 ],
@@ -9014,19 +9967,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9065,13 +10018,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9102,19 +10055,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TagWithCountResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TagWithCountResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9144,7 +10097,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTagRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTagRequest"
                         }
                     }
                 ],
@@ -9152,13 +10105,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9196,19 +10149,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9245,7 +10198,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTagRequest"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTagRequest"
                         }
                     }
                 ],
@@ -9253,19 +10206,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9304,13 +10257,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -9414,7 +10367,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicDocumentInfoResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicDocumentInfoResponse"
                         }
                     },
                     "404": {
@@ -9501,7 +10454,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
                         }
                     },
                     "401": {
@@ -9558,7 +10511,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
                         }
                     },
                     "400": {
@@ -9767,7 +10720,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
                         }
                     },
                     "401": {
@@ -9814,7 +10767,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse"
                         }
                     },
                     "401": {
@@ -9940,7 +10893,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse"
                         }
                     },
                     "401": {
@@ -10057,19 +11010,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse"
                         }
                     }
                 }
@@ -10077,7 +11030,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddSystemRoleRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddSystemRoleRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -10099,7 +11052,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddTagsRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddTagsRequest": {
             "type": "object",
             "required": [
                 "tagIds"
@@ -10114,7 +11067,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddTenantMemberRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddTenantMemberRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -10133,7 +11086,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AddVersionInjectableRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AddVersionInjectableRequest": {
             "type": "object",
             "required": [
                 "injectableDefinitionId"
@@ -10150,7 +11103,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeRequest": {
             "type": "object",
             "properties": {
                 "documentTypeId": {
@@ -10163,18 +11116,18 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignDocumentTypeResponse": {
             "type": "object",
             "properties": {
                 "conflict": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateConflictInfo"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateConflictInfo"
                 },
                 "template": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AssignSystemRoleRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AssignSystemRoleRequest": {
             "type": "object",
             "required": [
                 "role"
@@ -10189,7 +11142,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAssignDocumentTypeRequest": {
             "type": "object",
             "required": [
                 "documentTypeId"
@@ -10200,7 +11153,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse": {
             "type": "object",
             "properties": {
                 "action": {
@@ -10247,7 +11200,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateTemplateRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -10261,7 +11214,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateVersionRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -10275,7 +11228,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationCreateWorkspaceRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -10293,7 +11246,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse": {
             "type": "object",
             "properties": {
                 "allowedTenants": {
@@ -10331,7 +11284,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateTemplateRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -10342,7 +11295,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionContentRequest": {
             "type": "object",
             "required": [
                 "contentStructure"
@@ -10356,7 +11309,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateVersionRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -10367,7 +11320,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateWorkspaceRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationUpdateWorkspaceRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -10378,7 +11331,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentRequest": {
             "type": "object",
             "required": [
                 "documents"
@@ -10389,27 +11342,27 @@ const docTemplate = `{
                     "maxItems": 50,
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchCreateDocumentResponse": {
             "type": "object",
             "properties": {
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchDocumentResultResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchDocumentResultResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BatchDocumentResultResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BatchDocumentResultResponse": {
             "type": "object",
             "properties": {
                 "document": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentWithRecipients"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentWithRecipients"
                 },
                 "error": {
                     "type": "string"
@@ -10422,7 +11375,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkOperationError": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkOperationError": {
             "type": "object",
             "properties": {
                 "error": {
@@ -10433,7 +11386,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsRequest": {
             "type": "object",
             "required": [
                 "keys"
@@ -10448,13 +11401,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkPublicAssignmentsResponse": {
             "type": "object",
             "properties": {
                 "failed": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.BulkOperationError"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.BulkOperationError"
                     }
                 },
                 "succeeded": {
@@ -10465,7 +11418,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CloneTemplateRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CloneTemplateRequest": {
             "type": "object",
             "required": [
                 "newTitle",
@@ -10485,7 +11438,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAssignmentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAssignmentRequest": {
             "type": "object",
             "required": [
                 "scopeType"
@@ -10507,7 +11460,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyRequest": {
             "type": "object",
             "required": [
                 "keyType",
@@ -10528,7 +11481,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateAutomationKeyResponse": {
             "type": "object",
             "properties": {
                 "allowedTenants": {
@@ -10564,7 +11517,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentRequest": {
             "type": "object",
             "required": [
                 "recipients",
@@ -10587,7 +11540,7 @@ const docTemplate = `{
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateRecipientRequest"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateRecipientRequest"
                     }
                 },
                 "relatedDocumentId": {
@@ -10602,7 +11555,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentTypeRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateDocumentTypeRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -10628,7 +11581,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateFolderRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateFolderRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -10644,7 +11597,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateProcessRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateProcessRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -10678,7 +11631,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateReadOnlyViewLinkResponse": {
             "type": "object",
             "properties": {
                 "expiresAt": {
@@ -10692,7 +11645,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateRecipientRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateRecipientRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -10711,7 +11664,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTagRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTagRequest": {
             "type": "object",
             "required": [
                 "color",
@@ -10728,7 +11681,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTemplateRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTemplateRequest": {
             "type": "object",
             "required": [
                 "title"
@@ -10762,7 +11715,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateTenantRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateTenantRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -10785,7 +11738,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionFromExistingRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionFromExistingRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -10805,7 +11758,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateVersionRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -10821,7 +11774,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceInjectableRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceInjectableRequest": {
             "type": "object",
             "required": [
                 "defaultValue",
@@ -10851,7 +11804,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.CreateWorkspaceRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -10881,7 +11834,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeRequest": {
             "type": "object",
             "properties": {
                 "force": {
@@ -10894,7 +11847,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteDocumentTypeResponse": {
             "type": "object",
             "properties": {
                 "canReplace": {
@@ -10908,12 +11861,12 @@ const docTemplate = `{
                     "description": "Templates using this type (if not deleted)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeTemplateInfoResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeTemplateInfoResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessRequest": {
             "type": "object",
             "properties": {
                 "force": {
@@ -10926,7 +11879,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DeleteProcessResponse": {
             "type": "object",
             "properties": {
                 "canReplace": {
@@ -10940,12 +11893,12 @@ const docTemplate = `{
                     "description": "Templates using this process (if not deleted)",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentEventResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentEventResponse": {
             "type": "object",
             "properties": {
                 "actorId": {
@@ -10978,7 +11931,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse": {
             "type": "object",
             "properties": {
                 "documentId": {
@@ -11007,7 +11960,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListResponse": {
             "type": "object",
             "properties": {
                 "clientExternalReferenceId": {
@@ -11028,7 +11981,7 @@ const docTemplate = `{
                 "recipients": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentListRecipientResponse"
                     }
                 },
                 "signerProvider": {
@@ -11054,7 +12007,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentResponse": {
             "type": "object",
             "properties": {
                 "clientExternalReferenceId": {
@@ -11072,7 +12025,7 @@ const docTemplate = `{
                 "recipients": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse"
                     }
                 },
                 "signerProvider": {
@@ -11095,7 +12048,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeListItemResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeListItemResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11134,7 +12087,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11170,7 +12123,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeTemplateInfoResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeTemplateInfoResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11187,7 +12140,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11201,7 +12154,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse": {
             "type": "object",
             "properties": {
                 "childFolderCount": {
@@ -11230,13 +12183,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse": {
             "type": "object",
             "properties": {
                 "children": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderTreeResponse"
                     }
                 },
                 "createdAt": {
@@ -11259,7 +12212,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse": {
             "type": "object",
             "properties": {
                 "default": {
@@ -11273,7 +12226,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse": {
             "type": "object",
             "properties": {
                 "contentType": {
@@ -11296,13 +12249,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryAssetResponse"
                     }
                 },
                 "page": {
@@ -11316,7 +12269,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GalleryURLResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GalleryURLResponse": {
             "type": "object",
             "properties": {
                 "url": {
@@ -11324,7 +12277,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GroupResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GroupResponse": {
             "type": "object",
             "properties": {
                 "icon": {
@@ -11344,7 +12297,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -11360,7 +12313,7 @@ const docTemplate = `{
                     }
                 },
                 "formatConfig": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse"
                 },
                 "group": {
                     "type": "string"
@@ -11395,7 +12348,161 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "description": "Audience the comment is listed within, computed by crm-admission.",
+                    "type": "string"
+                },
+                "body": {
+                    "description": "Body is trimmed, must not be empty and is at most 4000 characters.",
+                    "type": "string"
+                },
+                "campus": {
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Who wrote it, and from which campus.",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalResponse"
+                    }
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalResponse": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "contentChecksum": {
+                    "type": "string"
+                },
+                "decidedAt": {
+                    "type": "string"
+                },
+                "decidedAtCampus": {
+                    "type": "string"
+                },
+                "decidedByEmail": {
+                    "type": "string"
+                },
+                "decidedByName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "proposedAt": {
+                    "type": "string"
+                },
+                "proposedBy": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "templateVersionId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalStateResponse": {
+            "type": "object",
+            "properties": {
+                "authorized": {
+                    "type": "boolean"
+                },
+                "currentChecksum": {
+                    "type": "string"
+                },
+                "latest": {
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalResponse"
+                },
+                "stale": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCancelDocumentRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCancelDocumentResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse"
+                    }
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "authorCampus": {
+                    "type": "string"
+                },
+                "authorEmail": {
+                    "type": "string"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "templateId": {
+                    "type": "string"
+                },
+                "templateVersionId": {
+                    "type": "string"
+                },
+                "versionNumber": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest": {
             "type": "object",
             "properties": {
                 "forceCreate": {
@@ -11418,7 +12525,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentWithRecipientsResponse": {
             "type": "object",
             "properties": {
                 "externalId": {
@@ -11433,7 +12540,7 @@ const docTemplate = `{
                 "recipients": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse"
                     }
                 },
                 "status": {
@@ -11453,7 +12560,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDecideApprovalRequest": {
+            "type": "object",
+            "properties": {
+                "approved": {
+                    "type": "boolean"
+                },
+                "campus": {
+                    "description": "Which campus the decision was made from. Capabilities are per-campus while a\nnetwork approves its shared template once, so this is not derivable.",
+                    "type": "string"
+                },
+                "comment": {
+                    "description": "Required when requesting changes.",
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Who decided. Stored as name and email rather than a user id alone, because\nthe user record can change or be deleted and the legal fact cannot.",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentRequest": {
             "type": "object",
             "properties": {
                 "reason": {
@@ -11461,21 +12591,21 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDeprecateDocumentResponse": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "string"
                 },
                 "providerCleanup": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse"
                 },
                 "status": {
                     "type": "string"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalDocumentRecipientResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -11492,7 +12622,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11509,7 +12639,91 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InviteMemberRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalProposeApprovalRequest": {
+            "type": "object",
+            "properties": {
+                "proposedBy": {
+                    "description": "ProposedBy is who at Tether put it forward. Required: an approval whose\nproposer is unknown is half an audit trail.",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolveTemplateResponse": {
+            "type": "object",
+            "properties": {
+                "documentType": {
+                    "type": "string"
+                },
+                "injectables": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolvedInjectableResponse"
+                    }
+                },
+                "process": {
+                    "type": "string"
+                },
+                "requestedWorkspaceCode": {
+                    "type": "string"
+                },
+                "resolvedWorkspaceCode": {
+                    "type": "string"
+                },
+                "signerRoles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolvedSignerRoleResponse"
+                    }
+                },
+                "templateId": {
+                    "type": "string"
+                },
+                "tenantCode": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "versionId": {
+                    "type": "string"
+                },
+                "versionNumber": {
+                    "type": "integer"
+                },
+                "versionStatus": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolvedInjectableResponse": {
+            "type": "object",
+            "properties": {
+                "isRequired": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalResolvedSignerRoleResponse": {
+            "type": "object",
+            "properties": {
+                "anchorString": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "signerOrder": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InviteMemberRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -11528,30 +12742,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListAssignmentsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListAssignmentsResponse": {
             "type": "object",
             "properties": {
                 "assignments": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListInjectablesResponse": {
             "type": "object",
             "properties": {
                 "groups": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.GroupResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.GroupResponse"
                     }
                 },
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
                     }
                 },
                 "total": {
@@ -11559,7 +12773,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_AutomationAuditLogResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11568,12 +12782,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationAuditLogResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_AutomationKeyResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11582,12 +12796,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.AutomationKeyResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_DocumentTypeResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11596,12 +12810,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_FolderResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_FolderResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11610,12 +12824,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_MemberResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_MemberResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11624,12 +12838,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_SystemRoleWithUserResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_SystemRoleWithUserResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11638,12 +12852,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleWithUserResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleWithUserResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TagWithCountResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TagWithCountResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11652,12 +12866,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagWithCountResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagWithCountResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TemplateListItemResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11666,12 +12880,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantMemberResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TenantMemberResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11680,12 +12894,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_TenantResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11694,12 +12908,12 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListResponse-github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto_WorkspaceResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -11708,29 +12922,29 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListSystemInjectablesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListSystemInjectablesResponse": {
             "type": "object",
             "properties": {
                 "injectables": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableResponse"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplateVersionsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                     }
                 },
                 "total": {
@@ -11738,13 +12952,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListTemplatesResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse"
                     }
                 },
                 "limit": {
@@ -11758,13 +12972,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ListWorkspaceInjectablesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ListWorkspaceInjectablesResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse"
                     }
                 },
                 "total": {
@@ -11772,7 +12986,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -11791,14 +13005,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberUserResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberUserResponse"
                 },
                 "workspaceId": {
                     "type": "string"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MemberUserResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MemberUserResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -11815,7 +13029,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MoveFolderRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MoveFolderRequest": {
             "type": "object",
             "properties": {
                 "newParentId": {
@@ -11823,88 +13037,88 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.MyRolesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.MyRolesResponse": {
             "type": "object",
             "properties": {
                 "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RoleEntry"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RoleEntry"
                     }
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedDocumentTypesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedDocumentTypesResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeListItemResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.DocumentTypeListItemResponse"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedProcessesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedProcessesResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessListItemResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessListItemResponse"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsWithRoleResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedTenantsWithRoleResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantWithRoleResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantWithRoleResponse"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginatedWorkspacesResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PaginationMeta": {
             "type": "object",
             "properties": {
                 "page": {
@@ -11921,7 +13135,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessListItemResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessListItemResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -11963,7 +13177,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -12002,7 +13216,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProcessTemplateInfoResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -12019,26 +13233,26 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewTemplateResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewTemplateResponse": {
             "type": "object",
             "properties": {
                 "template": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                 },
                 "version": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewVersionResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromoteAsNewVersionResponse": {
             "type": "object",
             "properties": {
                 "version": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromoteVersionRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromoteVersionRequest": {
             "type": "object",
             "required": [
                 "mode"
@@ -12051,7 +13265,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromotionMode"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromotionMode"
                         }
                     ]
                 },
@@ -12069,7 +13283,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.PromotionMode": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.PromotionMode": {
             "type": "string",
             "enum": [
                 "NEW_TEMPLATE",
@@ -12080,7 +13294,7 @@ const docTemplate = `{
                 "PromotionModeNewVersion"
             ]
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ProviderCleanupResponse": {
             "type": "object",
             "properties": {
                 "action": {
@@ -12094,7 +13308,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ReadOnlyViewResponse": {
             "type": "object",
             "properties": {
                 "content": {
@@ -12113,7 +13327,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "mode": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode"
                 },
                 "pdfUrl": {
                     "type": "string"
@@ -12123,7 +13337,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RecipientResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12158,7 +13372,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RecordAccessRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RecordAccessRequest": {
             "type": "object",
             "required": [
                 "entityId",
@@ -12173,7 +13387,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RenderPreviewRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RenderPreviewRequest": {
             "type": "object",
             "properties": {
                 "injectables": {
@@ -12183,7 +13397,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.RoleEntry": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.RoleEntry": {
             "type": "object",
             "properties": {
                 "resourceId": {
@@ -12200,7 +13414,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.ScheduleArchiveRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.ScheduleArchiveRequest": {
             "type": "object",
             "required": [
                 "archiveAt"
@@ -12211,7 +13425,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SchedulePublishRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SchedulePublishRequest": {
             "type": "object",
             "required": [
                 "publishAt"
@@ -12222,7 +13436,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SetProcessFieldsRequest": {
             "type": "object",
             "required": [
                 "process",
@@ -12242,7 +13456,99 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SigningURLResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateDocumentResponse": {
+            "type": "object",
+            "properties": {
+                "documentId": {
+                    "type": "string"
+                },
+                "documentTypeCode": {
+                    "description": "Empty when the document carries no type — such a document never publishes a\ncompletion event even once signed.",
+                    "type": "string"
+                },
+                "expired": {
+                    "type": "boolean"
+                },
+                "expiresAt": {
+                    "type": "string"
+                },
+                "externalReferenceId": {
+                    "type": "string"
+                },
+                "recipients": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateRecipientResponse"
+                    }
+                },
+                "signed": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateRecipientResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "roleName": {
+                    "type": "string"
+                },
+                "signed": {
+                    "type": "boolean"
+                },
+                "signedAt": {
+                    "type": "string"
+                },
+                "signerOrder": {
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "Status is a projection: only SIGNED is authoritative. Intermediate provider\nstates are attempt-owned and may lag, so do not branch on SENT/DELIVERED.",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateRequest": {
+            "type": "object",
+            "required": [
+                "documentIds"
+            ],
+            "properties": {
+                "documentIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateResponse": {
+            "type": "object",
+            "properties": {
+                "documents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningStateDocumentResponse"
+                    }
+                },
+                "unavailable": {
+                    "description": "Unavailable merges \"does not exist\" with \"belongs to another workspace\" so\nthe endpoint cannot be used to probe for documents outside the caller's\nworkspace. Callers should treat these as unknown, not as unsigned.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SigningURLResponse": {
             "type": "object",
             "properties": {
                 "expiresAt": {
@@ -12253,7 +13559,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableAssignmentResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12285,7 +13591,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemInjectableResponse": {
             "type": "object",
             "properties": {
                 "dataType": {
@@ -12317,7 +13623,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12337,7 +13643,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleWithUserResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.SystemRoleWithUserResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12353,14 +13659,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UserBriefResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UserBriefResponse"
                 },
                 "userId": {
                     "type": "string"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -12383,7 +13689,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagSimpleResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagSimpleResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -12397,7 +13703,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagWithCountResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagWithCountResponse": {
             "type": "object",
             "properties": {
                 "color": {
@@ -12423,7 +13729,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateConflictInfo": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateConflictInfo": {
             "type": "object",
             "properties": {
                 "id": {
@@ -12434,18 +13740,18 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateCreateResponse": {
             "type": "object",
             "properties": {
                 "initialVersion": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse"
                 },
                 "template": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateListItemResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12481,7 +13787,7 @@ const docTemplate = `{
                 "tags": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagSimpleResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagSimpleResponse"
                     }
                 },
                 "title": {
@@ -12498,7 +13804,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12539,7 +13845,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse": {
             "type": "object",
             "properties": {
                 "archivedAt": {
@@ -12569,7 +13875,7 @@ const docTemplate = `{
                 "injectables": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
                     }
                 },
                 "name": {
@@ -12590,7 +13896,7 @@ const docTemplate = `{
                 "signerRoles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse"
                     }
                 },
                 "status": {
@@ -12607,7 +13913,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12617,7 +13923,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "definition": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InjectableResponse"
                 },
                 "id": {
                     "type": "string"
@@ -12630,7 +13936,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionResponse": {
             "type": "object",
             "properties": {
                 "archivedAt": {
@@ -12680,7 +13986,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse": {
             "type": "object",
             "properties": {
                 "anchorString": {
@@ -12706,7 +14012,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSummaryResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSummaryResponse": {
             "type": "object",
             "properties": {
                 "archivedAt": {
@@ -12730,7 +14036,7 @@ const docTemplate = `{
                 "injectables": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionInjectableResponse"
                     }
                 },
                 "name": {
@@ -12751,7 +14057,7 @@ const docTemplate = `{
                 "signerRoles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSignerRoleResponse"
                     }
                 },
                 "status": {
@@ -12768,7 +14074,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithAllVersionsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithAllVersionsResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12784,7 +14090,7 @@ const docTemplate = `{
                     }
                 },
                 "folder": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                 },
                 "folderId": {
                     "type": "string"
@@ -12804,7 +14110,7 @@ const docTemplate = `{
                 "tags": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
                     }
                 },
                 "title": {
@@ -12816,7 +14122,7 @@ const docTemplate = `{
                 "versions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSummaryResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionSummaryResponse"
                     }
                 },
                 "workspaceId": {
@@ -12824,7 +14130,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateWithDetailsResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12840,7 +14146,7 @@ const docTemplate = `{
                     }
                 },
                 "folder": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FolderResponse"
                 },
                 "folderId": {
                     "type": "string"
@@ -12858,12 +14164,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "publishedVersion": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TemplateVersionDetailResponse"
                 },
                 "tags": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TagResponse"
                     }
                 },
                 "title": {
@@ -12877,7 +14183,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -12896,11 +14202,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberUserResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberUserResponse"
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberUserResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantMemberUserResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -12917,7 +14223,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -12950,7 +14256,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.TenantWithRoleResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.TenantWithRoleResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -12989,7 +14295,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateAutomationKeyRequest": {
             "type": "object",
             "properties": {
                 "allowedTenants": {
@@ -13003,7 +14309,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateDocumentTypeRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateDocumentTypeRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13023,7 +14329,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateFolderRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateFolderRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13036,7 +14342,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateMemberRoleRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateMemberRoleRequest": {
             "type": "object",
             "required": [
                 "role"
@@ -13047,7 +14353,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateProcessRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateProcessRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13067,7 +14373,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTagRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTagRequest": {
             "type": "object",
             "required": [
                 "color",
@@ -13084,7 +14390,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTemplateRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTemplateRequest": {
             "type": "object",
             "properties": {
                 "folderId": {
@@ -13101,7 +14407,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantMemberRoleRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantMemberRoleRequest": {
             "type": "object",
             "required": [
                 "role"
@@ -13112,7 +14418,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13133,7 +14439,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantStatusRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateTenantStatusRequest": {
             "type": "object",
             "required": [
                 "status"
@@ -13149,7 +14455,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateVersionRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateVersionRequest": {
             "type": "object",
             "properties": {
                 "contentStructure": {
@@ -13168,7 +14474,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceInjectableRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceInjectableRequest": {
             "type": "object",
             "properties": {
                 "defaultValue": {
@@ -13193,7 +14499,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13209,7 +14515,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceStatusRequest": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UpdateWorkspaceStatusRequest": {
             "type": "object",
             "required": [
                 "status"
@@ -13225,7 +14531,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.UserBriefResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.UserBriefResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -13242,7 +14548,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceInjectableResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -13258,7 +14564,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "formatConfig": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.FormatConfigResponse"
                 },
                 "id": {
                     "type": "string"
@@ -13287,7 +14593,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.WorkspaceResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -13322,7 +14628,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentRecipient": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentRecipient": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -13350,7 +14656,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.RecipientStatus"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.RecipientStatus"
                 },
                 "templateVersionRoleId": {
                     "type": "string"
@@ -13360,7 +14666,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentStatus": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentStatus": {
             "type": "string",
             "enum": [
                 "DRAFT",
@@ -13387,7 +14693,7 @@ const docTemplate = `{
                 "DocumentStatusError"
             ]
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentTypeFilterOption": {
             "type": "object",
             "properties": {
                 "id": {
@@ -13398,7 +14704,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.DocumentWithRecipients": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentWithRecipients": {
             "type": "object",
             "properties": {
                 "activeAttemptId": {
@@ -13438,19 +14744,19 @@ const docTemplate = `{
                     }
                 },
                 "operationType": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.OperationType"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.OperationType"
                 },
                 "recipients": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentRecipient"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentRecipient"
                     }
                 },
                 "relatedDocumentId": {
                     "type": "string"
                 },
                 "status": {
-                    "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity.DocumentStatus"
+                    "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity.DocumentStatus"
                 },
                 "supersedeReason": {
                     "type": "string"
@@ -13478,7 +14784,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.OperationType": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.OperationType": {
             "type": "string",
             "enum": [
                 "CREATE",
@@ -13495,7 +14801,7 @@ const docTemplate = `{
                 "OperationPreview"
             ]
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity.RecipientStatus": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity.RecipientStatus": {
             "type": "string",
             "enum": [
                 "PENDING",
@@ -13516,7 +14822,7 @@ const docTemplate = `{
                 "RecipientStatusRejected"
             ]
         },
-        "github_com_rendis_doc-assembly_core_internal_core_entity_portabledoc.InteractiveOption": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_entity_portabledoc.InteractiveOption": {
             "type": "object",
             "properties": {
                 "id": {
@@ -13527,7 +14833,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.DocumentStatistics": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.DocumentStatistics": {
             "type": "object",
             "properties": {
                 "byStatus": {
@@ -13553,7 +14859,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.FieldResponseInput": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.FieldResponseInput": {
             "type": "object",
             "properties": {
                 "fieldId": {
@@ -13568,7 +14874,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.InteractiveFieldDTO": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.InteractiveFieldDTO": {
             "type": "object",
             "properties": {
                 "fieldType": {
@@ -13586,7 +14892,7 @@ const docTemplate = `{
                 "options": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_entity_portabledoc.InteractiveOption"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_entity_portabledoc.InteractiveOption"
                     }
                 },
                 "placeholder": {
@@ -13597,7 +14903,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.PreSigningFormDTO": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PreSigningFormDTO": {
             "type": "object",
             "properties": {
                 "content": {
@@ -13617,7 +14923,7 @@ const docTemplate = `{
                     "description": "fields for this role",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.InteractiveFieldDTO"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.InteractiveFieldDTO"
                     }
                 },
                 "recipientEmail": {
@@ -13631,7 +14937,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicDocumentInfoResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicDocumentInfoResponse": {
             "type": "object",
             "properties": {
                 "documentId": {
@@ -13646,7 +14952,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PublicSigningResponse": {
             "type": "object",
             "properties": {
                 "canDownload": {
@@ -13681,7 +14987,7 @@ const docTemplate = `{
                     "description": "Form contains the pre-signing form data (step=preview, Path B).",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.PreSigningFormDTO"
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.PreSigningFormDTO"
                         }
                     ]
                 },
@@ -13727,7 +15033,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.ReadOnlyViewMode": {
             "type": "string",
             "enum": [
                 "content",
@@ -13740,7 +15046,7 @@ const docTemplate = `{
                 "ReadOnlyViewModeUnavailable"
             ]
         },
-        "github_com_rendis_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse": {
+        "github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.SigningSessionResponse": {
             "type": "object",
             "properties": {
                 "canDownload": {
@@ -13791,7 +15097,7 @@ const docTemplate = `{
                 "responses": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_rendis_doc-assembly_core_internal_core_usecase_document.FieldResponseInput"
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_core_usecase_document.FieldResponseInput"
                     }
                 }
             }
