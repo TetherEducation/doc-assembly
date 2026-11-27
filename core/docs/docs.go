@@ -5144,6 +5144,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/internal/template-versions/{versionId}/comments": {
+            "post": {
+                "description": "Appends a comment to the version's template, tagged with that version. The template is derived from the version. Comments are append-only and never part of the template content.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "Add a CRM-only comment to a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template version ID",
+                        "name": "versionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Comment",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/internal/templates/resolve": {
             "get": {
                 "description": "Runs the configured template resolver and reports the version a document created now would use. Creates nothing.",
@@ -5224,6 +5303,80 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/templates/{templateId}/comments": {
+            "get": {
+                "description": "Lists the comments of one audience on a template, oldest first, each tagged with the version it was written against.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "List CRM-only comments on a template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Key for authentication",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Workspace business code",
+                        "name": "X-Workspace-Code",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Template ID",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Audience the thread belongs to",
+                        "name": "audience",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse"
                         }
@@ -12195,6 +12348,29 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "description": "Audience the comment is listed within, computed by crm-admission.",
+                    "type": "string"
+                },
+                "body": {
+                    "description": "Body is trimmed, must not be empty and is at most 4000 characters.",
+                    "type": "string"
+                },
+                "campus": {
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Who wrote it, and from which campus.",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalHistoryResponse": {
             "type": "object",
             "properties": {
@@ -12277,6 +12453,52 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse"
+                    }
+                }
+            }
+        },
+        "github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "string"
+                },
+                "authorCampus": {
+                    "type": "string"
+                },
+                "authorEmail": {
+                    "type": "string"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "templateId": {
+                    "type": "string"
+                },
+                "templateVersionId": {
+                    "type": "string"
+                },
+                "versionNumber": {
+                    "type": "integer"
                 }
             }
         },

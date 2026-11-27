@@ -81,6 +81,7 @@ func NewHTTPServer(
 	internalDocController *controller.InternalDocumentController,
 	internalTemplateController *controller.InternalTemplateController,
 	internalApprovalController *controller.InternalApprovalController,
+	internalCommentController *controller.InternalCommentController,
 	publicDocAccessController *controller.PublicDocumentAccessController,
 	publicSigningController *controller.PublicSigningController,
 	publicReadOnlyViewController *controller.PublicReadOnlyViewController,
@@ -125,7 +126,7 @@ func NewHTTPServer(
 		base.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	registerInternalRoutes(base, cfg, internalDocController, internalTemplateController, internalApprovalController, keyRepo)
+	registerInternalRoutes(base, cfg, internalDocController, internalTemplateController, internalApprovalController, internalCommentController, keyRepo)
 
 	requestTimeout := cfg.Server.WriteTimeoutDuration() - 2*time.Second
 	if requestTimeout <= 0 {
@@ -195,6 +196,7 @@ func registerInternalRoutes(
 	internalDocController *controller.InternalDocumentController,
 	internalTemplateController *controller.InternalTemplateController,
 	internalApprovalController *controller.InternalApprovalController,
+	internalCommentController *controller.InternalCommentController,
 	keyRepo port.AutomationAPIKeyRepository,
 ) {
 	if cfg.InternalAPI.Enabled {
@@ -208,6 +210,7 @@ func registerInternalRoutes(
 		internalDocController.RegisterRoutes(internalV1, authMiddleware)
 		internalTemplateController.RegisterRoutes(internalV1, authMiddleware)
 		internalApprovalController.RegisterRoutes(internalV1, authMiddleware)
+		internalCommentController.RegisterRoutes(internalV1, authMiddleware)
 		slog.InfoContext(context.Background(), "internal API routes registered",
 			slog.String("api_key_auth_mode", authMode))
 	} else {

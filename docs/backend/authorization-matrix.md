@@ -565,6 +565,17 @@ Este endpoint retorna los roles del usuario autenticado de forma condicional:
 
 **Archivo fuente**: `internal/adapters/primary/http/controller/internal_document_controller.go`
 
+### Endpoints de Comentarios de Plantilla (solo CRM)
+
+Comentarios append-only sobre una plantilla (ADR 0005 de crm-front). Requieren solo `X-API-Key` y `X-Workspace-Code`; el workspace debe ser el de la plantilla (`403 WORKSPACE_SCOPE` si no coincide o falta el claim).
+
+| Método | Endpoint | Descripción | Requiere API Key |
+|--------|----------|-------------|:----------------:|
+| POST | `/internal/template-versions/{versionId}/comments` | Agrega un comentario a la plantilla de la versión (el `templateId` se deriva de la versión) | ✅ |
+| GET | `/internal/templates/{templateId}/comments?audience=<code>` | Lista los comentarios de una audiencia, del más antiguo al más nuevo | ✅ |
+
+**Archivo fuente**: `internal/adapters/primary/http/controller/internal_comment_controller.go`
+
 ### Endpoint `/internal/documents/create` - Detalle
 
 Crea un documento utilizando el sistema de extensiones (Mapper, Init, Injectors).

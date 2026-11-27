@@ -886,6 +886,22 @@ definitions:
       workspaceId:
         type: string
     type: object
+  github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest:
+    properties:
+      audience:
+        description: Audience the comment is listed within, computed by crm-admission.
+        type: string
+      body:
+        description: Body is trimmed, must not be empty and is at most 4000 characters.
+        type: string
+      campus:
+        type: string
+      email:
+        description: Who wrote it, and from which campus.
+        type: string
+      name:
+        type: string
+    type: object
   github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalApprovalHistoryResponse:
     properties:
       items:
@@ -940,6 +956,36 @@ definitions:
         type: string
       status:
         type: string
+    type: object
+  github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse'
+        type: array
+    type: object
+  github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse:
+    properties:
+      audience:
+        type: string
+      authorCampus:
+        type: string
+      authorEmail:
+        type: string
+      authorName:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      templateId:
+        type: string
+      templateVersionId:
+        type: string
+      versionNumber:
+        type: integer
     type: object
   github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCreateDocumentRequest:
     properties:
@@ -6099,6 +6145,112 @@ paths:
           schema:
             $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
       summary: Propose a template version for school approval
+      tags:
+      - Internal
+  /api/v1/internal/template-versions/{versionId}/comments:
+    post:
+      consumes:
+      - application/json
+      description: Appends a comment to the version's template, tagged with that version.
+        The template is derived from the version. Comments are append-only and never
+        part of the template content.
+      parameters:
+      - description: API Key for authentication
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      - description: Workspace business code
+        in: header
+        name: X-Workspace-Code
+        required: true
+        type: string
+      - description: Template version ID
+        in: path
+        name: versionId
+        required: true
+        type: string
+      - description: Comment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalAddCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+      summary: Add a CRM-only comment to a template
+      tags:
+      - Internal
+  /api/v1/internal/templates/{templateId}/comments:
+    get:
+      description: Lists the comments of one audience on a template, oldest first,
+        each tagged with the version it was written against.
+      parameters:
+      - description: API Key for authentication
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      - description: Workspace business code
+        in: header
+        name: X-Workspace-Code
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Audience the thread belongs to
+        in: query
+        name: audience
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalCommentListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_TetherEducation_doc-assembly_core_internal_adapters_primary_http_dto.InternalErrorResponse'
+      summary: List CRM-only comments on a template
       tags:
       - Internal
   /api/v1/internal/templates/{templateId}/versions:
